@@ -25,39 +25,6 @@ La investigación sigue un riguroso proceso de Machine Learning Operations (MLOp
 
 El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
 
-¡Excelente idea! Un buen README.md es la carta de presentación de tu proyecto. Es fundamental para que otros (incluido tu tribunal de tesis y tu futuro "yo") puedan entender rápidamente el alcance, la metodología y los resultados de tu trabajo.
-
-Aquí tienes una propuesta completa para tu archivo README.md. Está redactado en Markdown, así que puedes copiarlo y pegarlo directamente en un archivo con ese nombre en la raíz de tu proyecto.
-
-Markdown
-
-# Proyecto de Tesis: Tutor Cognitivo Adaptativo con IA Afectiva
-
-**Autora:** Mgter. Ing. Yanina A. Caffetti
-**Institución:** [Nombre de tu Universidad]
-**Programa:** Doctorado en Informática
-
----
-
-## 1. Descripción del Proyecto
-
-Este repositorio contiene el prototipo funcional y el pipeline experimental desarrollado como parte de la tesis doctoral "Diseño de un proceso para la integración de un tutor cognitivo adaptativo basado en arquetipos de usuario y computación afectiva".
-
-El proyecto explora la sinergia entre un **módulo de razonamiento cognitivo**, que clasifica perfiles de usuario complejos, y un **módulo de percepción afectiva**, que detecta la emoción en el lenguaje del usuario. El objetivo principal es crear un sistema de tutoría que no solo ofrezca un plan de acción basado en el perfil del estudiante, sino que también **adapte su interacción y recomendaciones en tiempo real** al estado emocional detectado, generando una intervención más holística y empática.
-
-La investigación sigue un riguroso proceso de Machine Learning Operations (MLOps), incluyendo la evaluación de modelos, benchmarking, tratamiento de desbalance de clases, validación estadística y, finalmente, la refactorización a una arquitectura de software modular.
-
-## 2. Características Principales
-
-* **🧠 Módulo de Razonamiento Cognitivo:** Utiliza un modelo `RandomForestClassifier` para clasificar perfiles de usuario (basados en datos de la encuesta ENDIS 2018) en arquetipos predefinidos. El rendimiento de este componente fue optimizado mediante la técnica **SMOTE** para manejar el severo desbalance de clases.
-* **❤️ Módulo de Percepción Afectiva:** Emplea un modelo de lenguaje `BERT` (BETO) fine-tuned para clasificar el texto del usuario en una de 8 emociones básicas. Para superar la escasez de datos de dominio, se implementó una estrategia de **aumentación de datos por retrotraducción (back-translation)**.
-* **✨ Sistema de Adaptación (MoE):** Una arquitectura de **Mezcla de Expertos (Mixture of Experts)** orquesta la respuesta final. El arquetipo predicho selecciona al "tutor experto" principal, mientras que la emoción detectada modula el plan de acción final.
-* **🔬 Pipeline de Evaluación Riguroso:** El proyecto incluye un pipeline completo para el benchmarking comparativo de modelos y la validación de la significancia estadística de los resultados mediante el **Test de McNemar**.
-
-## 3. Estructura del Proyecto
-
-El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
-
 TESIS_TUTOR_COGNITIVO/
 │
 ├── main.py             # Script principal que orquesta todo el pipeline.
