@@ -1,0 +1,26 @@
+# Requirements para el Proyecto de Tesis: Tutor Cognitivo Adaptativo
+# Fecha: 10 de julio de 2025
+
+# --- Core de Machine Learning y Deep Learning ---
+scikit-learn
+torch
+transformers[torch]
+accelerate
+
+# --- Manipulación y Procesamiento de Datos ---
+pandas
+numpy
+imbalanced-learn
+
+# --- Ecosistema Hugging Face ---
+datasets
+huggingface_hub
+
+# --- Modelos de Traducción y Tokenización ---
+sentencepiece
+sacremoses
+
+# --- Visualización y Estadísticas ---
+seaborn
+matplotlib
+mlxtend
