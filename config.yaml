@@ -1,0 +1,18 @@
+# config.yaml
+data_paths:
+  endis_raw: '/content/drive/My Drive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv'
+
+model_params:
+  cognitive_tutor:
+    test_size: 0.3
+    random_state: 42
+    n_estimators: 100
+    max_depth: 10
+  emotion_classifier:
+    model_name: "dccuchile/bert-base-spanish-wwm-cased"
+    learning_rate: 3e-5
+    epochs: 8
+    
+constants:
+    umbrales:
+        arquetipo: 0.15
