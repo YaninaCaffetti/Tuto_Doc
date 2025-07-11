@@ -5,18 +5,18 @@ from collections import Counter
 from google.colab import drive
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report
 from imblearn.over_sampling import SMOTE
 import traceback
-import yaml 
-
-# Importar nuestros módulos locales
-from src.data_processing import run_feature_engineering, run_archetype_engineering, run_fuzzification
-from src.emotion_classifier import train_and_evaluate_emotion_classifier
-from src.cognitive_tutor import MoESystem, IF_HUPM
-from sklearn.tree import DecisionTreeClassifier
+import yaml
 from mlxtend.evaluate import mcnemar_table, mcnemar
 
+
+# Importar nuestros módulos locales
+from src.data_processing import run_feature_engineering, run_archetype_engineering, run_fuzzification, IF_HUPM
+from src.emotion_classifier import train_and_evaluate_emotion_classifier
+from src.cognitive_tutor import MoESystem
 
 def main(config):
     """
@@ -24,17 +24,16 @@ def main(config):
     """
     print("\n--- 🚀 INICIANDO PIPELINE FINAL INTEGRADO Y EVALUACIÓN DOCTORAL ---")
 
-    # --- Parte I: Entrenamiento Avanzado del Clasificador de Emociones ---
+    # --- Parte I: Entrenamiento del Clasificador de Emociones ---
     emotion_classifier = train_and_evaluate_emotion_classifier(config)
 
     # --- Parte II: Entrenamiento del Tutor Cognitivo ---
     print("\n--- [PARTE II] Entrenando el Tutor Cognitivo... ---")
     
-    cognitive_model = None
+    cognitive_model_final = None
     df_featured, df_fuzzified, feature_columns = None, None, []
     cognitive_tutor_ready = False
     
-    # Extraer parámetros de la configuración para mayor legibilidad
     cfg_cog = config['model_params']['cognitive_tutor']
 
     try:
@@ -81,6 +80,7 @@ def main(config):
         traceback.print_exc()
         df_fuzzified = pd.DataFrame(index=[35906, 77570]); df_fuzzified['TIENE_CUD'] = ['No_Tiene_CUD', 'Si_Tiene_CUD']
 
+
     # --- Parte III: Evaluación, Benchmarking y Análisis Estadístico ---
     print("\n\n--- 📊 [PARTE III] Evaluación, Benchmarking y Análisis Estadístico ---")
     if cognitive_tutor_ready:
@@ -94,6 +94,7 @@ def main(config):
         )
         rf_model.fit(X_train_sm, y_train_sm)
         print("  › RandomForestClassifier entrenado.")
+        cognitive_model_final = rf_model # Modelo que usará la demo
 
         dt_model = DecisionTreeClassifier(
             max_depth=cfg_cog['max_depth'], 
@@ -145,7 +146,7 @@ def main(config):
 
     # --- Parte IV: Demostración del Sistema Integrado ---
     print("\n\n--- 🏁 [PARTE IV] Demostración del Sistema Integrado ---")
-    cognitive_tutor_system = MoESystem(rf_model, feature_columns, config['affective_rules']) if cognitive_tutor_ready else None
+    cognitive_tutor_system = MoESystem(cognitive_model_final, feature_columns, config['affective_rules']) if cognitive_tutor_ready else None
     
     def get_integrated_response(text: str, user_id: int):
         print("\n" + "="*80); print(f"INPUT DEL USUARIO (ID: {user_id}): '{text}'")
