@@ -59,11 +59,9 @@ class MoESystem:
 
         final_recs = []
         if user_profile.get('TIENE_CUD') != 'Si_Tiene_CUD':
-            cud_rec = GestorCUD().generate_recommendation()
-            if 'Ira' in emotion_probs and emotion_probs['Ira'] > 0.5:
-                cud_rec += "\n  [Consejo Adicional]: Entendemos tu frustración. Iniciar este trámite puede ser un paso concreto para resolver la situación."
-            final_recs.append(cud_rec)
+            final_recs.append("[Acción CUD]: Se ha detectado que no posee el CUD. Se recomienda iniciar el trámite (Ley 22.431).")
 
+        # ### LÓGICA DE ADAPTACIÓN DIFUSA ###
         final_recs.append(f"**[Adaptación Afectiva Difusa Activada]**")
         modulation_factors = {arq: 1.0 for arq in self.expert_map.keys()}
         
@@ -71,6 +69,7 @@ class MoESystem:
             if prob > 0.1 and emotion in self.affective_rules:
                 rules = self.affective_rules[emotion]
                 for arquetipo, factor in rules.items():
+                    # El factor se ajusta proporcionalmente a la confianza de la emoción
                     modulation_factors[arquetipo] *= (1 + (factor - 1) * prob)
         
         for arquetipo, factor in modulation_factors.items():
@@ -92,7 +91,7 @@ class MoESystem:
                     rec = experto.generate_recommendation(original_profile=user_profile)
                     final_recs.append(f"  - (Prioridad: {peso:.0%}): {rec}")
         
-        if len(final_recs) == 0 or (len(final_recs) == 1 and final_recs[0].startswith("[Acción CUD]")):
-             final_recs.append("[Sistema]: No se pudo determinar un plan de acción de tutores para este perfil.")
+        if len(final_recs) <= 1:
+             final_recs.append("[Sistema]: No se pudo determinar un plan de acción de tutores adicional para este perfil.")
 
         return "\n".join(final_recs)
