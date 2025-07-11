@@ -105,6 +105,12 @@ def train_and_evaluate_emotion_classifier(config):
     trainer = Trainer(model=model, args=training_args, train_dataset=tokenized_train, eval_dataset=tokenized_test)
     trainer.train()
     
+    model_save_path = config['model_paths']['emotion_classifier']
+    print(f"\n  › Guardando el modelo de emociones en: {model_save_path}")
+    trainer.save_model(model_save_path)
+    tokenizer.save_pretrained(model_save_path)
+    print("  › Modelo guardado exitosamente.")
+    
     print("\n--- 📊 Evaluación del Clasificador de Emociones Mejorado ---")
     emotion_classifier = EmotionClassifier(model, tokenizer)
     y_true_emotion = test_ds['emotion']
