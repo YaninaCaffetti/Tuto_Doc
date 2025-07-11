@@ -1,18 +1,52 @@
-# config.yaml
+# ============================================
+# ARCHIVO DE CONFIGURACIÓN CENTRALIZADO
+# ============================================
+
+# --- Rutas de Archivos ---
 data_paths:
   endis_raw: '/content/drive/My Drive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv'
 
+# --- Parámetros de los Modelos ---
 model_params:
+  # Parámetros para el tutor cognitivo
   cognitive_tutor:
     test_size: 0.3
     random_state: 42
     n_estimators: 100
     max_depth: 10
+  
+  # Parámetros para el clasificador de emociones
   emotion_classifier:
     model_name: "dccuchile/bert-base-spanish-wwm-cased"
-    learning_rate: 3e-5
     epochs: 8
+    learning_rate: 3e-5
+    train_batch_size: 8
+    logging_steps: 15
     
+# --- Constantes y Lógica de Negocio ---
 constants:
-    umbrales:
-        arquetipo: 0.15
+  umbrales:
+    arquetipo: 0.15
+  
+  emotion_labels: ['Ira', 'Miedo', 'Tristeza', 'Alegría', 'Confianza', 'Anticipación', 'Sorpresa', 'Neutral']
+
+affective_rules:
+  Tristeza:
+    Potencial_Latente: 1.5
+    Cand_Nec_Sig: 1.2
+  Miedo:
+    Potencial_Latente: 1.4
+    Cand_Nec_Sig: 1.3
+    Prof_Subutil: 0.8
+  Ira:
+    Prof_Subutil: 1.4
+    GestorCUD: 1.5
+    Potencial_Latente: 0.7
+  Alegría:
+    Nav_Informal: 1.3
+    Joven_Transicion: 1.3
+    Prof_Subutil: 1.2
+  Confianza:
+    Prof_Subutil: 1.4
+    Nav_Informal: 1.2
+    Joven_Transicion: 1.2
