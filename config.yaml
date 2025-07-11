@@ -1,21 +1,23 @@
 # ============================================
-# ARCHIVO DE CONFIGURACIÓN CENTRALIZADO
+# ARCHIVO DE CONFIGURACIÓN CENTRALIZADO (v26.0)
 # ============================================
 
-# --- Rutas de Archivos ---
+# --- Rutas de Archivos y Modelos Guardados ---
 data_paths:
   endis_raw: '/content/drive/My Drive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv'
 
+model_paths:
+  emotion_classifier: './saved_models/emotion_classifier'
+  cognitive_tutor: './saved_models/cognitive_tutor.joblib'
+
 # --- Parámetros de los Modelos ---
 model_params:
-  # Parámetros para el tutor cognitivo
   cognitive_tutor:
     test_size: 0.3
     random_state: 42
     n_estimators: 100
     max_depth: 10
   
-  # Parámetros para el clasificador de emociones
   emotion_classifier:
     model_name: "dccuchile/bert-base-spanish-wwm-cased"
     epochs: 8
@@ -49,4 +51,4 @@ affective_rules:
   Confianza:
     Prof_Subutil: 1.4
     Nav_Informal: 1.2
-    Joven_Transicion: 1.2
+    Joven_Transicion': 1.2
