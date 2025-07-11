@@ -5,6 +5,7 @@ import yaml
 import sys
 import os
 
+
 # Añadir la carpeta src al path para poder importar módulos
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
