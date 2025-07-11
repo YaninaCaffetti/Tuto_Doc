@@ -4,8 +4,51 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 
+class FuzzyDecisionTreeNode:
+    def __init__(self,f=None,t=None,b=None,l=None,u=None,c=None,n=0): self.feature_name,self.threshold,self.branches=f,t,b; self.leaf_value,self.uncertainty,self.class_probabilities,self.n_samples=l,u,c,n
+
+class IF_HUPM:
+    """Un único Árbol de Decisión Difuso. Sirve como benchmark de interpretabilidad."""
+    def __init__(self,min_samples_split=2,max_depth=10,uncertainty_threshold=.1): self.min_samples_split,self.max_depth,self.uncertainty_threshold=min_samples_split,max_depth,uncertainty_threshold; self.root=None
+    def _fe(self,y): n=len(y); return 0 if n==0 else -sum(p*np.log2(p) for p in (np.array(list(Counter(y).values()))/n) if p>0)
+    def _ig(self,y,ly,ry): n,nl,nr=len(y),len(ly),len(ry); return 0 if nl==0 or nr==0 else self._fe(y)-((nl/n)*self._fe(ly)+(nr/n)*self._fe(ry))
+    def _fbs(self,X,y):
+        bg,bf,bt=-1,None,None;
+        if len(y)<self.min_samples_split:return None,None,None
+        n_features = X.shape[1]
+        if n_features > 1:
+            size_subset = int(np.sqrt(n_features))
+        else:
+            size_subset = 1
+        features_to_check = np.random.choice(X.columns, size=size_subset, replace=False)
+        for fn in features_to_check:
+            for t in np.unique(X[fn]):
+                li,ri=y.index[X[fn]<=t],y.index[X[fn]>t]
+                if len(li)==0 or len(ri)==0:continue
+                g=self._ig(y,y.loc[li],y.loc[ri]);
+                if g>bg:bg,bf,bt=g,fn,t
+        return bf,bt,bg
+    def _bt(self,X,y,d=0):
+        if d>=self.max_depth or len(y.unique())==1 or len(y)<self.min_samples_split:return self._cl(y)
+        f,t,g=self._fbs(X,y)
+        if g is None or g<=0:return self._cl(y)
+        li,ri=y.index[X[f]<=t],y.index[X[f]>t]; lb,rb=self._bt(X.loc[li],y.loc[li],d+1),self._bt(X.loc[ri],y.loc[ri],d+1)
+        return FuzzyDecisionTreeNode(f=f,t=t,b={'<= '+str(t):lb,'> '+str(t):rb},n=len(y))
+    def _cl(self,y):
+        cs=Counter(y);
+        if not cs:return FuzzyDecisionTreeNode(l="Incierto (Hoja Vacía)",u=True,c={},n=0)
+        tot=len(y);pr={k:v/tot for k,v in cs.items()};mc=max(pr,key=pr.get);mp=pr[mc];sp=sorted(pr.values(),reverse=True)
+        iu=len(sp)>1 and(sp[0]-sp[1])<self.uncertainty_threshold or mp<(1.-self.uncertainty_threshold)
+        lv=mc if not iu else f"Incierto (posiblemente {mc})"; return FuzzyDecisionTreeNode(l=lv,u=iu,c=pr,n=tot)
+    def fit(self,X,y):self.root=self._bt(X,y)
+    def _ps(self,x,n):
+        if n.leaf_value:return n.leaf_value
+        v=x.get(n.feature_name);
+        if v is None:return "Incierto (Valor Faltante)"
+        k='<= '+str(n.threshold)if v<=n.threshold else'> '+str(n.threshold); return self._ps(x,n.branches[k])
+    def predict(self,X):return X.apply(self._ps,axis=1,args=(self.root,))
+
 def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Ejecuta la Fase 1: Ingeniería de Características a partir del dataset crudo."""
     print("  › Ejecutando Fase 1: Ingeniería de Características...")
     df_p = df.copy()
     cols_num = ['dificultad_total', 'dificultades', 'tipo_dificultad', 'MNEA', 'edad_agrupada', 'Estado_ocup', 'cat_ocup', 'certificado', 'PC08', 'pc03', 'tipo_hogar']
