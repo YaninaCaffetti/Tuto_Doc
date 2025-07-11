@@ -47,39 +47,41 @@ class MoESystem:
         self.expert_map = EXPERT_MAP
         self.affective_rules = affective_rules
 
-    def get_cognitive_plan(self, user_profile, emotion: str):
+    def get_cognitive_plan(self, user_profile, emotion_probs: dict):
         profile_df = pd.DataFrame([user_profile])
         profile_for_prediction = profile_df[self.feature_columns]
         
         arquetipo_predominante = self.cognitive_model.predict(profile_for_prediction)[0]
         
-        expert_weights = { arquetipo: 0.0 for arquetipo in EXPERT_MAP.keys() }
+        expert_weights = { arquetipo: 0.0 for arquetipo in self.expert_map.keys() }
         if arquetipo_predominante in expert_weights:
             expert_weights[arquetipo_predominante] = 1.0
 
         final_recs = []
         if user_profile.get('TIENE_CUD') != 'Si_Tiene_CUD':
             cud_rec = GestorCUD().generate_recommendation()
-            if emotion == 'Ira':
+            if 'Ira' in emotion_probs and emotion_probs['Ira'] > 0.5:
                 cud_rec += "\n  [Consejo Adicional]: Entendemos tu frustración. Iniciar este trámite puede ser un paso concreto para resolver la situación."
             final_recs.append(cud_rec)
 
-        applied_modulation = False
-        if emotion in self.affective_rules:
-            applied_modulation = True
-            modulation = self.affective_rules[emotion]
-            for arquetipo, factor in modulation.items():
-                if arquetipo in expert_weights:
-                    expert_weights[arquetipo] *= factor
+        final_recs.append(f"**[Adaptación Afectiva Difusa Activada]**")
+        modulation_factors = {arq: 1.0 for arq in self.expert_map.keys()}
+        
+        for emotion, prob in emotion_probs.items():
+            if prob > 0.1 and emotion in self.affective_rules:
+                rules = self.affective_rules[emotion]
+                for arquetipo, factor in rules.items():
+                    modulation_factors[arquetipo] *= (1 + (factor - 1) * prob)
+        
+        for arquetipo, factor in modulation_factors.items():
+            if arquetipo in expert_weights:
+                expert_weights[arquetipo] *= factor
         
         total_weight = sum(expert_weights.values())
         if total_weight > 0:
             normalized_weights = {key: value / total_weight for key, value in expert_weights.items()}
         else:
             normalized_weights = expert_weights
-        
-        if applied_modulation:
-            final_recs.append(f"**[Adaptación Afectiva: El plan se ha ajustado en base a la emoción '{emotion}' detectada.]**")
 
         sorted_plan = sorted(normalized_weights.items(), key=lambda item: item[1], reverse=True)
 
