@@ -1,4 +1,4 @@
-# src/emotion_classifier.py 
+# src/emotion_classifier.py (Corregido)
 
 import pandas as pd
 import torch
@@ -37,7 +37,7 @@ class EmotionClassifier:
         return {self.model.config.id2label[i]: prob.item() for i, prob in enumerate(probabilities)}
 
 def augment_emotion_data(df: pd.DataFrame, num_augments: int = 4) -> pd.DataFrame:
-    print(f"\\n  › Aumentando el dataset de emociones... (Esto puede tardar varios minutos)")
+    print(f"\n  › Aumentando el dataset de emociones... (Esto puede tardar varios minutos)")
     print("  › Inicializando modelos de traducción (puede tardar la primera vez)...")
     translator_es_en = pipeline("translation", model="Helsinki-NLP/opus-mt-es-en", device=0 if torch.cuda.is_available() else -1)
     translator_en_es = pipeline("translation", model="Helsinki-NLP/opus-mt-en-es", device=0 if torch.cuda.is_available() else -1)
@@ -63,7 +63,7 @@ def augment_emotion_data(df: pd.DataFrame, num_augments: int = 4) -> pd.DataFram
     return pd.concat([df, df_augmented], ignore_index=True)
 
 def train_and_evaluate_emotion_classifier(config):
-    print("\\n--- [PARTE I] Iniciando entrenamiento y evaluación del Clasificador de Emociones... ---")
+    print("\n--- [PARTE I] Iniciando entrenamiento y evaluación del Clasificador de Emociones... ---")
     
     cfg_emo = config['model_params']['emotion_classifier']
     EMOTION_LABELS = config['constants']['emotion_labels']
@@ -91,9 +91,8 @@ def train_and_evaluate_emotion_classifier(config):
     tokenized_train = train_ds.map(tokenize_function, batched=True)
     tokenized_test = test_ds.map(tokenize_function, batched=True)
 
-    print("\\n  › Entrenando el clasificador de emociones con datos aumentados...")
+    print("\n  › Entrenando el clasificador de emociones con datos aumentados...")
     
-    # ### CORRECCIÓN: Convertir learning_rate a float ###
     learning_rate = float(cfg_emo['learning_rate'])
     
     training_args = TrainingArguments(
@@ -103,22 +102,26 @@ def train_and_evaluate_emotion_classifier(config):
         learning_rate=learning_rate, 
         logging_strategy="steps", 
         logging_steps=cfg_emo['logging_steps'],
-        report_to="all"
+        report_to="all",
+        evaluation_strategy="epoch" # Para monitorear el rendimiento en validación
     )
     trainer = Trainer(model=model, args=training_args, train_dataset=tokenized_train, eval_dataset=tokenized_test)
     trainer.train()
     
     model_save_path = config['model_paths']['emotion_classifier']
-    print(f"\\n  › Guardando el modelo de emociones en: {model_save_path}")
+    print(f"\n  › Guardando el modelo de emociones en: {model_save_path}")
     os.makedirs(model_save_path, exist_ok=True)
     trainer.save_model(model_save_path)
     tokenizer.save_pretrained(model_save_path)
     print("  › Modelo guardado exitosamente.")
 
-    print("\\n--- 📊 Evaluación del Clasificador de Emociones Mejorado ---")
+    print("\n--- 📊 Evaluación del Clasificador de Emociones Mejorado ---")
     emotion_classifier = EmotionClassifier(model, tokenizer)
     y_true_emotion = test_ds['emotion']
-    y_pred_emotion = [max(emotion_classifier.predict_proba(text), key=emotion_classifier.predict_proba(text).get) for text in test_ds['text']]
+    
+    # Optimización de la predicción
+    predictions_probs = [emotion_classifier.predict_proba(text) for text in test_ds['text']]
+    y_pred_emotion = [max(prob_dict, key=prob_dict.get) for prob_dict in predictions_probs]
     
     print("  › Reporte de Clasificación (BERT fine-tuned):")
     print(classification_report(y_true_emotion, y_pred_emotion, labels=EMOTION_LABELS, zero_division=0))
@@ -131,25 +134,25 @@ def train_and_evaluate_emotion_classifier(config):
     plt.ylabel('Etiqueta Real')
     plt.show()
 
-    print("\\n--- 📊 Benchmark del Clasificador de Emociones vs. Modelo Clásico ---")
+    print("\n--- 📊 Benchmark del Clasificador de Emociones vs. Modelo Clásico ---")
     classic_model = make_pipeline(TfidfVectorizer(), LogisticRegression(max_iter=1000, random_state=RANDOM_STATE))
-    print("\\n  › Entrenando modelo clásico (TF-IDF + Regresión Logística)...")
+    print("\n  › Entrenando modelo clásico (TF-IDF + Regresión Logística)...")
     classic_model.fit(train_df['text'], train_df['emotion'])
     print("  › Evaluación del modelo clásico:")
     y_pred_classic = classic_model.predict(test_df['text'])
     print("  › Reporte de Clasificación (Modelo Clásico):")
     print(classification_report(test_df['emotion'], y_pred_classic, labels=EMOTION_LABELS, zero_division=0))
 
-    print("\\n--- Resumen de Comparación de Modelos de Emoción ---")
+    print("\n--- Resumen de Comparación de Modelos de Emoción ---")
     f1_bert = f1_score(y_true_emotion, y_pred_emotion, average='macro')
     f1_classic = f1_score(test_df['emotion'], y_pred_classic, average='macro')
     print(f"  - F1-Score Macro (BERT Aumentado): {f1_bert:.2f}")
     print(f"  - F1-Score Macro (Clásico TF-IDF + LogReg): {f1_classic:.2f}")
 
     if f1_bert > f1_classic:
-        print("\\n  Conclusión: El modelo BERT supera significativamente al benchmark clásico.")
+        print("\n  Conclusión: El modelo BERT supera significativamente al benchmark clásico.")
     else:
-        print("\\n  Conclusión: El modelo BERT NO supera al benchmark clásico, se requiere más análisis.")
+        print("\n  Conclusión: El modelo BERT NO supera al benchmark clásico, se requiere más análisis.")
 
     print("--- ✅ Clasificador de Emociones Entrenado y Evaluado. ---")
     return emotion_classifier
