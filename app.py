@@ -1,4 +1,3 @@
-# app.py (Versión 26.0 - Módulo de Servicio/Demo)
 
 import streamlit as st
 import yaml
@@ -17,11 +16,12 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 @st.cache_resource
 def load_all_models_and_data(config):
     """Carga todos los modelos y datos pre-entrenados desde el disco."""
-    
+    st.info("Cargando modelos... Esto puede tardar un momento la primera vez.")
+
     # Cargar el clasificador de emociones
     emotion_model_path = config['model_paths']['emotion_classifier']
     if not os.path.exists(emotion_model_path):
-        st.error(f"Error: No se encuentra el modelo de emociones en '{emotion_model_path}'. Por favor, ejecute 'main.py' primero para entrenar y guardar los modelos.")
+        st.error(f"Error: No se encuentra el modelo de emociones en '{emotion_model_path}'. Por favor, ejecute 'train.py' primero para entrenar y guardar los modelos.")
         st.stop()
     model_emo = AutoModelForSequenceClassification.from_pretrained(emotion_model_path)
     tokenizer_emo = AutoTokenizer.from_pretrained(emotion_model_path)
@@ -30,14 +30,14 @@ def load_all_models_and_data(config):
     # Cargar el tutor cognitivo
     cognitive_model_path = config['model_paths']['cognitive_tutor']
     if not os.path.exists(cognitive_model_path):
-        st.error(f"Error: No se encuentra el modelo de tutor en '{cognitive_model_path}'. Por favor, ejecute 'main.py' primero para entrenar y guardar los modelos.")
+        st.error(f"Error: No se encuentra el modelo de tutor en '{cognitive_model_path}'.")
         st.stop()
     cognitive_model = joblib.load(cognitive_model_path)
     
     # Cargar los perfiles de demo
     demo_profiles_path = config['data_paths']['demo_profiles']
     if not os.path.exists(demo_profiles_path):
-        st.error(f"Error: No se encuentra el archivo de perfiles de demo en '{demo_profiles_path}'. Por favor, ejecute 'main.py' primero.")
+        st.error(f"Error: No se encuentra el archivo de perfiles de demo en '{demo_profiles_path}'.")
         st.stop()
     df_profiles = pd.read_csv(demo_profiles_path, index_col='ID')
     
@@ -59,7 +59,7 @@ def main():
     emotion_classifier, cognitive_tutor_system, df_profiles = load_all_models_and_data(config)
     st.success("✅ ¡Sistema y modelos cargados exitosamente!")
 
-    st.subheader("Simulador de Interacción con el Tutor")
+    st.subheader("Simulador de Interacción")
     user_ids = df_profiles.index.tolist()
     selected_id = st.selectbox("Seleccione un ID de Usuario para la demostración:", user_ids)
     user_input = st.text_area("Escriba la consulta del usuario aquí:", "No entiendo bien qué es la ley 22.431 pero gracias por la info, me da esperanza.", height=100)
