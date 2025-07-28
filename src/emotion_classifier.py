@@ -1,4 +1,4 @@
-# src/emotion_classifier.py (Corregido)
+# src/emotion_classifier.py (Versión Final y Verificada)
 
 import pandas as pd
 import torch
@@ -93,17 +93,18 @@ def train_and_evaluate_emotion_classifier(config):
 
     print("\n  › Entrenando el clasificador de emociones con datos aumentados...")
     
+    # ### CORRECCIÓN DEFINITIVA ###
+    # Se convierte el learning_rate a float aquí.
     learning_rate = float(cfg_emo['learning_rate'])
     
     training_args = TrainingArguments(
         output_dir="./results_emotion_augmented", 
         num_train_epochs=cfg_emo['epochs'], 
         per_device_train_batch_size=cfg_emo['train_batch_size'], 
-        learning_rate=learning_rate, 
+        learning_rate=learning_rate, # Se usa la variable convertida
         logging_strategy="steps", 
         logging_steps=cfg_emo['logging_steps'],
-        report_to="all",
-        evaluation_strategy="epoch"
+        report_to="all"
     )
     trainer = Trainer(
         model=model, 
@@ -123,9 +124,7 @@ def train_and_evaluate_emotion_classifier(config):
     print("\n--- 📊 Evaluación del Clasificador de Emociones Mejorado ---")
     emotion_classifier = EmotionClassifier(model, tokenizer)
     y_true_emotion = test_ds['emotion']
-    
-    predictions_probs = [emotion_classifier.predict_proba(text) for text in test_ds['text']]
-    y_pred_emotion = [max(prob_dict, key=prob_dict.get) for prob_dict in predictions_probs]
+    y_pred_emotion = [max(emotion_classifier.predict_proba(text), key=emotion_classifier.predict_proba(text).get) for text in test_ds['text']]
     
     print("  › Reporte de Clasificación (BERT fine-tuned):")
     print(classification_report(y_true_emotion, y_pred_emotion, labels=EMOTION_LABELS, zero_division=0))
