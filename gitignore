@@ -1,0 +1,7 @@
+# .gitignore
+# Archivos de caché de Python
+__pycache__/
+*.pyc
+
+# Modelos guardados (no deben ir al repositorio)
+/saved_models/
