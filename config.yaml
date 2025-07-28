@@ -6,7 +6,6 @@
 data_paths:
   endis_raw: '/content/drive/My Drive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv'
   demo_profiles: './saved_models/demo_profiles.csv'
-  # En config.yaml
 
 model_paths:
   emotion_classifier: './saved_models/emotion_classifier'
@@ -53,4 +52,4 @@ affective_rules:
   Confianza:
     Prof_Subutil: 1.4
     Nav_Informal: 1.2
-    Joven_Transicion': 1.2
+    Joven_Transicion: 1.2
