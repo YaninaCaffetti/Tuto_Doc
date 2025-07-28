@@ -1,23 +1,27 @@
 # Requirements para el Proyecto de Tesis: Tutor Cognitivo Adaptativo
-# Versión 2.0 - Con versiones fijadas para despliegue estable
+# Versión 3.0 - Optimizada para despliegue en Streamlit Cloud
 
-# --- Core de Streamlit y Machine Learning ---
-streamlit==1.35.0
+--find-links https://download.pytorch.org/whl/cpu/torch_stable.html
+
+# --- Core de Machine Learning y Deep Learning ---
 scikit-learn==1.4.2
-torch==2.3.0
 pandas==2.2.2
 numpy==1.26.4
+transformers[torch]
+accelerate
 
 # --- Ecosistema Hugging Face ---
-transformers==4.41.2
-datasets==2.19.0
-accelerate==0.30.1
+datasets
+huggingface_hub
 
 # --- Librerías de Apoyo ---
-imbalanced-learn==0.12.2
-mlxtend==0.23.1
-sentencepiece==0.2.0
-sacremoses==0.1.1
-seaborn==0.13.2
-matplotlib==3.8.4
-PyYAML==6.0.1
+imbalanced-learn
+mlxtend
+sentencepiece
+sacremoses
+seaborn
+matplotlib
+PyYAML
+
+# --- Streamlit ---
+streamlit==1.35.0
