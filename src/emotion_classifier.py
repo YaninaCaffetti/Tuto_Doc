@@ -103,9 +103,14 @@ def train_and_evaluate_emotion_classifier(config):
         logging_strategy="steps", 
         logging_steps=cfg_emo['logging_steps'],
         report_to="all",
-        evaluation_strategy="epoch" # Para monitorear el rendimiento en validación
+        evaluation_strategy="epoch"
     )
-    trainer = Trainer(model=model, args=training_args, train_dataset=tokenized_train, eval_dataset=tokenized_test)
+    trainer = Trainer(
+        model=model, 
+        args=training_args, 
+        train_dataset=tokenized_train, 
+        eval_dataset=tokenized_test  
+    )
     trainer.train()
     
     model_save_path = config['model_paths']['emotion_classifier']
@@ -119,7 +124,6 @@ def train_and_evaluate_emotion_classifier(config):
     emotion_classifier = EmotionClassifier(model, tokenizer)
     y_true_emotion = test_ds['emotion']
     
-    # Optimización de la predicción
     predictions_probs = [emotion_classifier.predict_proba(text) for text in test_ds['text']]
     y_pred_emotion = [max(prob_dict, key=prob_dict.get) for prob_dict in predictions_probs]
     
