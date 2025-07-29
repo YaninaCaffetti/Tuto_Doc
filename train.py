@@ -1,9 +1,9 @@
-# train.py (Versión 26.1 - Corregido UnboundLocalError)
+# train.py (Versión 26.1)
 
 
 import pandas as pd
 from collections import Counter
-from google.colab import drive
+#from google.colab import drive
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -35,11 +35,11 @@ def train_and_evaluate_all(config):
     # --- Parte II: Entrenamiento y Benchmarking del Tutor Cognitivo ---
     print("\n--- [PARTE II] Entrenando y Evaluando el Tutor Cognitivo... ---")
     
-    cognitive_model_final = None # <--- INICIALIZACIÓN CLAVE
+    cognitive_model_final = None 
     cognitive_tutor_ready = False
     
     try:
-        drive.mount('/content/drive', force_remount=True)
+       #drive.mount('/content/drive', force_remount=True)
         df_raw = pd.read_csv(config['data_paths']['endis_raw'], delimiter=';', low_memory=False, index_col='ID')
         
         df_featured = run_feature_engineering(df_raw)
