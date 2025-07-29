@@ -3,5 +3,5 @@
 __pycache__/
 *.pyc
 
-# Modelos guardados (no deben ir al repositorio)
-/saved_models/
+# Modelos guardados (no deben ir al repositorio, por lo tanto descomenta si lo ejecutas localmente)
+# /saved_models/
