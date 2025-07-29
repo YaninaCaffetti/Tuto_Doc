@@ -1,19 +1,17 @@
 
---find-links https://download.pytorch.org/whl/cpu/torch_stable.html
-scikit-learn==1.5.1
-pandas==2.0.3
-numpy==2.0.0
-torch==2.1.0
-transformers==4.36.2
-datasets==2.16.1
-accelerate==0.26.1
-imbalanced-learn==0.12.0
-mlxtend==0.23.1
-sentencepiece==0.2.0
-sacremoses==0.1.1
-seaborn==0.13.2
-matplotlib==3.8.4
-PyYAML==6.0.1
-streamlit==1.37.0
-Pillow==10.4.0
-
+scikit-learn
+pandas
+numpy
+torch
+transformers
+accelerate
+datasets
+imbalanced-learn
+mlxtend
+sentencepiece
+sacremoses
+seaborn
+matplotlib
+PyYAML
+streamlit
+Pillow
