@@ -28,7 +28,7 @@ El código está organizado siguiendo las mejores prácticas para facilitar su m
 
 TESIS_TUTOR_COGNITIVO/
 │
-├── main.py             # Script principal que orquesta todo el pipeline.
+├── train.py             # Script principal que orquesta todo el pipeline.
 │
 └── src/                  # Carpeta para todo el código fuente.
 │
@@ -90,10 +90,10 @@ matplotlib
 mlxtend
 
 #### **Ejecución**
-El script está diseñado para ser ejecutado en un entorno como Google Colab, donde puede acceder a GPUs y manejar las dependencias de manera sencilla.
+El script fue diseñado para ser ejecutado en un entorno como Google Colab, donde puede acceder a GPUs y manejar las dependencias de manera sencilla. Sin embargo las lineas están comentadas para que se pueda ejecutar en un entorno Streamlit a aplicación app.py
 
-1.  Asegúrate de que la estructura de archivos (`main.py` y la carpeta `src/`) esté en tu entorno.
-2.  Ejecuta el script principal.
+1.  Asegúrate de que la estructura de archivos (`train.py` y la carpeta `src/`) esté en tu entorno.
+2.  Ejecuta el script principal train.py (y luego el app.py.)
 3.  La primera vez, te pedirá autenticarte en Hugging Face. Pega tu token de acceso cuando se te solicite.
 4.  El pipeline completo se ejecutará, mostrando los resultados de cada fase.
 
