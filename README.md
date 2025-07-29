@@ -2,7 +2,7 @@
 
 **Autora:** Mgter. Ing. Yanina A. Caffetti
 **Institución:** Universidad Nacional de Misiones, Argentina.
-**Programa:** Doctorado en Informática
+**Programa:** Doctorado en Informática.
 
 ---
 
@@ -19,27 +19,30 @@ La investigación sigue un riguroso proceso de Machine Learning Operations (MLOp
 * **🧠 Módulo de Razonamiento Cognitivo:** Utiliza un modelo `RandomForestClassifier` para clasificar perfiles de usuario (basados en datos de la encuesta ENDIS 2018) en arquetipos predefinidos heurísticamente y basados en el modelo MTBI (o Indicador de Tipo Myers-Briggs, es una herramienta psicométrica que clasifica a las personas en 16 tipos de personalidad basados en sus preferencias en cuatro dicotomías psicológicas: extroversión/introversión, sensación/intuición, pensamiento/sentimiento y juicio/percepción. Este modelo, desarrollado por Katharine Briggs y Isabel Myers, se basa en la teoría de los tipos psicológicos de Carl Jung. 
 ). El rendimiento de este componente fue optimizado mediante la técnica **SMOTE** para manejar el severo desbalance de clases.
 * **❤️ Módulo de Percepción Afectiva:** Emplea un modelo de lenguaje `BERT` (BETO) fine-tuned para clasificar el texto del usuario en una de 8 emociones básicas. Para superar la escasez de datos de dominio, se implementó una estrategia de **aumentación de datos por retrotraducción (back-translation)**.
-* **✨ Sistema de Adaptación (MoE):** Una arquitectura de **Mezcla de Expertos (Mixture of Experts)** orquesta la respuesta final. El arquetipo predicho selecciona al "tutor experto" principal, mientras que la emoción detectada modula el plan de acción final.
+* **✨ Sistema de Adaptación (MoE):** Una arquitectura de Mezcla de Expertos (Mixture of Experts) orquesta la respuesta final. El arquetipo predicho por el módulo cognitivo selecciona al "tutor experto" principal, pero la clave de la innovación reside en que el vector completo de probabilidades de emoción modula los pesos de todos los expertos. Esto permite, por ejemplo, que una alta probabilidad de "tristeza" aumente la prioridad del "Tutor de Bienestar", generando un plan de acción mixto y verdaderamente adaptativo.
 * **🔬 Pipeline de Evaluación Riguroso:** El proyecto incluye un pipeline completo para el benchmarking comparativo de modelos y la validación de la significancia estadística de los resultados mediante el **Test de McNemar**.
 
 ## 3. Estructura del Proyecto
 
 El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
 
-TESIS_TUTOR_COGNITIVO/
+Tuto_Doc/
 │
-├── train.py             # Script principal que orquesta todo el pipeline.
+├── app.py                # Aplicación de demostración interactiva con Streamlit.
+├── train.py              # Script principal para entrenar y guardar todos los modelos.
+├── config.yaml           # Archivo central de configuración de modelos y parámetros.
+├── requirements.txt      # Dependencias del proyecto.
 │
-└── src/                  # Carpeta para todo el código fuente.
+├── data/                 # Carpeta para los datasets (e.g., endis_raw).
 │
-├── init.py       # Hace que 'src' sea un paquete de Python.
-│
-├── data_processing.py # Funciones de ingeniería de características y fuzzificación.
-│
-├── emotion_classifier.py # Lógica de entrenamiento y evaluación del clasificador de emociones.
-│
-└── cognitive_tutor.py # Clases de los Expertos y el sistema MoESystem.
+└── src/                  # Carpeta para todo el código fuente modular.
+    │
+    ├── __init__.py
+    ├── data_processing.py    # Pipeline de ingeniería de características y fuzzificación.
+    ├── emotion_classifier.py # Lógica de entrenamiento y clasificación de emociones.
+    └── cognitive_tutor.py    # Clases para los Expertos y el sistema MoESystem.
 
+La carpeta SAVED_MODELS contiene los modelos entrenados una primera vez para el lanzamiento de la aplicación.
 
 ## 4. Metodología y Tecnologías
 
@@ -55,10 +58,33 @@ TESIS_TUTOR_COGNITIVO/
 
 ## 5. Instalación y Ejecución
 
+Este proyecto está diseñado para ser reproducible. La aplicación interactiva se puede ejecutar localmente o desplegar en servicios como Streamlit Cloud.
+
+#### **Instalación**
+1.  **Clona el repositorio:**
+    ```bash
+    git clone [https://github.com/YaninaCaffetti/Tuto_Doc.git](https://github.com/YaninaCaffetti/Tuto_Doc.git)
+    cd Tuto_Doc
+    ```
+2.  **Crea un entorno virtual (recomendado):**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # En Windows: venv\Scripts\activate
+    ```
+3.  **Instala las dependencias:**
+    ```bash
+    pip install -r requirements.txt
+
+#### **Ejecución de la Aplicación**
+
+El repositorio ya incluye los modelos pre-entrenados para una demostración inmediata. Para lanzar la aplicación interactiva, ejecuta:
+```bash
+streamlit run app.py
+
 #### **Requisitos Previos**
 * Python 3.9+
 * Una cuenta de Hugging Face ([huggingface.co](https://huggingface.co/)) para obtener un token de acceso.
-* El dataset `base_estudio_discapacidad_2018.csv` ubicado en la ruta especificada en `main.py`. Sino puedes consultarlo de: https://www.indec.gob.ar/indec/web/Institucional-Indec-BasesDeDatos-7
+* El dataset `base_estudio_discapacidad_2018.csv` ubicado en la ruta especificada en `train.py`. Sino puedes consultarlo de: https://www.indec.gob.ar/indec/web/Institucional-Indec-BasesDeDatos-7
 
 #### **Instalación**
 1.  Clona o descarga este repositorio.
