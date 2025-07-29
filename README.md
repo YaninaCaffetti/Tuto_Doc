@@ -81,6 +81,7 @@ El repositorio ya incluye los modelos pre-entrenados para una demostración inme
 
 ```bash
 streamlit run app.py
+  ```
 
 ## 6. Resumen de Hallazgos
 
