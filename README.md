@@ -74,63 +74,22 @@ Este proyecto está diseñado para ser reproducible. La aplicación interactiva 
 3.  **Instala las dependencias:**
     ```bash
     pip install -r requirements.txt
+    ```
 
-#### **Ejecución de la Aplicación**
+#### **Ejecución de la Aplicación de Demostración**
+El repositorio ya incluye los modelos pre-entrenados para una demostración inmediata. Para lanzar la aplicación interactiva, simplemente ejecuta:
 
-El repositorio ya incluye los modelos pre-entrenados para una demostración inmediata. Para lanzar la aplicación interactiva, ejecuta:
 ```bash
 streamlit run app.py
-
-#### **Requisitos Previos**
-* Python 3.9+
-* Una cuenta de Hugging Face ([huggingface.co](https://huggingface.co/)) para obtener un token de acceso.
-* El dataset `base_estudio_discapacidad_2018.csv` ubicado en la ruta especificada en `train.py`. Sino puedes consultarlo de: https://www.indec.gob.ar/indec/web/Institucional-Indec-BasesDeDatos-7
-
-#### **Instalación**
-1.  Clona o descarga este repositorio.
-2.  Crea un entorno virtual (recomendado).
-3.  Instala las dependencias:
-
-# --- Core de Machine Learning y Deep Learning ---
-scikit-learn
-torch
-transformers[torch]
-accelerate
-
-# --- Manipulación y Procesamiento de Datos ---
-pandas
-numpy
-imbalanced-learn
-
-# --- Ecosistema Hugging Face ---
-datasets
-huggingface_hub
-
-# --- Modelos de Traducción y Tokenización ---
-sentencepiece
-sacremoses
-
-# --- Visualización y Estadísticas ---
-seaborn
-matplotlib
-mlxtend
-
-#### **Ejecución**
-El script fue diseñado para ser ejecutado en un entorno como Google Colab, donde puede acceder a GPUs y manejar las dependencias de manera sencilla. Sin embargo las lineas están comentadas para que se pueda ejecutar en un entorno Streamlit a aplicación app.py
-
-1.  Asegúrate de que la estructura de archivos (`train.py` y la carpeta `src/`) esté en tu entorno.
-2.  Ejecuta el script principal train.py (y luego el app.py.)
-3.  La primera vez, te pedirá autenticarte en Hugging Face. Pega tu token de acceso cuando se te solicite.
-4.  El pipeline completo se ejecutará, mostrando los resultados de cada fase.
 
 ## 6. Resumen de Hallazgos
 
 1.  **Modelo Cognitivo:** Se validó que un `RandomForestClassifier` entrenado con datos balanceados por `SMOTE` es la solución óptima para la clasificación de arquetipos, alcanzando un **91% de accuracy** y un **F1-score macro de 0.79**, demostrando su capacidad para predecir clases minoritarias. La mejora sobre un `DecisionTree` simple fue estadísticamente significativa (p < 0.05).
-2.  **Clasificador de Emociones:** La estrategia de aumentación de datos por retrotraducción fue **altamente efectiva**, llevando el rendimiento del clasificador a un **100% de precisión** en el conjunto de prueba del dominio.
+2.  **Clasificador de Emociones:** La estrategia de aumentación de datos por retrotraducción fue **altamente efectiva**, llevando el rendimiento del clasificador a un **rendimiento casi perfecto** en el conjunto de prueba del dominio.
 3.  **Trade-off XAI vs. Rendimiento:** La investigación ha cuantificado empíricamente el compromiso entre rendimiento y explicabilidad. El modelo original `IF-HUPM`, aunque 100% interpretable ("caja blanca"), demostró ser frágil y de bajo rendimiento, mientras que el `RandomForest` ("caja negra") ofreció un rendimiento robusto y superior.
 
 ## 7. Trabajo Futuro
 
-* **Adaptación Afectiva Difusa:** Implementar la lógica para que el `MoESystem` utilice el **vector completo de probabilidades** de emoción, en lugar de solo la emoción dominante, para una adaptación aún más matizada.
 * **Explicabilidad del Modelo Final:** Aplicar técnicas de XAI post-hoc (como **SHAP** o **LIME**) sobre el `RandomForestClassifier` para intentar explicar sus predicciones y comparar estas explicaciones con las reglas del `IF-HUPM`.
 * **Modelos Híbridos:** Explorar arquitecturas que combinen la interpretabilidad del `IF-HUPM` para casos de baja confianza con el rendimiento del `RandomForest` para predicciones de alta confianza.
+* **Validación con Usuarios:** Realizar un nuevo estudio formal con usuarios finales para medir cuantitativamente el impacto de la adaptación afectiva en la percepción de empatía, la confianza en el sistema y el éxito en las tareas propuestas.
