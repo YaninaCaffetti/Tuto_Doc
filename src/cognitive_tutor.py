@@ -1,4 +1,4 @@
-# src/cognitive_tutor.py
+# src/cognitive_tutor.py (Versión Corregida y Robusta)
 
 import pandas as pd
 
@@ -61,7 +61,6 @@ class MoESystem:
         if user_profile.get('TIENE_CUD') != 'Si_Tiene_CUD':
             final_recs.append("[Acción CUD]: Se ha detectado que no posee el CUD. Se recomienda iniciar el trámite (Ley 22.431).")
 
-        # ### LÓGICA DE ADAPTACIÓN DIFUSA ###
         final_recs.append(f"**[Adaptación Afectiva Difusa Activada]**")
         modulation_factors = {arq: 1.0 for arq in self.expert_map.keys()}
         
@@ -69,8 +68,9 @@ class MoESystem:
             if prob > 0.1 and emotion in self.affective_rules:
                 rules = self.affective_rules[emotion]
                 for arquetipo, factor in rules.items():
-                    # El factor se ajusta proporcionalmente a la confianza de la emoción
-                    modulation_factors[arquetipo] *= (1 + (factor - 1) * prob)
+                    # Solo intentamos modular el factor si el arquetipo es válido
+                    if arquetipo in modulation_factors:
+                        modulation_factors[arquetipo] *= (1 + (factor - 1) * prob)
         
         for arquetipo, factor in modulation_factors.items():
             if arquetipo in expert_weights:
