@@ -1,7 +1,11 @@
-# .gitignore
+
 # Archivos de caché de Python
 __pycache__/
 *.pyc
 
-# Modelos guardados (no deben ir al repositorio, por lo tanto descomenta si lo ejecutas localmente)
-# /saved_models/
+# Ignorar el entorno virtual
+venv/
+
+# Ignorar carpetas de resultados y logs de entrenamiento
+/results_emotion_augmented/
+/wandb/
