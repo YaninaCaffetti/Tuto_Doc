@@ -43,7 +43,6 @@ affective_rules:
     Prof_Subutil: 0.8
   Ira:
     Prof_Subutil: 1.4
-    GestorCUD: 1.5
     Potencial_Latente: 0.7
   Alegría:
     Nav_Informal: 1.3
