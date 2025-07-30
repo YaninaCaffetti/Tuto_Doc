@@ -1,17 +1,17 @@
 
-scikit-learn==1.5.1
 pandas==2.2.2
 numpy==1.26.4
-torch==2.1.0
-transformers==4.36.2
-accelerate==0.29.3
-datasets==2.16.1
+scikit-learn==1.5.1
+torch==2.3.1
+transformers==4.41.2
+accelerate==0.31.0
+datasets==2.19.1
 imbalanced-learn==0.12.0
 mlxtend==0.23.1
-sentencepiece==0.2.0
-sacremoses==0.1.1
-seaborn==0.13.2
-matplotlib==3.8.4
-PyYAML==6.0.1
+sentencepiece
+sacremoses
+seaborn
+matplotlib
+PyYAML
 streamlit==1.37.0
 Pillow==10.4.0
