@@ -1,4 +1,4 @@
-# train.py (Versión Completa y Definitiva)
+# train.py (Versión con Demo Mejorada)
 
 import pandas as pd
 from collections import Counter
@@ -31,7 +31,6 @@ def train_and_evaluate_all(config):
     except Exception as e:
         print(f"❌ ERROR CRÍTICO EN LA PARTE I (Clasificador de Emociones): {e}")
         traceback.print_exc()
-        # Detenemos la ejecución si esta parte crucial falla
         return
 
     # --- Parte II: Entrenamiento y Benchmarking del Tutor Cognitivo ---
@@ -40,23 +39,25 @@ def train_and_evaluate_all(config):
     cognitive_tutor_ready = False
     
     try:
-        # Carga el dataset desde la ruta local especificada en config.yaml
         print("  › Cargando el dataset cognitivo...")
         df_raw = pd.read_csv(config['data_paths']['endis_raw'], delimiter=';', low_memory=False, index_col='ID')
         print("  › Dataset cargado exitosamente.")
         
-        # Ejecuta el pipeline de procesamiento de datos
         df_featured = run_feature_engineering(df_raw)
         df_archetyped = run_archetype_engineering(df_featured)
         df_fuzzified = run_fuzzification(df_archetyped)
         
-        # Guarda los perfiles de demostración
-        demo_ids = [35906, 77570]
-        os.makedirs(os.path.dirname(config['data_paths']['demo_profiles']), exist_ok=True)
-        df_fuzzified.loc[demo_ids].to_csv(config['data_paths']['demo_profiles'], index=True)
-        print(f"  › Perfiles de demostración guardados en {config['data_paths']['demo_profiles']}")
+        demo_ids = [35906, 77570, 5497] 
+        
+        # Asegurarnos de que los IDs existen en el dataframe antes de guardar
+        valid_demo_ids = [id for id in demo_ids if id in df_fuzzified.index]
+        if not valid_demo_ids:
+            print("  › Advertencia: Ninguno de los IDs de demo se encontró en el dataset procesado.")
+        else:
+            os.makedirs(os.path.dirname(config['data_paths']['demo_profiles']), exist_ok=True)
+            df_fuzzified.loc[valid_demo_ids].to_csv(config['data_paths']['demo_profiles'], index=True)
+            print(f"  › Perfiles de demostración guardados para los IDs: {valid_demo_ids}")
 
-        # Prepara los datos para el entrenamiento
         pertenencia_cols = {col: col.replace('_v6', '').replace('_v3', '').replace('_v2', '').replace('_v1', '') for col in df_fuzzified.columns if 'Pertenencia_' in col}
         df_fuzzified.rename(columns=pertenencia_cols, inplace=True)
         columnas_arquetipos = [col for col in df_fuzzified.columns if 'Pertenencia_' in col]
