@@ -1,6 +1,7 @@
-# src/cognitive_tutor.py (Versión Corregida y Robusta)
+# src/cognitive_tutor.py (Versión Final y Robusta)
 
 import pandas as pd
+import warnings
 
 class Experto:
     def __init__(self, nombre_experto): self.nombre = nombre_experto
@@ -68,9 +69,12 @@ class MoESystem:
             if prob > 0.1 and emotion in self.affective_rules:
                 rules = self.affective_rules[emotion]
                 for arquetipo, factor in rules.items():
-                    # Solo intentamos modular el factor si el arquetipo es válido
+                    # Solo intentamos modular el factor si el arquetipo es válido y conocido.
                     if arquetipo in modulation_factors:
                         modulation_factors[arquetipo] *= (1 + (factor - 1) * prob)
+                    else:
+                        # (Opcional) Advertimos sobre una regla inválida en la configuración
+                        warnings.warn(f"Regla afectiva para '{arquetipo}' ignorada porque no es un arquetipo de experto válido.")
         
         for arquetipo, factor in modulation_factors.items():
             if arquetipo in expert_weights:
