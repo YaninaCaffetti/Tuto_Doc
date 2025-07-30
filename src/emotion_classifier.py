@@ -93,15 +93,13 @@ def train_and_evaluate_emotion_classifier(config):
 
     print("\n  › Entrenando el clasificador de emociones con datos aumentados...")
     
-    # ### CORRECCIÓN DEFINITIVA ###
-    # Se convierte el learning_rate a float aquí.
     learning_rate = float(cfg_emo['learning_rate'])
     
     training_args = TrainingArguments(
         output_dir="./results_emotion_augmented", 
         num_train_epochs=cfg_emo['epochs'], 
         per_device_train_batch_size=cfg_emo['train_batch_size'], 
-        learning_rate=learning_rate, # Se usa la variable convertida
+        learning_rate=learning_rate, 
         logging_strategy="steps", 
         logging_steps=cfg_emo['logging_steps'],
         report_to="all"
