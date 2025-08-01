@@ -11,8 +11,8 @@ import yaml
 import os
 import joblib
 
-# Importar módulos locales
-from src.data_processing import run_feature_engineering, run_archetype_engineering, run_fuzzification
+# Importar nuestros módulos locales
+from src.data_processing import run_feature_engineering, run_archetype_engineering, run_fuzzification, IF_HUPM
 from src.emotion_classifier import train_and_evaluate_emotion_classifier
 from imblearn.over_sampling import SMOTE
 from mlxtend.evaluate import mcnemar_table, mcnemar
@@ -20,13 +20,6 @@ from mlxtend.evaluate import mcnemar_table, mcnemar
 def train_and_evaluate_all(config: dict):
     """
     Orquesta el pipeline completo de entrenamiento, evaluación y guardado de modelos.
-
-    Este script ejecuta dos pipelines principales en secuencia:
-    1.  **Clasificador de Emociones:** Entrena y evalúa un modelo BERT fine-tuned
-        para la clasificación de emociones a partir de texto.
-    2.  **Tutor Cognitivo:** Procesa los datos de la encuesta ENDIS, entrena un modelo
-        RandomForest para clasificar perfiles de usuario en arquetipos y guarda
-        los modelos y perfiles de demostración necesarios para la aplicación.
 
     Args:
         config (dict): El diccionario de configuración cargado desde config.yaml.
@@ -41,39 +34,37 @@ def train_and_evaluate_all(config: dict):
     except Exception as e:
         print(f"❌ ERROR CRÍTICO EN LA PARTE I (Clasificador de Emociones): {e}")
         traceback.print_exc()
-        return # Detener la ejecución si el clasificador de emociones falla
+        return
 
     # --- Parte II: Entrenamiento y Benchmarking del Tutor Cognitivo ---
     print("\n--- [PARTE II] Entrenando y Evaluando el Tutor Cognitivo... ---")
     
-    cognitive_tutor_ready = False
-    
     try:
-        # --- A. Carga y Procesamiento de Datos ---
         print("  › Cargando el dataset cognitivo...")
         df_raw = pd.read_csv(config['data_paths']['endis_raw'], delimiter=';', low_memory=False, index_col='ID')
         print("  › Dataset cargado exitosamente.")
         
         df_featured = run_feature_engineering(df_raw)
         df_archetyped = run_archetype_engineering(df_featured)
-        df_fuzzified = run_fuzzification(df_archetyped)
+        df_fuzzified = run_fuzzification(df_featured)
+    
+        demo_ids = config['data_paths'].get('demo_user_ids', []) # Usar IDs del config o una lista vacía
         
-        # --- B. Creación y Guardado de Perfiles para la Demostración ---
-        demo_ids = config.get('demo_user_ids', [35906, 77570]) # Usar IDs del config o unos por defecto
         valid_demo_ids = [uid for uid in demo_ids if uid in df_fuzzified.index]
         
         if valid_demo_ids:
             demo_profiles_df = df_fuzzified.loc[valid_demo_ids].copy()
-            # Forzar un escenario de demo para un usuario con CUD
-            if 5497 in demo_profiles_df.index:
-                demo_profiles_df.loc[5497, 'TIENE_CUD'] = 'Si_Tiene_CUD'
+            # Forzar escenario de CUD si el ID 14 está en la lista para asegurar la demo
+            if 14 in demo_profiles_df.index:
+                demo_profiles_df.loc[14, 'TIENE_CUD'] = 'Si_Tiene_CUD'
+                print("  › Perfil de demo forzado: ID 14 tiene CUD.")
             
             os.makedirs(os.path.dirname(config['data_paths']['demo_profiles']), exist_ok=True)
             demo_profiles_df.to_csv(config['data_paths']['demo_profiles'], index=True)
             print(f"  › Perfiles de demostración guardados para los IDs: {valid_demo_ids}")
         else:
-            print("  › Advertencia: Ninguno de los IDs de demo se encontró en el dataset procesado.")
-
+            print("  › Advertencia: Ninguno de los IDs de demo especificados en config.yaml se encontró en el dataset.")
+            
         # --- C. Preparación Final de Datos para Entrenamiento ---
         pertenencia_cols = {col: col.replace('_v6', '').replace('_v3', '').replace('_v2', '').replace('_v1', '') for col in df_fuzzified.columns if 'Pertenencia_' in col}
         df_fuzzified.rename(columns=pertenencia_cols, inplace=True)
