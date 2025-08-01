@@ -1,4 +1,4 @@
-# train.py (Versión Final, Pulida y Documentada)
+# train.py 
 
 import pandas as pd
 from collections import Counter
@@ -63,7 +63,7 @@ def train_and_evaluate_all(config: dict):
             # Forzar escenario de CUD si el ID 14 está en la lista para asegurar la demo
             if 14 in demo_profiles_df.index:
                 demo_profiles_df.loc[14, 'TIENE_CUD'] = 'Si_Tiene_CUD'
-                print("  › Perfil de demo forzado: ID 14 ahora tiene CUD.")
+                print("  › Perfil de demo forzado: ID 14 tiene CUD.")
             
             os.makedirs(os.path.dirname(config['data_paths']['demo_profiles']), exist_ok=True)
             demo_profiles_df.to_csv(config['data_paths']['demo_profiles'], index=True)
@@ -71,7 +71,7 @@ def train_and_evaluate_all(config: dict):
         else:
             print("  › Advertencia: Ninguno de los IDs de demo especificados en config.yaml se encontró en el dataset.")
 
-        # --- C. Preparación Final de Datos para Entrenamiento (con Lógica Corregida) ---
+        # --- C. Preparación Final de Datos para Entrenamiento ---
         pertenencia_cols_map = {col: col.replace('Pertenencia_', '') for col in df_fuzzified.columns if 'Pertenencia_' in col}
         df_fuzzified.rename(columns=pertenencia_cols_map, inplace=True)
         
@@ -83,7 +83,7 @@ def train_and_evaluate_all(config: dict):
             Función robusta para asignar una etiqueta de clase final.
 
             Maneja correctamente los casos donde no hay puntajes de pertenencia (NaNs)
-           
+            para evitar el error 'argmax of an empty sequence'.
             """
             pertenencias = row[columnas_arquetipos].dropna() # Clave: .dropna()
             
@@ -97,6 +97,8 @@ def train_and_evaluate_all(config: dict):
         # --- D. División y Balanceo de Datos (SMOTE) ---
         feature_columns = [col for col in df_fuzzified.columns if '_memb' in col]
         df_entrenamiento = df_fuzzified[df_fuzzified['Arquetipo_Predominante'] != 'Arquetipo_No_Predominante'].copy()
+
+        print(f"  › {len(df_entrenamiento)} perfiles superaron el umbral de arquetipo y se usarán para el entrenamiento.")
 
         if len(df_entrenamiento) > 10:
             X_train, X_test, y_train, y_test = train_test_split(
