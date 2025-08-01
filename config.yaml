@@ -6,6 +6,7 @@
 data_paths:
   endis_raw: './data/base_estudio_discapacidad_2018.csv' 
   demo_profiles: './saved_models/demo_profiles.csv'
+  demo_user_ids: [35906, 77570, 14] # IDs para la demo de la aplicación
 
 model_paths:
   emotion_classifier: './saved_models/emotion_classifier'
