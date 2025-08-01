@@ -1,56 +1,162 @@
-# src/data_processing.py
+# src/data_processing.py 
 
 import pandas as pd
 import numpy as np
 from collections import Counter
 
 class FuzzyDecisionTreeNode:
-    def __init__(self,f=None,t=None,b=None,l=None,u=None,c=None,n=0): self.feature_name,self.threshold,self.branches=f,t,b; self.leaf_value,self.uncertainty,self.class_probabilities,self.n_samples=l,u,c,n
+    """Representa un único nodo en el Árbol de Decisión Difuso (IF_HUPM)."""
+    def __init__(self, feature_name=None, threshold=None, branches=None, leaf_value=None, is_uncertain=None, class_probabilities=None, n_samples=0):
+        """
+        Inicializa un nodo del árbol.
+
+        Args:
+            feature_name (str, optional): Nombre de la característica por la que se divide.
+            threshold (float, optional): Umbral de división para la característica.
+            branches (dict, optional): Diccionario con las ramas hijas del nodo.
+            leaf_value (str, optional): El valor de la clase si el nodo es una hoja.
+            is_uncertain (bool, optional): Booleano que indica si la clasificación de la hoja es incierta.
+            class_probabilities (dict, optional): Probabilidades de las clases en el nodo hoja.
+            n_samples (int, optional): Número de muestras que llegan a este nodo.
+        """
+        self.feature_name = feature_name
+        self.threshold = threshold
+        self.branches = branches
+        self.leaf_value = leaf_value
+        self.uncertainty = is_uncertain
+        self.class_probabilities = class_probabilities
+        self.n_samples = n_samples
 
 class IF_HUPM:
-    """Un único Árbol de Decisión Difuso. Sirve como benchmark de interpretabilidad."""
-    def __init__(self,min_samples_split=2,max_depth=10,uncertainty_threshold=.1): self.min_samples_split,self.max_depth,self.uncertainty_threshold=min_samples_split,max_depth,uncertainty_threshold; self.root=None
-    def _fe(self,y): n=len(y); return 0 if n==0 else -sum(p*np.log2(p) for p in (np.array(list(Counter(y).values()))/n) if p>0)
-    def _ig(self,y,ly,ry): n,nl,nr=len(y),len(ly),len(ry); return 0 if nl==0 or nr==0 else self._fe(y)-((nl/n)*self._fe(ly)+(nr/n)*self._fe(ry))
-    def _fbs(self,X,y):
-        bg,bf,bt=-1,None,None;
-        if len(y)<self.min_samples_split:return None,None,None
+    """
+    Implementación de un Árbol de Decisión Difuso simple (IF-HUPM).
+
+    Este modelo sirve como un benchmark de "caja blanca" (100% interpretable)
+    para comparar con el modelo RandomForest de "caja negra".
+    """
+    def __init__(self, min_samples_split=2, max_depth=10, uncertainty_threshold=0.1):
+        """
+        Inicializa el clasificador de árbol de decisión difuso.
+
+        Args:
+            min_samples_split (int): El número mínimo de muestras requeridas para dividir un nodo.
+            max_depth (int): La profundidad máxima del árbol.
+            uncertainty_threshold (float): Umbral para determinar si una hoja es "incierta".
+        """
+        self.min_samples_split = min_samples_split
+        self.max_depth = max_depth
+        self.uncertainty_threshold = uncertainty_threshold
+        self.root = None
+
+    def _calculate_entropy(self, y):
+        """Calcula la entropía de un conjunto de etiquetas."""
+        n = len(y)
+        if n == 0: return 0
+        proportions = np.array(list(Counter(y).values())) / n
+        return -np.sum(p * np.log2(p) for p in proportions if p > 0)
+
+    def _information_gain(self, y, left_y, right_y):
+        """Calcula la ganancia de información de una división."""
+        n, n_left, n_right = len(y), len(left_y), len(right_y)
+        if n_left == 0 or n_right == 0: return 0
+        parent_entropy = self._calculate_entropy(y)
+        child_entropy = (n_left / n) * self._calculate_entropy(left_y) + (n_right / n) * self._calculate_entropy(right_y)
+        return parent_entropy - child_entropy
+
+    def _find_best_split(self, X, y):
+        """Encuentra la mejor característica y umbral para dividir los datos."""
+        best_gain, best_feature, best_threshold = -1, None, None
+        if len(y) < self.min_samples_split:
+            return None, None, None
+        
         n_features = X.shape[1]
-        if n_features > 1:
-            size_subset = int(np.sqrt(n_features))
-        else:
-            size_subset = 1
+        # Se usa un subconjunto aleatorio de características para la división (similar a RandomForest)
+        size_subset = int(np.sqrt(n_features)) if n_features > 1 else 1
         features_to_check = np.random.choice(X.columns, size=size_subset, replace=False)
-        for fn in features_to_check:
-            for t in np.unique(X[fn]):
-                li,ri=y.index[X[fn]<=t],y.index[X[fn]>t]
-                if len(li)==0 or len(ri)==0:continue
-                g=self._ig(y,y.loc[li],y.loc[ri]);
-                if g>bg:bg,bf,bt=g,fn,t
-        return bf,bt,bg
-    def _bt(self,X,y,d=0):
-        if d>=self.max_depth or len(y.unique())==1 or len(y)<self.min_samples_split:return self._cl(y)
-        f,t,g=self._fbs(X,y)
-        if g is None or g<=0:return self._cl(y)
-        li,ri=y.index[X[f]<=t],y.index[X[f]>t]; lb,rb=self._bt(X.loc[li],y.loc[li],d+1),self._bt(X.loc[ri],y.loc[ri],d+1)
-        return FuzzyDecisionTreeNode(f=f,t=t,b={'<= '+str(t):lb,'> '+str(t):rb},n=len(y))
-    def _cl(self,y):
-        cs=Counter(y);
-        if not cs:return FuzzyDecisionTreeNode(l="Incierto (Hoja Vacía)",u=True,c={},n=0)
-        tot=len(y);pr={k:v/tot for k,v in cs.items()};mc=max(pr,key=pr.get);mp=pr[mc];sp=sorted(pr.values(),reverse=True)
-        iu=len(sp)>1 and(sp[0]-sp[1])<self.uncertainty_threshold or mp<(1.-self.uncertainty_threshold)
-        lv=mc if not iu else f"Incierto (posiblemente {mc})"; return FuzzyDecisionTreeNode(l=lv,u=iu,c=pr,n=tot)
-    def fit(self,X,y):self.root=self._bt(X,y)
-    def _ps(self,x,n):
-        if n.leaf_value:return n.leaf_value
-        v=x.get(n.feature_name);
-        if v is None:return "Incierto (Valor Faltante)"
-        k='<= '+str(n.threshold)if v<=n.threshold else'> '+str(n.threshold); return self._ps(x,n.branches[k])
-    def predict(self,X):return X.apply(self._ps,axis=1,args=(self.root,))
+
+        for feature_name in features_to_check:
+            for threshold in np.unique(X[feature_name]):
+                left_indices, right_indices = y.index[X[feature_name] <= threshold], y.index[X[feature_name] > threshold]
+                if len(left_indices) == 0 or len(right_indices) == 0: continue
+                
+                gain = self._information_gain(y, y.loc[left_indices], y.loc[right_indices])
+                if gain > best_gain:
+                    best_gain, best_feature, best_threshold = gain, feature_name, threshold
+        return best_feature, best_threshold, best_gain
+
+    def _build_tree(self, X, y, depth=0):
+        """Construye el árbol de decisión de forma recursiva."""
+        if depth >= self.max_depth or len(y.unique()) == 1 or len(y) < self.min_samples_split:
+            return self._create_leaf_node(y)
+
+        feature, threshold, gain = self._find_best_split(X, y)
+        if gain is None or gain <= 0:
+            return self._create_leaf_node(y)
+
+        left_indices, right_indices = y.index[X[feature] <= threshold], y.index[X[feature] > threshold]
+        left_branch = self._build_tree(X.loc[left_indices], y.loc[left_indices], depth + 1)
+        right_branch = self._build_tree(X.loc[right_indices], y.loc[right_indices], depth + 1)
+        
+        branches = {'<= ' + str(threshold): left_branch, '> ' + str(threshold): right_branch}
+        return FuzzyDecisionTreeNode(feature_name=feature, threshold=threshold, branches=branches, n_samples=len(y))
+
+    def _create_leaf_node(self, y):
+        """Crea un nodo hoja y calcula su valor y nivel de incertidumbre."""
+        counts = Counter(y)
+        if not counts:
+            return FuzzyDecisionTreeNode(leaf_value="Incierto (Hoja Vacía)", is_uncertain=True, class_probabilities={}, n_samples=0)
+        
+        total = len(y)
+        probabilities = {k: v / total for k, v in counts.items()}
+        most_common_class = max(probabilities, key=probabilities.get)
+        max_prob = probabilities[most_common_class]
+        sorted_probs = sorted(probabilities.values(), reverse=True)
+        
+        # Una hoja es incierta si la diferencia entre las dos clases más probables es pequeña,
+        # o si la clase más probable no es lo suficientemente dominante.
+        is_uncertain = (len(sorted_probs) > 1 and (sorted_probs[0] - sorted_probs[1]) < self.uncertainty_threshold) or \
+                       (max_prob < (1. - self.uncertainty_threshold))
+        
+        leaf_value = most_common_class if not is_uncertain else f"Incierto (posiblemente {most_common_class})"
+        return FuzzyDecisionTreeNode(leaf_value=leaf_value, is_uncertain=is_uncertain, class_probabilities=probabilities, n_samples=total)
+
+    def fit(self, X, y):
+        """Entrena el árbol de decisión."""
+        self.root = self._build_tree(X, y)
+
+    def _predict_single(self, x, node):
+        """Predice la clase para una única muestra de forma recursiva."""
+        if node.leaf_value:
+            return node.leaf_value
+        
+        value = x.get(node.feature_name)
+        if value is None:
+            return "Incierto (Valor Faltante)"
+        
+        key = '<= ' + str(node.threshold) if value <= node.threshold else '> ' + str(node.threshold)
+        return self._predict_single(x, node.branches[key])
+
+    def predict(self, X):
+        """Predice la clase para un DataFrame de muestras."""
+        return X.apply(self._predict_single, axis=1, args=(self.root,))
 
 def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Transforma las variables crudas del dataset ENDIS en características compuestas.
+
+    Esta fase convierte códigos numéricos en categorías legibles y crea nuevas
+    variables de alto nivel como 'Perfil_Dificultad_Agrupado', 'CAPITAL_HUMANO',
+    'TIENE_CUD', etc., que son fundamentales para la posterior creación de arquetipos.
+
+    Args:
+        df (pd.DataFrame): El DataFrame crudo de la encuesta ENDIS.
+
+    Returns:
+        pd.DataFrame: El DataFrame con las nuevas características de ingeniería.
+    """
     print("  › Ejecutando Fase 1: Ingeniería de Características...")
     df_p = df.copy()
+    # ... (El código interno es complejo pero la lógica se mantiene)
     cols_num = ['dificultad_total', 'dificultades', 'tipo_dificultad', 'MNEA', 'edad_agrupada', 'Estado_ocup', 'cat_ocup', 'certificado', 'PC08', 'pc03', 'tipo_hogar']
     for col in cols_num:
         if col in df_p.columns: df_p[col] = pd.to_numeric(df_p[col], errors='coerce')
@@ -68,8 +174,23 @@ def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     return df_p
 
 def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcula el grado de pertenencia de cada perfil de usuario a un conjunto de arquetipos.
+
+    Esta es una fase crítica donde se inyecta conocimiento experto. Se simulan
+    puntuaciones de tipo MBTI y luego se aplican una serie de reglas heurísticas
+    complejas para determinar qué tan bien encaja un usuario en arquetipos como
+    'Profesional Subutilizado', 'Navegante Informal', etc.
+
+    Args:
+        df (pd.DataFrame): El DataFrame con las características de la Fase 1.
+
+    Returns:
+        pd.DataFrame: El DataFrame enriquecido con las columnas de pertenencia a arquetipos.
+    """
     print("  › Ejecutando Fase 2: Ingeniería de Arquetipos...")
     df_out = df.copy()
+    # ... (El código interno es muy denso y específico del dominio, se mantiene tal cual)
     s_ei=pd.Series(0.0,index=df_out.index); s_ei.loc[df_out['Perfil_Dificultad_Agrupado'].isin(['1F_Habla_Comunicacion_Unica','1C_Auditiva_Unica','1D_Mental_Cognitiva_Unica'])]-=.4; s_ei.loc[df_out['Espectro_Inclusion_Laboral']=='1_Exclusion_del_Mercado']-=.3; s_ei.loc[df_out['tipo_hogar']==1]-=.3; df_out['MBTI_EI_score_sim']=s_ei.clip(-1.,1.).round(2)
     df_out['MBTI_SN_score_sim']=np.select([df_out['CAPITAL_HUMANO']=='1_Bajo',df_out['CAPITAL_HUMANO']=='3_Alto'],[-.5,.5],default=0.); df_out['MBTI_TF_score_sim']=np.select([df_out['pc03']==4,(df_out['pc03'].notna())&(df_out['pc03']!=9)&(df_out['pc03']!=4)],[.5,-.25],default=0.)
     s_jp=pd.Series(0.,index=df_out.index); s_jp.loc[df_out['Espectro_Inclusion_Laboral']=='3_Inclusion_Precaria_Aprox']+=.5; s_jp.loc[df_out['TIENE_CUD']=='Si_Tiene_CUD']-=.5; df_out['MBTI_JP_score_sim']=s_jp.clip(-1.,1.).round(2)
@@ -147,8 +268,23 @@ def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convierte características categóricas y scores numéricos en variables difusas.
+
+    Esta fase toma características como 'CAPITAL_HUMANO' o los scores MBTI y las
+    transforma en un conjunto de nuevas columnas con un grado de membresía (entre 0 y 1),
+    preparando los datos para ser utilizados por un modelo de machine learning que
+    pueda manejar la incertidumbre.
+
+    Args:
+        df (pd.DataFrame): El DataFrame con las características de la Fase 2.
+
+    Returns:
+        pd.DataFrame: El DataFrame final "fuzzificado", listo para el entrenamiento.
+    """
     print("  › Ejecutando Fase 3: Fuzzificación...")
     df_out = df.copy()
+    # ... (El código interno es complejo pero la lógica se mantiene)
     def _fuzzificar_capital_humano(r):
         v=r.get('CAPITAL_HUMANO');m={'1_Bajo':{'CH_Bajo_memb':1.,'CH_Medio_memb':.2,'CH_Alto_memb':0.},'2_Medio':{'CH_Bajo_memb':.2,'CH_Medio_memb':1.,'CH_Alto_memb':.2},'3_Alto':{'CH_Bajo_memb':0.,'CH_Medio_memb':.2,'CH_Alto_memb':1.}};return pd.Series(m.get(v,{'CH_Bajo_memb':.33,'CH_Medio_memb':.33,'CH_Alto_memb':.33}))
     def _fuzzificar_perfil_dificultad(r):
