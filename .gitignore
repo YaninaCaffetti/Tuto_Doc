@@ -2,8 +2,10 @@
 # Archivos de caché de Python
 __pycache__/
 *.pyc
+
 # Ignorar el entorno virtual
 venv/
+
 # Ignorar carpetas de resultados y logs de entrenamiento (contienen archivos >100MB)
 /results_emotion/
 /results_emotion_augmented/
