@@ -1,4 +1,4 @@
-# train.py (Versión con Demo Mejorada)
+# train.py 
 
 import pandas as pd
 from collections import Counter
@@ -11,15 +11,25 @@ import yaml
 import os
 import joblib
 
-# Importar nuestros módulos locales
-from src.data_processing import run_feature_engineering, run_archetype_engineering, run_fuzzification, IF_HUPM
+# Importar módulos locales
+from src.data_processing import run_feature_engineering, run_archetype_engineering, run_fuzzification
 from src.emotion_classifier import train_and_evaluate_emotion_classifier
 from imblearn.over_sampling import SMOTE
 from mlxtend.evaluate import mcnemar_table, mcnemar
 
-def train_and_evaluate_all(config):
+def train_and_evaluate_all(config: dict):
     """
-    Función principal que orquesta el entrenamiento, guardado y evaluación de todos los modelos.
+    Orquesta el pipeline completo de entrenamiento, evaluación y guardado de modelos.
+
+    Este script ejecuta dos pipelines principales en secuencia:
+    1.  **Clasificador de Emociones:** Entrena y evalúa un modelo BERT fine-tuned
+        para la clasificación de emociones a partir de texto.
+    2.  **Tutor Cognitivo:** Procesa los datos de la encuesta ENDIS, entrena un modelo
+        RandomForest para clasificar perfiles de usuario en arquetipos y guarda
+        los modelos y perfiles de demostración necesarios para la aplicación.
+
+    Args:
+        config (dict): El diccionario de configuración cargado desde config.yaml.
     """
     print("\n--- 🚀 INICIANDO PIPELINE DE ENTRENAMIENTO Y EVALUACIÓN ---")
 
@@ -31,7 +41,7 @@ def train_and_evaluate_all(config):
     except Exception as e:
         print(f"❌ ERROR CRÍTICO EN LA PARTE I (Clasificador de Emociones): {e}")
         traceback.print_exc()
-        return
+        return # Detener la ejecución si el clasificador de emociones falla
 
     # --- Parte II: Entrenamiento y Benchmarking del Tutor Cognitivo ---
     print("\n--- [PARTE II] Entrenando y Evaluando el Tutor Cognitivo... ---")
@@ -39,6 +49,7 @@ def train_and_evaluate_all(config):
     cognitive_tutor_ready = False
     
     try:
+        # --- A. Carga y Procesamiento de Datos ---
         print("  › Cargando el dataset cognitivo...")
         df_raw = pd.read_csv(config['data_paths']['endis_raw'], delimiter=';', low_memory=False, index_col='ID')
         print("  › Dataset cargado exitosamente.")
@@ -47,30 +58,39 @@ def train_and_evaluate_all(config):
         df_archetyped = run_archetype_engineering(df_featured)
         df_fuzzified = run_fuzzification(df_archetyped)
         
-        demo_ids = [35906, 77570, 5497] 
+        # --- B. Creación y Guardado de Perfiles para la Demostración ---
+        demo_ids = config.get('demo_user_ids', [35906, 77570]) # Usar IDs del config o unos por defecto
+        valid_demo_ids = [uid for uid in demo_ids if uid in df_fuzzified.index]
         
-        # Asegurarnos de que los IDs existen en el dataframe antes de guardar
-        valid_demo_ids = [id for id in demo_ids if id in df_fuzzified.index]
-        if not valid_demo_ids:
-            print("  › Advertencia: Ninguno de los IDs de demo se encontró en el dataset procesado.")
-        else:
+        if valid_demo_ids:
+            demo_profiles_df = df_fuzzified.loc[valid_demo_ids].copy()
+            # Forzar un escenario de demo para un usuario con CUD
+            if 5497 in demo_profiles_df.index:
+                demo_profiles_df.loc[5497, 'TIENE_CUD'] = 'Si_Tiene_CUD'
+            
             os.makedirs(os.path.dirname(config['data_paths']['demo_profiles']), exist_ok=True)
-            df_fuzzified.loc[valid_demo_ids].to_csv(config['data_paths']['demo_profiles'], index=True)
+            demo_profiles_df.to_csv(config['data_paths']['demo_profiles'], index=True)
             print(f"  › Perfiles de demostración guardados para los IDs: {valid_demo_ids}")
+        else:
+            print("  › Advertencia: Ninguno de los IDs de demo se encontró en el dataset procesado.")
 
+        # --- C. Preparación Final de Datos para Entrenamiento ---
         pertenencia_cols = {col: col.replace('_v6', '').replace('_v3', '').replace('_v2', '').replace('_v1', '') for col in df_fuzzified.columns if 'Pertenencia_' in col}
         df_fuzzified.rename(columns=pertenencia_cols, inplace=True)
         columnas_arquetipos = [col for col in df_fuzzified.columns if 'Pertenencia_' in col]
         
         def determinar_arquetipo_predominante(row):
+            """Función anidada para asignar una etiqueta de clase final basada en la mayor pertenencia."""
             pertenencias = row[columnas_arquetipos]
-            if pertenencias.empty or len(pertenencias.dropna()) == 0 or pertenencias.max() < config['constants']['umbrales']['arquetipo']: return 'Arquetipo_No_Predominante'
+            if pertenencias.max() < config['constants']['umbrales']['arquetipo']:
+                return 'Arquetipo_No_Predominante'
             return pertenencias.idxmax().replace('Pertenencia_', '')
         
         df_fuzzified['Arquetipo_Predominante'] = df_fuzzified.apply(determinar_arquetipo_predominante, axis=1)
         feature_columns = [col for col in df_fuzzified.columns if '_memb' in col]
         df_entrenamiento = df_fuzzified[df_fuzzified['Arquetipo_Predominante'] != 'Arquetipo_No_Predominante'].copy()
 
+        # --- D. División y Balanceo de Datos (SMOTE) ---
         if len(df_entrenamiento) > 10:
             X_cognitive, y_cognitive = df_entrenamiento[feature_columns], df_entrenamiento['Arquetipo_Predominante']
             X_train_cog, X_test_cog, y_train_cog, y_test_cog = train_test_split(X_cognitive, y_cognitive, test_size=config['model_params']['cognitive_tutor']['test_size'], random_state=config['model_params']['cognitive_tutor']['random_state'], stratify=y_cognitive)
@@ -81,17 +101,18 @@ def train_and_evaluate_all(config):
             
             cognitive_tutor_ready = True 
         else:
-            raise ValueError("No hay suficientes datos para entrenar el tutor cognitivo.")
+            raise ValueError("No hay suficientes datos para entrenar el tutor cognitivo después del filtrado.")
 
     except Exception as e:
         print(f"❌ ERROR AL PREPARAR DATOS DEL TUTOR COGNITIVO: {e}")
         traceback.print_exc()
+        return
 
+    # --- E. Entrenamiento y Guardado del Modelo Cognitivo ---
     if cognitive_tutor_ready:
         cfg_cog = config['model_params']['cognitive_tutor']
         
-        print("\n--- Entrenando y evaluando modelos cognitivos... ---")
-
+        print("\n--- Entrenando el modelo cognitivo final (RandomForest)... ---")
         rf_model = RandomForestClassifier(n_estimators=cfg_cog['n_estimators'], max_depth=cfg_cog['max_depth'], random_state=cfg_cog['random_state'])
         rf_model.fit(X_train_sm, y_train_sm)
         
@@ -107,8 +128,19 @@ def train_and_evaluate_all(config):
 
 
 if __name__ == '__main__':
-    with open('config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
-    
-    train_and_evaluate_all(config)
-    print("\n✅ --- Proceso de entrenamiento, evaluación y guardado finalizado. ---")
+    """
+    Punto de entrada del script.
+
+    Carga la configuración desde 'config.yaml' y ejecuta el pipeline principal
+    de entrenamiento y evaluación.
+    """
+    try:
+        with open('config.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+        train_and_evaluate_all(config)
+        print("\n✅ --- Proceso de entrenamiento, evaluación y guardado finalizado. ---")
+    except FileNotFoundError:
+        print("❌ Error: No se encontró el archivo 'config.yaml'. Asegúrate de que exista en el directorio raíz.")
+    except Exception as e:
+        print(f"❌ Un error inesperado ocurrió durante la ejecución: {e}")
+        traceback.print_exc()
