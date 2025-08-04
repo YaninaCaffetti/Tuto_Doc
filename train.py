@@ -77,6 +77,8 @@ def train_and_evaluate_all(config: dict):
         
         from src.cognitive_tutor import EXPERT_MAP
         columnas_arquetipos = [col for col in df_fuzzified.columns if col in EXPERT_MAP.keys()]
+
+        print(f"  › Diagnóstico: El puntaje MÁXIMO de pertenencia encontrado en todo el dataset es: {df_fuzzified[columnas_arquetipos].max().max():.4f}")
         
         def determinar_arquetipo_predominante(row: pd.Series) -> str:
             """
