@@ -5,7 +5,7 @@
 
 ___
 
-1. # Descripción del Proyecto
+# 1. Descripción del Proyecto
    
 Este repositorio contiene el prototipo funcional y el pipeline experimental desarrollado como parte de la tesis doctoral "Diseño de un proceso para la integración de un tutor cognitivo adaptativo basado en arquetipos de usuario y computación afectiva".
 
@@ -13,7 +13,7 @@ El proyecto explora la sinergia entre un módulo de razonamiento cognitivo, que 
 
 La investigación sigue un riguroso proceso de Machine Learning Operations (MLOps), incluyendo la evaluación de modelos, benchmarking, tratamiento de desbalance de clases, validación estadística y, finalmente, la refactorización a una arquitectura de software modular.
 
-2. # Características Principales
+ # 2. Características Principales
    
 🧠 Módulo de Razonamiento Cognitivo: Utiliza un modelo RandomForestClassifier para clasificar perfiles de usuario (basados en datos de la encuesta ENDIS 2018) en arquetipos predefinidos heurísticamente. El rendimiento de este componente fue optimizado mediante la técnica SMOTE para manejar el severo desbalance de clases.
 
@@ -23,32 +23,19 @@ La investigación sigue un riguroso proceso de Machine Learning Operations (MLOp
 
 🔬 Pipeline de Evaluación Riguroso: El proyecto incluye un pipeline completo para el benchmarking comparativo de modelos y la validación de la significancia estadística de los resultados mediante el Test de McNemar.
 
-3. # Estructura del Proyecto
+# 3. Estructura del Proyecto
   
 El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
 
-Tuto_Doc/
-│
-├── app.py                # Aplicación de demostración interactiva con Streamlit.
-├── train.py              # Script principal para entrenar y guardar todos los modelos.
-├── config.yaml           # Archivo central de configuración de modelos y parámetros.
-├── requirements.txt      # Dependencias del proyecto para un entorno reproducible.
-│
-├── data/                 # Carpeta para los datasets (e.g., endis_raw).
-│
-└── src/                  # Carpeta para todo el código fuente modular.
-    │
-    ├── __init__.py
-    ├── data_processing.py    # Pipeline de ingeniería de características y fuzzificación.
-    ├── emotion_classifier.py # Lógica de entrenamiento y clasificación de emociones.
-    └── cognitive_tutor.py    # Clases para los Expertos y el sistema MoESystem.
+<img width="673" height="402" alt="Captura de Pantalla 2025-08-04 a la(s) 18 40 46" src="https://github.com/user-attachments/assets/3f2e553b-9b0f-4718-b7dd-f04021686da7" />
 
-4. # Metodología y Tecnologías
+
+# 4. Metodología y Tecnologías
    
 <img width="685" height="409" alt="Captura de Pantalla 2025-08-04 a la(s) 18 36 37" src="https://github.com/user-attachments/assets/e9b959bf-5cf3-43e8-822b-4f38238f4915" />
 
 
-5. # Instalación y Ejecución
+# 5. Instalación y Ejecución
 
 Este proyecto está diseñado para ser reproducible. La aplicación interactiva se puede ejecutar localmente o desplegar en servicios como Streamlit Cloud.
 
@@ -61,9 +48,9 @@ cd Tuto_Doc
 Descargar los modelos grandes:
 Este repositorio usa Git LFS. Para descargar los modelos, necesitas tener Git LFS instalado.
 
-# Instalar Git LFS (solo se hace una vez por máquina)
-# En macOS: brew install git-lfs
-# En Windows/Linux: ver https://git-lfs.github.com/
+   Instalar Git LFS (solo se hace una vez por máquina)
+   .En macOS: brew install git-lfs
+   .En Windows/Linux: ver https://git-lfs.github.com/
 
 git lfs install
 git lfs pull
@@ -93,7 +80,7 @@ Ejecuta el pipeline de entrenamiento completo:
 
 python train.py
 
-6. # Resumen de Hallazgos
+# 6. Resumen de Hallazgos
    
 **Modelo Cognitivo**: Se validó que un RandomForestClassifier entrenado con datos balanceados por SMOTE es una solución óptima para la clasificación de arquetipos, alcanzando un 91% de accuracy y un F1-score macro de 0.79.
 
@@ -101,7 +88,7 @@ python train.py
 
 **Trade-off XAI vs. Rendimiento**: La investigación ha cuantificado empíricamente el compromiso entre rendimiento y explicabilidad. El modelo IF-HUPM ("caja blanca") demostró ser frágil, mientras que el RandomForest ("caja negra") ofreció un rendimiento robusto y superior.
 
-7. # Trabajo Futuro
+# 7. Trabajo Futuro
    
 **Explicabilidad del Modelo Final**: Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para intentar explicar sus predicciones.
 
