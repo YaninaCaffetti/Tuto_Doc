@@ -30,7 +30,7 @@ model_params:
 # --- Constantes y Lógica de Negocio ---
 constants:
   umbrales:
-    arquetipo: 0.15
+    arquetipo: 0.01
   
   emotion_labels: ['Ira', 'Miedo', 'Tristeza', 'Alegría', 'Confianza', 'Anticipación', 'Sorpresa', 'Neutral']
 
