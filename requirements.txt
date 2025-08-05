@@ -83,7 +83,7 @@ dask==2025.5.0
 dask-cuda==25.6.0
 dask-cudf-cu12==25.6.0
 dataproc-spark-connect==0.8.3
-datasets==2.19.1
+datasets==4.0.0
 db-dtypes==1.4.3
 dbus-python==1.2.18
 debugpy==1.8.15
@@ -111,6 +111,7 @@ et_xmlfile==2.0.0
 etils==1.13.0
 etuples==0.3.10
 Farama-Notifications==0.0.4
+fastai==2.7.19
 fastapi==0.116.1
 fastcore==1.7.29
 fastdownload==0.0.7
@@ -127,7 +128,7 @@ folium==0.20.0
 fonttools==4.59.0
 frozendict==2.4.6
 frozenlist==1.7.0
-fsspec==2024.3.1
+fsspec==2025.3.0
 future==1.0.0
 gast==0.6.0
 gcsfs==2025.3.0
@@ -212,7 +213,7 @@ idna==3.10
 imageio==2.37.0
 imageio-ffmpeg==0.6.0
 imagesize==1.4.1
-imbalanced-learn==0.12.0
+imbalanced-learn==0.13.0
 immutabledict==4.2.1
 importlib_metadata==8.7.0
 importlib_resources==6.5.2
@@ -310,7 +311,7 @@ mistune==3.1.3
 mizani==0.13.5
 mkl==2025.2.0
 ml-dtypes==0.4.1
-mlxtend==0.23.1
+mlxtend==0.23.4
 more-itertools==10.7.0
 moviepy==1.0.3
 mpmath==1.3.0
@@ -338,23 +339,22 @@ notebook_shim==0.2.4
 numba==0.60.0
 numba-cuda==0.11.0
 numexpr==2.11.0
-numpy==1.26.4
-nvidia-cublas-cu12==12.6.4.1
-nvidia-cuda-cupti-cu12==12.6.80
+numpy==2.0.2
+nvidia-cublas-cu12==12.4.5.8
+nvidia-cuda-cupti-cu12==12.4.127
 nvidia-cuda-nvcc-cu12==12.5.82
-nvidia-cuda-nvrtc-cu12==12.6.77
-nvidia-cuda-runtime-cu12==12.6.77
-nvidia-cudnn-cu12==9.5.1.17
-nvidia-cufft-cu12==11.3.0.4
-nvidia-cufile-cu12==1.11.1.6
-nvidia-curand-cu12==10.3.7.77
-nvidia-cusolver-cu12==11.7.1.2
-nvidia-cusparse-cu12==12.5.4.2
-nvidia-cusparselt-cu12==0.6.3
+nvidia-cuda-nvrtc-cu12==12.4.127
+nvidia-cuda-runtime-cu12==12.4.127
+nvidia-cudnn-cu12==9.1.0.70
+nvidia-cufft-cu12==11.2.1.3
+nvidia-curand-cu12==10.3.5.147
+nvidia-cusolver-cu12==11.6.1.9
+nvidia-cusparse-cu12==12.3.1.170
+nvidia-cusparselt-cu12==0.6.2
 nvidia-ml-py==12.575.51
-nvidia-nccl-cu12==2.26.2
-nvidia-nvjitlink-cu12==12.6.85
-nvidia-nvtx-cu12==12.6.77
+nvidia-nccl-cu12==2.21.5
+nvidia-nvjitlink-cu12==12.4.127
+nvidia-nvtx-cu12==12.4.127
 nvtx==0.2.12
 nx-cugraph-cu12 @ https://pypi.nvidia.com/nx-cugraph-cu12/nx_cugraph_cu12-25.6.0-py3-none-any.whl
 oauth2client==4.1.3
@@ -371,7 +371,7 @@ optree==0.17.0
 orbax-checkpoint==0.11.19
 orjson==3.11.1
 osqp==1.0.4
-packaging==24.2
+packaging==25.0
 pandas==2.2.2
 pandas-datareader==0.10.0
 pandas-gbq==0.29.2
@@ -387,7 +387,7 @@ peewee==3.18.2
 peft==0.16.0
 pexpect==4.9.0
 pickleshare==0.7.5
-pillow==10.4.0
+pillow==11.3.0
 platformdirs==4.3.8
 plotly==5.24.1
 plotnine==0.14.5
@@ -414,7 +414,6 @@ ptyprocess==0.7.0
 py-cpuinfo==9.0.0
 py4j==0.10.9.7
 pyarrow==18.1.0
-pyarrow-hotfix==0.7
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycairo==1.28.0
@@ -490,7 +489,7 @@ sacremoses==0.1.1
 safehttpx==0.1.6
 safetensors==0.5.3
 scikit-image==0.25.2
-scikit-learn==1.5.1
+scikit-learn==1.6.1
 scipy==1.16.0
 scooby==0.10.1
 scs==3.2.7.post2
@@ -537,10 +536,10 @@ srsly==2.5.1
 stanio==0.5.1
 starlette==0.47.2
 statsmodels==0.14.5
-streamlit==1.37.0
+streamlit==1.47.1
 stringzilla==3.12.5
 stumpy==1.13.0
-sympy==1.14.0
+sympy==1.13.1
 tables==3.10.2
 tabulate==0.9.0
 tbb==2022.2.0
@@ -549,6 +548,7 @@ tcmlib==1.4.0
 tenacity==8.5.0
 tensorboard==2.18.0
 tensorboard-data-server==0.7.2
+tensorflow==2.18.0
 tensorflow-datasets==4.9.9
 tensorflow-hub==0.16.1
 tensorflow-io-gcs-filesystem==0.37.1
@@ -569,23 +569,25 @@ tifffile==2025.6.11
 tiktoken==0.9.0
 timm==1.0.19
 tinycss2==1.4.0
-tokenizers==0.21.4
+tokenizers==0.21.2
 toml==0.10.2
 tomlkit==0.13.3
 toolz==0.12.1
-torch==2.7.1
+torch @ https://download.pytorch.org/whl/cu124/torch-2.6.0%2Bcu124-cp311-cp311-linux_x86_64.whl
 torchao==0.10.0
+torchaudio @ https://download.pytorch.org/whl/cu124/torchaudio-2.6.0%2Bcu124-cp311-cp311-linux_x86_64.whl
 torchdata==0.11.0
 torchsummary==1.5.1
 torchtune==0.6.1
+torchvision @ https://download.pytorch.org/whl/cu124/torchvision-0.21.0%2Bcu124-cp311-cp311-linux_x86_64.whl
 tornado==6.4.2
 tqdm==4.67.1
 traitlets==5.7.1
 traittypes==0.2.1
-transformers==4.54.1
+transformers==4.54.0
 treelite==4.4.1
 treescope==0.1.9
-triton==3.3.1
+triton==3.2.0
 tsfresh==0.21.0
 tweepy==4.16.0
 typeguard==4.4.4
@@ -608,7 +610,7 @@ vega-datasets==0.9.0
 wadllib==1.3.6
 wandb==0.21.0
 wasabi==1.1.3
-watchdog==4.0.2
+watchdog==6.0.0
 wcwidth==0.2.13
 weasel==0.4.1
 webcolors==24.11.1
