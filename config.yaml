@@ -1,20 +1,25 @@
-
+constants:
+  emotion_labels:
+  - Ira
+  - Miedo
+  - Tristeza
+  - "Alegr\xEDa"
+  - Confianza
+  - Sorpresa
 data_paths:
-  emotion_corpus_local: './data/emotion_corpus_es.csv'
-model_paths:
-  emotion_classifier: './saved_models/emotion_classifier'
+  emotion_corpus_local: ./data/emotion_corpus_es.csv
 model_params:
-  cognitive_tutor: # Mantenido por si se usa en otro script
+  cognitive_tutor:
     random_state: 42
   emotion_classifier:
-    model_name: "dccuchile/bert-base-spanish-wwm-cased"
     experimental_pipeline:
-      cv_folds: 3 # Reducido a 3 para una ejecución más rápida en la demo
+      cv_folds: 3
+    model_name: dccuchile/bert-base-spanish-wwm-cased
     training_params:
-      num_train_epochs: 1 # Reducido a 1 para una ejecución rápida
       learning_rate: 2e-5
-      per_device_train_batch_size: 16
-      report_to: "none"
       logging_steps: 500
-constants:
-  emotion_labels: ['Ira', 'Miedo', 'Tristeza', 'Alegría', 'Confianza', 'Sorpresa'] # Se quita Neutral y Anticipación que no están en el nuevo dataset
+      num_train_epochs: 1
+      per_device_train_batch_size: 16
+      report_to: none
+model_paths:
+  emotion_classifier: ./saved_models/emotion_classifier
