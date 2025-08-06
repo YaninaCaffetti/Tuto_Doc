@@ -1,3 +1,4 @@
+# src/emotion_classifier.py (Versión Experimental con Hyperparameter Tuning, CV y Análisis de Errores)
 
 import pandas as pd
 import torch
@@ -5,17 +6,34 @@ from torch import nn
 import numpy as np
 import os
 import warnings
+import requests
+import matplotlib.pyplot as plt
+import seaborn as sns
+import optuna
+
+# --- SKLearn Imports ---
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.metrics import classification_report, f1_score
+from sklearn.metrics import classification_report, f1_score, confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+
+# --- Hugging Face Imports ---
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from datasets import load_dataset, Dataset, Features, ClassLabel, Value
 
+# --- 1. CLASE DE CLASIFICACIÓN (Para Inferencia) ---
 class EmotionClassifier:
-    def __init__(self, model, tokenizer):
+    """
+    Clasificador para la inferencia de emociones a partir de texto.
+    """
+    def __init__(self, model: AutoModelForSequenceClassification, tokenizer: AutoTokenizer):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model.to(self.device)
         self.tokenizer = tokenizer
+        print(f"Clasificador de Emociones inicializado en: {self.device.upper()}")
+
     def predict_proba(self, text: str) -> dict:
         if isinstance(text, str): text = [text]
         inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
@@ -23,10 +41,14 @@ class EmotionClassifier:
             logits = self.model(**inputs).logits
         probabilities = torch.nn.functional.softmax(logits, dim=-1)[0]
         return {self.model.config.id2label[i]: prob.item() for i, prob in enumerate(probabilities)}
-    def predict(self, text: str) -> str:
-        return max(self.predict_proba(text), key=self.predict_proba(text).get)
 
+    def predict(self, text: str) -> str:
+        probs = self.predict_proba(text)
+        return max(probs, key=probs.get)
+
+# --- 2. LÓGICA DE PREPARACIÓN DE DATOS ---
 def get_custom_domain_data() -> pd.DataFrame:
+    """Carga el corpus de emociones específico del dominio de la tesis."""
     data_custom_list = [
         ("¡Esto nunca funciona como debería!", "Ira"), ("Mi hipótesis fue refutada", "Tristeza"),
         ("Siempre creí que este sistema funcionaría.", "Confianza"), ("No sé cómo voy a superar esto.", "Miedo"),
@@ -38,6 +60,10 @@ def get_custom_domain_data() -> pd.DataFrame:
     return pd.DataFrame(data_custom_list, columns=['text', 'emotion'])
 
 def download_and_prepare_dataset(emotion_labels: list) -> pd.DataFrame:
+    """
+    Descarga un dataset público desde Hugging Face, lo procesa y lo combina
+    con el corpus de dominio para crear un set de datos de entrenamiento robusto.
+    """
     print("  › Cargando dataset 'emotion' desde el Hub de Hugging Face...")
     try:
         # Cargar el dataset público estándar
@@ -66,7 +92,13 @@ def download_and_prepare_dataset(emotion_labels: list) -> pd.DataFrame:
         warnings.warn(f"No se pudo descargar el dataset público. Usando solo corpus de dominio. Error: {e}")
         return get_custom_domain_data()
 
+# --- 3. PIPELINE DE ENTRENAMIENTO Y EVALUACIÓN AVANZADO ---
+
 class WeightedLossTrainer(Trainer):
+    """
+    Trainer de Hugging Face personalizado que utiliza una función de pérdida
+    ponderada para mitigar el efecto del desbalance de clases.
+    """
     def __init__(self, *args, class_weights=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.class_weights = class_weights.to(self.args.device) if class_weights is not None else None
@@ -79,6 +111,9 @@ class WeightedLossTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
 def train_and_evaluate_emotion_classifier(config: dict):
+    """
+    Orquesta el pipeline experimental completo para el clasificador de emociones.
+    """
     cfg_emo = config['model_params']['emotion_classifier']
     EMOTION_LABELS = config['constants']['emotion_labels']
     RANDOM_STATE = config['model_params']['cognitive_tutor']['random_state']
@@ -90,13 +125,13 @@ def train_and_evaluate_emotion_classifier(config: dict):
     df_processed['label'] = df_processed['emotion'].map(label2id)
 
     # Validación Cruzada
-    n_splits = config['model_params']['emotion_classifier']['experimental_pipeline']['cv_folds']
+    n_splits = cfg_emo['experimental_pipeline']['cv_folds']
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_STATE)
     
     all_metrics = []
     
     for fold, (train_index, val_index) in enumerate(skf.split(df_processed['text'], df_processed['emotion'])):
-        print(f"\n  --- Fold {fold + 1}/{n_splits} ---")
+        print(f"\\n  --- Fold {fold + 1}/{n_splits} ---")
         train_df = df_processed.iloc[train_index]
         
         class_weights = compute_class_weight('balanced', classes=np.unique(train_df['emotion']), y=train_df['emotion'])
@@ -113,7 +148,11 @@ def train_and_evaluate_emotion_classifier(config: dict):
         
         model = AutoModelForSequenceClassification.from_pretrained(cfg_emo['model_name'], num_labels=len(EMOTION_LABELS), id2label=id2label, label2id=label2id)
         
-        training_args = TrainingArguments(output_dir=f"./cv_results/fold_{fold}", **config['model_params']['emotion_classifier']['training_params'])
+        training_params = cfg_emo['training_params']
+        # Forzar la conversión de tipo para evitar errores
+        training_params['learning_rate'] = float(training_params['learning_rate'])
+        
+        training_args = TrainingArguments(output_dir=f"./cv_results/fold_{fold}", **training_params)
         
         trainer = WeightedLossTrainer(model=model, args=training_args, train_dataset=train_ds, eval_dataset=val_ds, class_weights=class_weights_tensor)
         trainer.train()
@@ -126,18 +165,23 @@ def train_and_evaluate_emotion_classifier(config: dict):
         all_metrics.append(fold_f1)
         print(f"  › F1-Score (Macro) para el Fold {fold + 1}: {fold_f1:.3f}")
 
-    print(f"\n--- 📊 Resultados Finales de CV: F1-Score Promedio: {np.mean(all_metrics):.3f} ± {np.std(all_metrics):.3f} ---")
+    print(f"\\n--- 📊 Resultados Finales de CV: F1-Score Promedio: {np.mean(all_metrics):.3f} ± {np.std(all_metrics):.3f} ---")
     
     # Entrenamiento Final
-    print("\n--- 🚂 Entrenando modelo final con TODOS los datos... ---")
+    print("\\n--- 🚂 Entrenando modelo final con TODOS los datos... ---")
     full_dataset = Dataset.from_pandas(df_processed).map(tokenize, batched=True)
     final_model = AutoModelForSequenceClassification.from_pretrained(cfg_emo['model_name'], num_labels=len(EMOTION_LABELS), id2label=id2label, label2id=label2id)
-    final_args = TrainingArguments(output_dir="./results_emotion_final", **config['model_params']['emotion_classifier']['training_params'])
+    
+    final_training_params = cfg_emo['training_params']
+    final_training_params['learning_rate'] = float(final_training_params['learning_rate'])
+    final_args = TrainingArguments(output_dir="./results_emotion_final", **final_training_params)
+    
     final_trainer = Trainer(model=final_model, args=final_args, train_dataset=full_dataset)
     final_trainer.train()
     
     model_save_path = config['model_paths']['emotion_classifier']
-    print(f"\n  › Guardando el modelo final de producción en: {model_save_path}")
+    print(f"\\n  › Guardando el modelo final de producción en: {model_save_path}")
     os.makedirs(model_save_path, exist_ok=True)
     final_trainer.save_model(model_save_path)
     tokenizer.save_pretrained(model_save_path)
+
