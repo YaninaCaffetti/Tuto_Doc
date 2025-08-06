@@ -1,12 +1,17 @@
 # ============================================
-# ARCHIVO DE CONFIGURACIÓN CENTRALIZADO (v26.0)
+# ARCHIVO DE CONFIGURACIÓN CENTRALIZADO
 # ============================================
 
 # --- Rutas de Archivos y Modelos Guardados ---
 data_paths:
-  endis_raw: './data/base_estudio_discapacidad_2018.csv' 
+  endis_raw: './data/base_estudio_discapacidad_2018.csv'
   demo_profiles: './saved_models/demo_profiles.csv'
-  demo_user_ids: [35906, 77570, 14] # IDs para la demo de la aplicación
+  demo_user_ids: [35906, 77570, 14]
+  
+  # --- Rutas para el Clasificador de Emociones ---
+  emotion_corpus_url: 'https://raw.githubusercontent.com/aylliote/senti-py/master/data/train_es.csv'
+  emotion_corpus_local: './data/emotion_corpus_es.csv'
+  emotion_error_analysis: './results/emotion_error_analysis.csv' 
 
 model_paths:
   emotion_classifier: './saved_models/emotion_classifier'
@@ -22,15 +27,28 @@ model_params:
   
   emotion_classifier:
     model_name: "dccuchile/bert-base-spanish-wwm-cased"
-    epochs: 8
-    learning_rate: 3e-5
+    # --- Parámetros para el entrenamiento final ---
+    epochs: 5 # Épocas para el modelo final, puede ser ajustado por la búsqueda
+    learning_rate: 2e-5 # Tasa de aprendizaje por defecto
     train_batch_size: 8
-    logging_steps: 15
     
+    # --- NUEVA SECCIÓN: Configuración del Pipeline Experimental ---
+    experimental_pipeline:
+      run_hyperparameter_search: false # Cambiar a 'true' para activar la búsqueda
+      cv_folds: 5 # Número de pliegues para la Validación Cruzada
+      
+      # --- Parámetros para la Búsqueda con Optuna ---
+      hp_search:
+        n_trials: 10 # Número de combinaciones a probar
+        epochs_min: 3
+        epochs_max: 8
+        lr_min: 1e-6
+        lr_max: 5e-5
+
 # --- Constantes y Lógica de Negocio ---
 constants:
   umbrales:
-    arquetipo: 0.01
+    arquetipo: 0.10
   
   emotion_labels: ['Ira', 'Miedo', 'Tristeza', 'Alegría', 'Confianza', 'Anticipación', 'Sorpresa', 'Neutral']
 
