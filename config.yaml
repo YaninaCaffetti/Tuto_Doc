@@ -34,7 +34,7 @@ model_params:
     
     # --- NUEVA SECCIÓN: Configuración del Pipeline Experimental ---
     experimental_pipeline:
-      run_hyperparameter_search: false # Cambiar a 'true' para activar la búsqueda
+      run_hyperparameter_search: false # Cambiar a 'true' para activar la búsqueda de hiperparámetros o ir directamente a la validación cruzada con los valores por defecto
       cv_folds: 5 # Número de pliegues para la Validación Cruzada
       
       # --- Parámetros para la Búsqueda con Optuna ---
