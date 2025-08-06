@@ -1,73 +1,20 @@
-# ============================================
-# ARCHIVO DE CONFIGURACIÓN CENTRALIZADO
-# ============================================
 
-# --- Rutas de Archivos y Modelos Guardados ---
 data_paths:
-  endis_raw: './data/base_estudio_discapacidad_2018.csv'
-  demo_profiles: './saved_models/demo_profiles.csv'
-  demo_user_ids: [35906, 77570, 14]
-  
-  # --- Rutas para el Clasificador de Emociones ---
-  emotion_corpus_url: 'https://raw.githubusercontent.com/aylliote/senti-py/master/data/train_es.csv'
   emotion_corpus_local: './data/emotion_corpus_es.csv'
-  emotion_error_analysis: './results/emotion_error_analysis.csv' 
-
 model_paths:
   emotion_classifier: './saved_models/emotion_classifier'
-  cognitive_tutor: './saved_models/cognitive_tutor.joblib'
-
-# --- Parámetros de los Modelos ---
 model_params:
-  cognitive_tutor:
-    test_size: 0.3
+  cognitive_tutor: # Mantenido por si se usa en otro script
     random_state: 42
-    n_estimators: 100
-    max_depth: 10
-  
   emotion_classifier:
     model_name: "dccuchile/bert-base-spanish-wwm-cased"
-    # --- Parámetros para el entrenamiento final ---
-    epochs: 5 # Épocas para el modelo final, puede ser ajustado por la búsqueda
-    learning_rate: 2e-5 # Tasa de aprendizaje por defecto
-    train_batch_size: 8
-    
-    # --- NUEVA SECCIÓN: Configuración del Pipeline Experimental ---
     experimental_pipeline:
-      run_hyperparameter_search: false # Cambiar a 'true' para activar la búsqueda de hiperparámetros o ir directamente a la validación cruzada con los valores por defecto
-      cv_folds: 5 # Número de pliegues para la Validación Cruzada
-      
-      # --- Parámetros para la Búsqueda con Optuna ---
-      hp_search:
-        n_trials: 10 # Número de combinaciones a probar
-        epochs_min: 3
-        epochs_max: 8
-        lr_min: 1e-6
-        lr_max: 5e-5
-
-# --- Constantes y Lógica de Negocio ---
+      cv_folds: 3 # Reducido a 3 para una ejecución más rápida en la demo
+    training_params:
+      num_train_epochs: 1 # Reducido a 1 para una ejecución rápida
+      learning_rate: 2e-5
+      per_device_train_batch_size: 16
+      report_to: "none"
+      logging_steps: 500
 constants:
-  umbrales:
-    arquetipo: 0.10
-  
-  emotion_labels: ['Ira', 'Miedo', 'Tristeza', 'Alegría', 'Confianza', 'Anticipación', 'Sorpresa', 'Neutral']
-
-affective_rules:
-  Tristeza:
-    Potencial_Latente: 1.5
-    Cand_Nec_Sig: 1.2
-  Miedo:
-    Potencial_Latente: 1.4
-    Cand_Nec_Sig: 1.3
-    Prof_Subutil: 0.8
-  Ira:
-    Prof_Subutil: 1.4
-    Potencial_Latente: 0.7
-  Alegría:
-    Nav_Informal: 1.3
-    Joven_Transicion: 1.3
-    Prof_Subutil: 1.2
-  Confianza:
-    Prof_Subutil: 1.4
-    Nav_Informal: 1.2
-    Joven_Transicion: 1.2
+  emotion_labels: ['Ira', 'Miedo', 'Tristeza', 'Alegría', 'Confianza', 'Sorpresa'] # Se quita Neutral y Anticipación que no están en el nuevo dataset
