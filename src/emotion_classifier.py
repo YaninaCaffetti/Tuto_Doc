@@ -1,69 +1,41 @@
-# src/emotion_classifier.py
+# src/emotion_classifier.py 
 
 import pandas as pd
 import torch
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, f1_score
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, pipeline
-from datasets import Dataset, Features, ClassLabel, Value
+from torch import nn
+import numpy as np
+import os
+import warnings
+import requests
 import matplotlib.pyplot as plt
 import seaborn as sns
+import optuna
+
+# --- SKLearn Imports ---
+from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.metrics import classification_report, f1_score, confusion_matrix
+from sklearn.utils.class_weight import compute_class_weight
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
-import os
-import warnings
+
+# --- Hugging Face Imports ---
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer
+from datasets import Dataset, Features, ClassLabel, Value
 
 # --- 1. CLASE DE CLASIFICACIÓN (Para Inferencia) ---
 
 class EmotionClassifier:
     """
-    Un clasificador para inferir emociones de un texto utilizando un modelo
-    pre-entrenado de Hugging Face.
-
-    Esta clase encapsula el modelo y el tokenizador para facilitar la predicción
-    y el cálculo de probabilidades.
+    Clasificador para la inferencia de emociones a partir de texto.
     """
     def __init__(self, model: AutoModelForSequenceClassification, tokenizer: AutoTokenizer):
-        """
-        Inicializa el clasificador de emociones.
-
-        Args:
-            model (AutoModelForSequenceClassification): El modelo de transformers fine-tuned.
-            tokenizer (AutoTokenizer): El tokenizador correspondiente al modelo.
-        """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model.to(self.device)
         self.tokenizer = tokenizer
         print(f"Clasificador de Emociones inicializado en: {self.device.upper()}")
 
-    def predict(self, text: str) -> str:
-        """
-        Predice la emoción dominante en un texto.
-
-        Args:
-            text (str): El texto de entrada a clasificar.
-
-        Returns:
-            str: La etiqueta de la emoción con la mayor probabilidad.
-        """
-        if isinstance(text, str): text = [text]
-        inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
-        with torch.no_grad():
-            logits = self.model(**inputs).logits
-        predictions = [self.model.config.id2label[i] for i in logits.argmax(dim=1).tolist()]
-        return predictions[0] if len(predictions) == 1 else predictions
-    
     def predict_proba(self, text: str) -> dict:
-        """
-        Calcula la distribución de probabilidad de todas las emociones para un texto.
-
-        Args:
-            text (str): El texto de entrada a clasificar.
-
-        Returns:
-            dict: Un diccionario que mapea cada etiqueta de emoción a su probabilidad.
-        """
         if isinstance(text, str): text = [text]
         inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
         with torch.no_grad():
@@ -71,18 +43,14 @@ class EmotionClassifier:
         probabilities = torch.nn.functional.softmax(logits, dim=-1)[0]
         return {self.model.config.id2label[i]: prob.item() for i, prob in enumerate(probabilities)}
 
-# --- 2. LÓGICA DE PREPARACIÓN DE DATOS Y ENTRENAMIENTO ---
+    def predict(self, text: str) -> str:
+        probs = self.predict_proba(text)
+        return max(probs, key=probs.get)
 
-def get_base_emotion_data() -> pd.DataFrame:
-    """
-    Carga el corpus base de emociones desde una lista hardcodeada.
-
-    En una implementación más avanzada, esto leería los datos desde un archivo
-    externo (ej. un CSV) para separar completamente los datos del código.
-
-    Returns:
-        pd.DataFrame: Un DataFrame con las columnas 'text' y 'emotion'.
-    """
+# --- 2. LÓGICA DE PREPARACIÓN DE DATOS ---
+# Sin cambios en la lógica de obtención de datos.
+def get_custom_domain_data() -> pd.DataFrame:
+    """Carga el corpus de emociones específico del dominio de la tesis."""
     data_custom_list = [
         ("¡Esto nunca funciona como debería!", "Ira"), ("Mi hipótesis fue refutada", "Tristeza"),
         ("Siempre creí que este sistema funcionaría.", "Confianza"), ("No sé cómo voy a superar esto.", "Miedo"),
@@ -91,161 +59,195 @@ def get_base_emotion_data() -> pd.DataFrame:
         ("La situación es frustrante.", "Ira"), ("Tengo fe en que el plan funcionará.", "Confianza"),
         ("El procedimiento es claro.", "Neutral"), ("Tengo miedo de no estar a la altura.", "Miedo"),
         ("¡Wow, no puedo creer que esto sea posible!", "Sorpresa"), ("No puedo esperar a ver los resultados.", "Anticipación"),
-        ("¡Qué buena noticia! Esto me da mucho ánimo.", "Alegría"), ("Recibí la documentación para el siguiente paso.", "Neutral"),
-        ("¡No puedo creer la incompetencia, es inaceptable!", "Ira"), ("He perdido toda esperanza en este proceso.", "Tristeza"),
-        ("Estoy seguro de que seguiremos el camino correcto.", "Confianza"), ("Me aterra pensar en las consecuencias si esto falla.", "Miedo"),
-        ("Francamente, el resultado me ha dejado sin palabras.", "Sorpresa"), ("Estoy expectante por los próximos pasos del plan.", "Anticipación"),
-        ("¡Siento un gran alivio y felicidad por esta noticia!", "Alegría"), ("Se ha procesado la solicitud según lo previsto.", "Neutral")
+        ("¡Qué buena noticia! Esto me da mucho ánimo.", "Alegría"), ("Recibí la documentación para el siguiente paso.", "Neutral")
     ]
     return pd.DataFrame(data_custom_list, columns=['text', 'emotion'])
 
-def augment_emotion_data(df: pd.DataFrame, num_augments: int = 4) -> pd.DataFrame:
-    """
-    Aplica aumentación de datos por retrotraducción (Español -> Inglés -> Español).
+def download_and_prepare_dataset(config: dict, emotion_labels: list) -> pd.DataFrame:
+    """Descarga, procesa y guarda un dataset unificado para el entrenamiento."""
+    url = config['data_paths']['emotion_corpus_url']
+    raw_local_path = config['data_paths']['emotion_corpus_local']
+    processed_local_path = raw_local_path.replace('.csv', '_processed.csv')
 
-    Este es un proceso computacionalmente costoso que descarga modelos de traducción
-    y genera nuevas muestras de texto para enriquecer el dataset de entrenamiento.
+    if os.path.exists(processed_local_path):
+        print(f"  › Cargando dataset procesado desde '{processed_local_path}'.")
+        return pd.read_csv(processed_local_path)
 
-    Args:
-        df (pd.DataFrame): El DataFrame original con columnas 'text' y 'emotion'.
-        num_augments (int, optional): El número de versiones aumentadas a generar por cada texto original. Por defecto es 4.
+    if not os.path.exists(raw_local_path):
+        print(f"  › Descargando dataset público de emociones desde {url}...")
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            os.makedirs(os.path.dirname(raw_local_path), exist_ok=True)
+            with open(raw_local_path, 'w', encoding='utf-8') as f:
+                f.write(response.text)
+        except requests.exceptions.RequestException as e:
+            warnings.warn(f"No se pudo descargar el dataset público. Usando solo corpus de dominio. Error: {e}")
+            return get_custom_domain_data()
 
-    Returns:
-        pd.DataFrame: Un DataFrame que contiene tanto los datos originales como los aumentados.
-    """
-    print(f"\n  › Aumentando el dataset de emociones... (Esto puede tardar varios minutos)")
-    try:
-        translator_es_en = pipeline("translation", model="Helsinki-NLP/opus-mt-es-en", device=0 if torch.cuda.is_available() else -1)
-        translator_en_es = pipeline("translation", model="Helsinki-NLP/opus-mt-en-es", device=0 if torch.cuda.is_available() else -1)
-    except Exception as e:
-        warnings.warn(f"No se pudieron cargar los modelos de traducción. Saltando aumentación. Error: {e}")
-        return df
-
-    augmented_rows = []
-    for _, row in df.iterrows():
-        original_text = row['text']
-        for _ in range(num_augments):
-            try:
-                translated_text = translator_es_en(original_text, max_length=128)[0]['translation_text']
-                back_translated_text = translator_en_es(translated_text, max_length=128)[0]['translation_text']
-                augmented_rows.append({'text': back_translated_text, 'emotion': row['emotion']})
-            except Exception as e:
-                warnings.warn(f"No se pudo aumentar la frase: '{original_text}'. Error: {e}")
-                continue
+    df_public = pd.read_csv(raw_local_path, header=None, names=['text', 'emotion_raw'])
+    label_map = {'anger': 'Ira', 'sadness': 'Tristeza', 'fear': 'Miedo', 'joy': 'Alegría', 'surprise': 'Sorpresa', 'love': 'Confianza', 'others': 'Neutral'}
+    df_public['emotion'] = df_public['emotion_raw'].map(label_map)
+    df_public_clean = df_public.dropna(subset=['emotion'])[['text', 'emotion']]
     
-    if not augmented_rows:
-        return df
+    df_domain = get_custom_domain_data()
+    df_combined = pd.concat([df_public_clean, df_domain], ignore_index=True)
+    df_final = df_combined[df_combined['emotion'].isin(emotion_labels)].drop_duplicates().reset_index(drop=True)
+    
+    print(f"  › Dataset combinado creado con {len(df_final)} ejemplos. Guardando en '{processed_local_path}'.")
+    df_final.to_csv(processed_local_path, index=False)
+    return df_final
 
-    df_augmented = pd.DataFrame(augmented_rows)
-    return pd.concat([df, df_augmented], ignore_index=True)
+# --- 3. PIPELINE DE ENTRENAMIENTO Y EVALUACIÓN AVANZADO ---
 
-def train_and_evaluate_emotion_classifier(config: dict, use_augmentation: bool = True):
+def train_and_evaluate_emotion_classifier(config: dict, run_hyperparameter_search: bool = False):
     """
-    Orquesta el pipeline completo para el clasificador de emociones.
-
-    Este proceso incluye:
-    1. Carga y (opcionalmente) aumentación de datos.
-    2. Fine-tuning de un modelo BERT pre-entrenado.
-    3. Guardado del modelo y tokenizador entrenados.
-    4. Evaluación del modelo y comparación con un benchmark clásico.
+    Orquesta el pipeline experimental completo para el clasificador de emociones.
 
     Args:
         config (dict): El diccionario de configuración cargado desde config.yaml.
-        use_augmentation (bool, optional): Si es True, se aplicará la aumentación de datos. Por defecto es True.
+        run_hyperparameter_search (bool): Si es True, ejecuta una búsqueda de
+            hiperparámetros con Optuna antes de la validación cruzada.
     """
-    print("\n--- [PARTE I] Iniciando entrenamiento y evaluación del Clasificador de Emociones... ---")
+    print("\n--- [PARTE I] Iniciando Pipeline Experimental del Clasificador de Emociones... ---")
     
-    # --- A. Preparación de Parámetros y Datos ---
+    # --- A. Preparación de Datos y Parámetros ---
     cfg_emo = config['model_params']['emotion_classifier']
     EMOTION_LABELS = config['constants']['emotion_labels']
     RANDOM_STATE = config['model_params']['cognitive_tutor']['random_state']
     
-    df_base = get_base_emotion_data()
-    
-    if use_augmentation:
-        df_processed = augment_emotion_data(df_base, num_augments=cfg_emo.get('num_augments', 4))
-    else:
-        df_processed = df_base
-        print("\n  › Saltando la aumentación de datos por configuración.")
+    df_processed = download_and_prepare_dataset(config, EMOTION_LABELS)
 
-    print(f"  › Tamaño del dataset de emociones final: {len(df_processed)} ejemplos.")
-    
     label2id = {label: i for i, label in enumerate(EMOTION_LABELS)}
+    id2label = {i: label for i, label in enumerate(EMOTION_LABELS)}
     df_processed['label'] = df_processed['emotion'].map(label2id)
 
-    train_df, test_df = train_test_split(df_processed, test_size=0.25, random_state=RANDOM_STATE, stratify=df_processed['label'])
-    
-    emotion_features = Features({'text': Value('string'), 'emotion': Value('string'), 'label': ClassLabel(names=EMOTION_LABELS)})
-    train_ds = Dataset.from_pandas(train_df.reset_index(drop=True), features=emotion_features)
-    test_ds = Dataset.from_pandas(test_df.reset_index(drop=True), features=emotion_features)
-    
-    # --- B. Entrenamiento del Modelo BERT ---
+    def model_init():
+        """Función requerida por Optuna para cargar un modelo nuevo en cada trial."""
+        return AutoModelForSequenceClassification.from_pretrained(
+            cfg_emo['model_name'],
+            num_labels=len(EMOTION_LABELS),
+            id2label=id2label,
+            label2id=label2id
+        )
+
     tokenizer = AutoTokenizer.from_pretrained(cfg_emo['model_name'])
-    model = AutoModelForSequenceClassification.from_pretrained(cfg_emo['model_name'], num_labels=len(EMOTION_LABELS), id2label={i: l for i, l in enumerate(EMOTION_LABELS)}, label2id=label2id)
-    
-    def tokenize_function(examples): return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=128)
+    def tokenize_function(examples): 
+        return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=128)
 
-    tokenized_train = train_ds.map(tokenize_function, batched=True)
-    tokenized_test = test_ds.map(tokenize_function, batched=True)
+    best_params = {
+        "learning_rate": float(cfg_emo['learning_rate']),
+        "num_train_epochs": cfg_emo['epochs']
+    }
 
-    print("\n  › Entrenando el clasificador de emociones...")
+    # --- B. (Opcional) Búsqueda de Hiperparámetros con Optuna ---
+    if run_hyperparameter_search:
+        print("\n--- 🔍 Iniciando Búsqueda de Hiperparámetros con Optuna... ---")
+        
+        # Dividir una pequeña porción para la búsqueda
+        train_df_hp, eval_df_hp = train_test_split(df_processed, test_size=0.3, random_state=RANDOM_STATE, stratify=df_processed['label'])
+        train_ds_hp = Dataset.from_pandas(train_df_hp).map(tokenize_function, batched=True)
+        eval_ds_hp = Dataset.from_pandas(eval_df_hp).map(tokenize_function, batched=True)
+
+        def objective(trial: optuna.Trial):
+            training_args = TrainingArguments(
+                output_dir="./hp_search_results",
+                learning_rate=trial.suggest_float("learning_rate", 1e-6, 5e-5, log=True),
+                num_train_epochs=trial.suggest_int("num_train_epochs", 3, 8),
+                per_device_train_batch_size=cfg_emo['train_batch_size'],
+                evaluation_strategy="epoch",
+                logging_steps=float('inf'), # Desactivar logs intermedios
+                report_to="none"
+            )
+            trainer = Trainer(model_init=model_init, args=training_args, train_dataset=train_ds_hp, eval_dataset=eval_ds_hp)
+            result = trainer.train()
+            return result.training_loss
+
+        study = optuna.create_study(direction="minimize")
+        study.optimize(objective, n_trials=10) # 10 trials para una búsqueda razonable
+        best_params = study.best_params
+        print(f"--- ✅ Búsqueda finalizada. Mejores parámetros encontrados: {best_params} ---")
+
+    # --- C. Validación Cruzada (Cross-Validation) ---
+    print("\n--- 🔄 Iniciando Validación Cruzada (K-Fold)... ---")
+    n_splits = 5 # 5 folds es un estándar robusto
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_STATE)
     
-    training_args = TrainingArguments(
-        output_dir="./results_emotion", 
-        num_train_epochs=cfg_emo['epochs'], 
-        per_device_train_batch_size=cfg_emo['train_batch_size'], 
-        learning_rate=float(cfg_emo['learning_rate']),
-        logging_strategy="epoch",
+    all_metrics = []
+    error_analysis_data = []
+
+    for fold, (train_index, val_index) in enumerate(skf.split(df_processed['text'], df_processed['emotion'])):
+        print(f"\n  --- Fold {fold + 1}/{n_splits} ---")
+        train_df = df_processed.iloc[train_index]
+        val_df = df_processed.iloc[val_index]
+
+        train_ds = Dataset.from_pandas(train_df).map(tokenize_function, batched=True)
+        val_ds = Dataset.from_pandas(val_df).map(tokenize_function, batched=True)
+        
+        training_args = TrainingArguments(
+            output_dir=f"./cv_results/fold_{fold}",
+            **best_params, # Usar los mejores parámetros encontrados
+            per_device_train_batch_size=cfg_emo['train_batch_size'],
+            evaluation_strategy="epoch",
+            logging_steps=float('inf'),
+            report_to="none"
+        )
+        
+        model = model_init() # Cargar un modelo fresco para cada fold
+        trainer = Trainer(model=model, args=training_args, train_dataset=train_ds, eval_dataset=val_ds)
+        trainer.train()
+        
+        # Evaluación y Análisis de Errores
+        predictions = trainer.predict(val_ds)
+        y_pred_labels = np.argmax(predictions.predictions, axis=1)
+        y_pred = [id2label[i] for i in y_pred_labels]
+        y_true = val_df['emotion']
+        
+        fold_f1 = f1_score(y_true, y_pred, average='macro', zero_division=0)
+        all_metrics.append(fold_f1)
+        print(f"  › F1-Score (Macro) para el Fold {fold + 1}: {fold_f1:.3f}")
+
+        for i, (true_label, pred_label) in enumerate(zip(y_true, y_pred)):
+            if true_label != pred_label:
+                error_analysis_data.append({
+                    "fold": fold + 1,
+                    "text": val_df.iloc[i]['text'],
+                    "true_emotion": true_label,
+                    "predicted_emotion": pred_label
+                })
+
+    # --- D. Resultados Finales y Artefactos ---
+    print("\n--- 📊 Resultados Finales de la Validación Cruzada ---")
+    mean_f1 = np.mean(all_metrics)
+    std_f1 = np.std(all_metrics)
+    print(f"  › F1-Score (Macro) Promedio: {mean_f1:.3f} ± {std_f1:.3f}")
+
+    # Guardar el análisis de errores
+    if error_analysis_data:
+        error_df = pd.DataFrame(error_analysis_data)
+        error_df.to_csv("emotion_error_analysis.csv", index=False)
+        print("  › Análisis de errores guardado en 'emotion_error_analysis.csv'")
+    
+    # --- E. Entrenamiento Final y Guardado del Modelo de Producción ---
+    print("\n--- 🚂 Entrenando modelo final con TODOS los datos... ---")
+    full_dataset = Dataset.from_pandas(df_processed).map(tokenize_function, batched=True)
+    
+    final_training_args = TrainingArguments(
+        output_dir="./results_emotion_final",
+        **best_params,
+        per_device_train_batch_size=cfg_emo['train_batch_size'],
         report_to="none"
     )
-    trainer = Trainer(model=model, args=training_args, train_dataset=tokenized_train, eval_dataset=tokenized_test)
-    trainer.train()
     
-    # --- C. Guardado del Modelo ---
+    final_model = model_init()
+    final_trainer = Trainer(model=final_model, args=final_training_args, train_dataset=full_dataset)
+    final_trainer.train()
+    
     model_save_path = config['model_paths']['emotion_classifier']
-    print(f"\n  › Guardando el modelo de emociones en: {model_save_path}")
+    print(f"\n  › Guardando el modelo final de producción en: {model_save_path}")
     os.makedirs(model_save_path, exist_ok=True)
-    trainer.save_model(model_save_path)
+    final_trainer.save_model(model_save_path)
     tokenizer.save_pretrained(model_save_path)
-    print("  › Modelo guardado exitosamente.")
+    print("  › Modelo de producción guardado exitosamente.")
 
-    # --- D. Evaluación y Benchmark ---
-    print("\n--- 📊 Evaluación Comparativa del Clasificador de Emociones ---")
-    
-    emotion_classifier = EmotionClassifier(model, tokenizer)
-    y_true_emotion = test_ds['emotion']
-    y_pred_emotion = [emotion_classifier.predict(text) for text in test_ds['text']]
-    
-    print("\n  › Reporte de Clasificación (BERT fine-tuned):")
-    print(classification_report(y_true_emotion, y_pred_emotion, labels=EMOTION_LABELS, zero_division=0))
-    
-    cm_emotion = confusion_matrix(y_true_emotion, y_pred_emotion, labels=EMOTION_LABELS)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm_emotion, annot=True, fmt='d', cmap='Blues', xticklabels=EMOTION_LABELS, yticklabels=EMOTION_LABELS)
-    plt.title('Matriz de Confusión - Clasificador de Emociones (BERT)')
-    plt.xlabel('Predicción'); plt.ylabel('Etiqueta Real')
-    plt.savefig("confusion_matrix_emotion_bert.png")
-    print("  › Matriz de confusión guardada en 'confusion_matrix_emotion_bert.png'")
-    plt.close()
-
-    classic_model = make_pipeline(TfidfVectorizer(), LogisticRegression(max_iter=1000, random_state=RANDOM_STATE))
-    classic_model.fit(train_df['text'], train_df['emotion'])
-    y_pred_classic = classic_model.predict(test_df['text'])
-    
-    print("\n  › Reporte de Clasificación (Benchmark Clásico: TF-IDF + LogReg):")
-    print(classification_report(test_df['emotion'], y_pred_classic, labels=EMOTION_LABELS, zero_division=0))
-
-    # --- E. Conclusión Final ---
-    f1_bert = f1_score(y_true_emotion, y_pred_emotion, average='macro')
-    f1_classic = f1_score(test_df['emotion'], y_pred_classic, average='macro')
-    
-    print("\n--- Resumen de Comparación (F1-Score Macro) ---")
-    print(f"  - Modelo BERT fine-tuned: {f1_bert:.3f}")
-    print(f"  - Modelo Clásico (TF-IDF): {f1_classic:.3f}")
-
-    if f1_bert > f1_classic:
-        print("\n  › Conclusión: El modelo BERT demuestra un rendimiento superior al benchmark clásico.")
-    else:
-        print("\n  › Conclusión: El modelo BERT no supera al benchmark clásico. Se recomienda revisar los datos o el modelo.")
-
-    print("--- ✅ Clasificador de Emociones Entrenado y Evaluado. ---")
+    print("--- ✅ Pipeline Experimental del Clasificador de Emociones Finalizado. ---")
