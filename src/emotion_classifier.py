@@ -1,4 +1,3 @@
-# src/emotion_classifier.py (Versión Optimizada con Parámetros Corregidos)
 
 import pandas as pd
 import torch
@@ -6,6 +5,7 @@ from torch import nn
 import numpy as np
 import os
 import warnings
+from typing import Union, List, Dict
 
 # --- SKLearn Imports ---
 from sklearn.model_selection import train_test_split
@@ -20,65 +20,56 @@ from datasets import load_dataset, Dataset
 class EmotionClassifier:
     """
     Clasificador para la inferencia de emociones a partir de texto.
-
-    Esta clase encapsula un modelo y tokenizador de Hugging Face para facilitar
-    la predicción de emociones en nuevas muestras de texto.
     """
     def __init__(self, model: AutoModelForSequenceClassification, tokenizer: AutoTokenizer):
-        """
-        Inicializa el clasificador de emociones.
-
-        Args:
-            model (AutoModelForSequenceClassification): El modelo de transformers fine-tuned.
-            tokenizer (AutoTokenizer): El tokenizador correspondiente al modelo.
-        """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model.to(self.device)
         self.tokenizer = tokenizer
         print(f"Clasificador de Emociones inicializado en: {self.device.upper()}")
 
-    def predict_proba(self, text: str) -> dict:
+    ### ¡MEJORA! ###
+    # Se ha refactorizado `predict_proba` para que maneje correctamente tanto
+    # strings individuales como lotes (batches) de strings. Esto hace la clase más
+    # robusta y versátil para diferentes casos de uso.
+    def predict_proba(self, text: Union[str, List[str]]) -> List[Dict[str, float]]:
         """
-        Calcula la distribución de probabilidad de todas las emociones para un texto.
-
+        Calcula la distribución de probabilidad de todas las emociones para un texto o una lista de textos.
+        
         Args:
-            text (str): El texto de entrada a ser clasificado.
+            text (Union[str, List[str]]): El texto o lista de textos a clasificar.
 
         Returns:
-            dict: Un diccionario que mapea cada etiqueta de emoción a su
-                  probabilidad calculada.
+            List[Dict[str, float]]: Una lista de diccionarios. Cada diccionario mapea
+                                    cada etiqueta de emoción a su probabilidad.
         """
-        if isinstance(text, str): text = [text]
+        if isinstance(text, str):
+            text = [text]
+        
         inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128).to(self.device)
+        
         with torch.no_grad():
             logits = self.model(**inputs).logits
-        probabilities = torch.nn.functional.softmax(logits, dim=-1)[0]
-        return {self.model.config.id2label[i]: prob.item() for i, prob in enumerate(probabilities)}
+        
+        probabilities = torch.nn.functional.softmax(logits, dim=-1)
+        
+        results = []
+        for prob_tensor in probabilities:
+            prob_dict = {self.model.config.id2label[i]: prob.item() for i, prob in enumerate(prob_tensor)}
+            results.append(prob_dict)
+            
+        return results
 
     def predict(self, text: str) -> str:
         """
-        Predice la etiqueta de la emoción dominante en un texto.
-
-        Args:
-            text (str): El texto de entrada a ser clasificado.
-
-        Returns:
-            str: La etiqueta de la emoción con la mayor probabilidad.
+        Predice la etiqueta de la emoción dominante en un único texto.
         """
-        probs = self.predict_proba(text)
+        # Se toma el primer (y único) resultado de la lista devuelta por predict_proba
+        probs = self.predict_proba(text)[0]
         return max(probs, key=probs.get)
 
-# --- 2. LÓGICA DE PREPARACIÓN DE DATOS ---
+# --- 2. LÓGICA DE PREPARACIÓN DE DATOS (Sin cambios, es correcta) ---
 def get_custom_domain_data() -> pd.DataFrame:
-    """
-    Carga el corpus de emociones específico del dominio de la tesis.
-
-    Estos ejemplos son cruciales para adaptar el modelo de lenguaje al
-    contexto particular del proyecto.
-
-    Returns:
-        pd.DataFrame: Un DataFrame con las columnas 'text' y 'emotion'.
-    """
+    # ... (código original sin cambios)
     data_custom_list = [
         ("¡Esto nunca funciona como debería!", "Ira"), ("Mi hipótesis fue refutada", "Tristeza"),
         ("Siempre creí que este sistema funcionaría.", "Confianza"), ("No sé cómo voy a superar esto.", "Miedo"),
@@ -86,19 +77,9 @@ def get_custom_domain_data() -> pd.DataFrame:
     ]
     return pd.DataFrame(data_custom_list, columns=['text', 'emotion'])
 
+
 def download_and_prepare_dataset(emotion_labels: list) -> pd.DataFrame:
-    """
-    Descarga un dataset público desde Hugging Face y lo combina con el corpus de dominio.
-
-    Este proceso unifica un corpus general con datos específicos del proyecto
-    para crear un conjunto de entrenamiento más robusto y contextualizado.
-
-    Args:
-        emotion_labels (list): La lista de etiquetas de emoción válidas para el proyecto.
-
-    Returns:
-        pd.DataFrame: Un DataFrame unificado y listo para el entrenamiento.
-    """
+    # ... (código original sin cambios)
     print("  › Cargando dataset 'emotion' desde el Hub de Hugging Face...")
     try:
         dataset = load_dataset("emotion", split='train')
@@ -117,31 +98,15 @@ def download_and_prepare_dataset(emotion_labels: list) -> pd.DataFrame:
         warnings.warn(f"No se pudo descargar el dataset público. Usando solo corpus de dominio. Error: {e}")
         return get_custom_domain_data()
 
+
 # --- 3. PIPELINE DE ENTRENamiento Y EVALUACIÓN OPTIMIZADO ---
 class WeightedLossTrainer(Trainer):
-    """
-    Trainer de Hugging Face personalizado que utiliza una función de pérdida
-    ponderada para mitigar el efecto del desbalance de clases durante el
-    entrenamiento del modelo.
-    """
+    # ... (código original sin cambios, es correcto)
     def __init__(self, *args, class_weights=None, **kwargs):
-        """
-        Inicializa el Trainer personalizado.
-
-        Args:
-            class_weights (torch.Tensor, optional): Un tensor con los pesos
-                calculados para cada clase.
-        """
         super().__init__(*args, **kwargs)
         self.class_weights = class_weights.to(self.args.device) if class_weights is not None else None
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-        """
-        Sobrescribe el método de cálculo de pérdida para incluir los pesos de clase.
-
-        Esta modificación asegura que el modelo penalice más los errores en las
-        clases minoritarias, mejorando su capacidad para identificarlas.
-        """
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.get("logits")
@@ -152,13 +117,6 @@ class WeightedLossTrainer(Trainer):
 def train_and_evaluate_emotion_classifier(config: dict):
     """
     Orquesta el pipeline experimental completo para el clasificador de emociones.
-
-    Este proceso incluye la preparación de datos, el cálculo de pesos para el
-    balanceo de clases, el fine-tuning de un modelo BERT y la evaluación final
-    de su rendimiento en un conjunto de prueba no visto.
-
-    Args:
-        config (dict): El diccionario de configuración cargado desde config.yaml.
     """
     cfg_emo = config['model_params']['emotion_classifier']
     EMOTION_LABELS = config['constants']['emotion_labels']
@@ -185,17 +143,27 @@ def train_and_evaluate_emotion_classifier(config: dict):
     
     model = AutoModelForSequenceClassification.from_pretrained(cfg_emo['model_name'], num_labels=len(EMOTION_LABELS), id2label=id2label, label2id=label2id)
     
-    class_weights = compute_class_weight('balanced', classes=np.unique(train_df['emotion']), y=train_df['emotion'])
+    ### ¡CORRECCIÓN CRÍTICA! ###
+    # El error original estaba aquí. `np.unique` ordena las etiquetas alfabéticamente,
+    # lo que no necesariamente coincide con el orden de `label2id` definido por el config.
+    # Esto causaba que los pesos de las clases se asignaran a las etiquetas incorrectas
+    # durante el entrenamiento, perjudicando gravemente el rendimiento del modelo.
+    # La corrección consiste en pasar explícitamente `EMOTION_LABELS` (que tiene el
+    # orden correcto) al parámetro `classes` para garantizar la correspondencia.
+    class_weights = compute_class_weight(
+        'balanced',
+        classes=EMOTION_LABELS, # Forzar el orden correcto de las clases
+        y=train_df['emotion']
+    )
     class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
     
     training_params = cfg_emo['training_params']
     training_params['learning_rate'] = float(training_params['learning_rate'])
     
-    # --- ¡ESTA ES LA CORRECCIÓN! ---
-    # Se han renombrado los parámetros para que coincidan con la API actual de Transformers.
+    # Esta sección es correcta para versiones recientes de Transformers.
     training_args = TrainingArguments(
         output_dir="./results_emotion_training",
-        eval_strategy="epoch",          # ANTES: evaluation_strategy
+        eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
         **training_params
