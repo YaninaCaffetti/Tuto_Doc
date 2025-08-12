@@ -1,3 +1,5 @@
+# src/data_processing.py (Versión Refactorizada y Documentada)
+
 import pandas as pd
 import numpy as np
 import os
@@ -16,11 +18,13 @@ except ImportError:
 # --- Configuración del Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# (Las clases IF_HUPM se mantienen sin cambios como evidencia de la tesis)
+# Las clases IF_HUPM se mantienen sin cambios como evidencia de la tesis
 class FuzzyDecisionTreeNode:
+    """Representa un único nodo en el Árbol de Decisión Difuso (IF_HUPM)."""
     def __init__(self, feature_name=None, threshold=None, branches=None, leaf_value=None, is_uncertain=None, class_probabilities=None, n_samples=0):
         self.feature_name, self.threshold, self.branches, self.leaf_value, self.uncertainty, self.class_probabilities, self.n_samples = feature_name, threshold, branches, leaf_value, is_uncertain, class_probabilities, n_samples
 class IF_HUPM:
+    """Implementación de un Árbol de Decisión Difuso simple (IF-HUPM)."""
     def __init__(self, min_samples_split=2, max_depth=10, uncertainty_threshold=0.1):
         self.min_samples_split, self.max_depth, self.uncertainty_threshold, self.root = min_samples_split, max_depth, uncertainty_threshold, None
     def _calculate_entropy(self, y):
@@ -63,18 +67,50 @@ class IF_HUPM:
         return self._predict_single(x, node.branches['<= ' + str(node.threshold) if value <= node.threshold else '> ' + str(node.threshold)])
     def predict(self, X): return X.apply(self._predict_single, axis=1, args=(self.root,))
 
+# --- Funciones del Pipeline de Procesamiento ---
+
 def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Transforma las variables crudas del dataset en características compuestas."""
+    """
+    Transforma las variables crudas del dataset en características compuestas.
+
+    Esta fase convierte códigos numéricos en categorías legibles y crea nuevas
+    variables de alto nivel como 'Perfil_Dificultad_Agrupado', 'CAPITAL_HUMANO',
+    'TIENE_CUD', etc., que son fundamentales para la posterior creación de arquetipos.
+
+    Args:
+        df (pd.DataFrame): El DataFrame crudo (ej. de la encuesta ENDIS).
+
+    Returns:
+        pd.DataFrame: El DataFrame con las nuevas características de ingeniería.
+    """
     logging.info("Ejecutando Fase 1: Ingeniería de Características...")
     df_p=df.copy();cols_num=['dificultad_total','dificultades','tipo_dificultad','MNEA','edad_agrupada','Estado_ocup','cat_ocup','certificado','PC08','pc03','tipo_hogar'];[df_p[col].apply(pd.to_numeric, errors='coerce') for col in cols_num if col in df_p.columns];c_dificultad=[df_p['dificultad_total']==0,df_p['tipo_dificultad']==1,df_p['tipo_dificultad']==2,df_p['tipo_dificultad']==3,df_p['tipo_dificultad']==4,df_p['tipo_dificultad']==5,df_p['tipo_dificultad']==6,df_p['tipo_dificultad']==7,df_p['tipo_dificultad']==8,(df_p['tipo_dificultad']==9)|(df_p['dificultades']==4),df_p['dificultad_total']==1];ch_dificultad=['0_Sin_Dificultad_Registrada','1A_Motora_Unica','1B_Visual_Unica','1C_Auditiva_Unica','1D_Mental_Cognitiva_Unica','1E_Autocuidado_Unica','1F_Habla_Comunicacion_Unica','2_Dos_Dificultades','3_Tres_o_Mas_Dificultades','4_Solo_Certificado','5_Dificultad_General_No_Detallada'];df_p['Perfil_Dificultad_Agrupado']=pd.Series(np.select(c_dificultad,ch_dificultad,default='9_Ignorado_o_No_Clasificado'),index=df_p.index);c_capital=[df_p['MNEA']==5,df_p['MNEA']==4,df_p['MNEA'].isin([1,2,3])];ch_capital=['3_Alto','2_Medio','1_Bajo'];df_p['CAPITAL_HUMANO']=pd.Series(np.select(c_capital,ch_capital,default='9_No_Sabe_o_NC'),index=df_p.index);df_p['GRUPO_ETARIO_INDEC']=df_p['edad_agrupada'].map({1:'0A_0_a_5_anios',2:'0B_6_a_13_anios',3:'1_Joven_Adulto_Temprano (14-39)',4:'2_Adulto_Medio (40-64)',5:'3_Adulto_Mayor (65+)'}).fillna('No Especificado_Edad');df_p['TIENE_CUD']=df_p['certificado'].map({1:'Si_Tiene_CUD',2:'No_Tiene_CUD',9:'Ignorado_CUD'}).fillna('Desconocido_CUD');c_inclusion=[df_p['Estado_ocup']==3,df_p['Estado_ocup']==2,(df_p['Estado_ocup']==1)&(df_p['cat_ocup'].isin([1,3])),(df_p['Estado_ocup']==1)&(df_p['cat_ocup'].isin([2,4]))];ch_inclusion=['1_Exclusion_del_Mercado','2_Busqueda_Sin_Exito','4_Inclusion_Plena_Aprox','3_Inclusion_Precaria_Aprox'];base_inclusion=pd.Series(np.select(c_inclusion,ch_inclusion,default='No_Clasificado_Laboral'),index=df_p.index);df_p['Espectro_Inclusion_Laboral']=base_inclusion.where((df_p['edad_agrupada']>=3)&(df_p['dificultad_total']==1));return df_p
 
 def _simulate_mbti_scores(df: pd.DataFrame) -> pd.DataFrame:
-    """Simula scores de personalidad tipo MBTI basados en características existentes."""
+    """
+    Simula scores de personalidad tipo MBTI basados en características existentes.
+    Esta función es una auxiliar para la ingeniería de arquetipos.
+
+    Args:
+        df (pd.DataFrame): DataFrame con características de la Fase 1.
+
+    Returns:
+        pd.DataFrame: DataFrame con 4 nuevas columnas de scores MBTI simulados.
+    """
     df_out=df.copy();s_ei=pd.Series(0.0,index=df_out.index);s_ei.loc[df_out['Perfil_Dificultad_Agrupado'].isin(['1F_Habla_Comunicacion_Unica','1C_Auditiva_Unica','1D_Mental_Cognitiva_Unica'])]-=.4;s_ei.loc[df_out['Espectro_Inclusion_Laboral']=='1_Exclusion_del_Mercado']-=.3;s_ei.loc[df_out['tipo_hogar']==1]-=.3;df_out['MBTI_EI_score_sim']=s_ei.clip(-1.,1.).round(2);df_out['MBTI_SN_score_sim']=np.select([df_out['CAPITAL_HUMANO']=='1_Bajo',df_out['CAPITAL_HUMANO']=='3_Alto'],[-.5,.5],default=0.);df_out['MBTI_TF_score_sim']=np.select([df_out['pc03']==4,(df_out['pc03'].notna())&(df_out['pc03']!=9)&(df_out['pc03']!=4)],[.5,-.25],default=0.);s_jp=pd.Series(0.,index=df_out.index);s_jp.loc[df_out['Espectro_Inclusion_Laboral']=='3_Inclusion_Precaria_Aprox']+=.5;s_jp.loc[df_out['TIENE_CUD']=='Si_Tiene_CUD']-=.5;df_out['MBTI_JP_score_sim']=s_jp.clip(-1.,1.).round(2)
     return df_out
 
 def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
-    """Aplica las reglas de negocio para calcular la pertenencia a cada arquetipo."""
+    """
+    Aplica las reglas de negocio expertas para calcular la pertenencia a cada arquetipo.
+    Esta es una función auxiliar para la ingeniería de arquetipos.
+
+    Args:
+        df (pd.DataFrame): DataFrame con scores MBTI simulados.
+
+    Returns:
+        pd.DataFrame: DataFrame con nuevas columnas 'Pertenencia_<arquetipo>'.
+    """
     df_out = df.copy()
     def _clasificar_comunicador_desafiado(r):
         ch,pdif,slab,get,ei,sn=r.get('CAPITAL_HUMANO'),r.get('Perfil_Dificultad_Agrupado'),r.get('Espectro_Inclusion_Laboral'),r.get('GRUPO_ETARIO_INDEC'),r.get('MBTI_EI_score_sim'),r.get('MBTI_SN_score_sim');e_a,e_c,e_s=(ch=='3_Alto'),(pdif in['1F_Habla_Comunicacion_Unica','1C_Auditiva_Unica']),(slab in['2_Busqueda_Sin_Exito','3_Inclusion_Precaria_Aprox']);e_m=((pdif in['2_Dos_Dificultades','3_Tres_o_Mas_Dificultades'])and not e_c);pb=0;
@@ -147,7 +183,19 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Calcula el grado de pertenencia de cada perfil a un conjunto de arquetipos."""
+    """
+    Calcula el grado de pertenencia de cada perfil a un conjunto de arquetipos.
+
+    Esta fase crítica inyecta conocimiento experto, simulando scores de personalidad
+    y aplicando reglas heurísticas para determinar la afinidad de un usuario con
+    arquetipos como 'Profesional Subutilizado' o 'Navegante Informal'.
+
+    Args:
+        df (pd.DataFrame): El DataFrame con las características de la Fase 1.
+
+    Returns:
+        pd.DataFrame: El DataFrame enriquecido con las columnas de pertenencia a arquetipos.
+    """
     logging.info("Ejecutando Fase 2: Ingeniería de Arquetipos...")
     df_mbti = _simulate_mbti_scores(df)
     df_archetyped = _calculate_archetype_membership(df_mbti)
@@ -155,7 +203,19 @@ def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
     return df_archetyped
 
 def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
-    """Convierte características categóricas y scores numéricos en variables difusas."""
+    """
+    Convierte características categóricas y scores numéricos en variables difusas.
+
+    Esta fase transforma características en un conjunto de nuevas columnas con un
+    grado de membresía (entre 0 y 1), preparando los datos para ser utilizados
+    por un modelo de machine learning que pueda manejar la incertidumbre.
+
+    Args:
+        df (pd.DataFrame): El DataFrame con las características de la Fase 2.
+
+    Returns:
+        pd.DataFrame: El DataFrame final "fuzzificado", listo para el entrenamiento.
+    """
     logging.info("Ejecutando Fase 3: Fuzzificación...")
     df_out=df.copy()
     def _fuzzificar_capital_humano(r):
@@ -179,6 +239,8 @@ def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 if __name__ == '__main__':
+    # Este bloque se ejecuta cuando el script es llamado directamente.
+    # Orquesta todo el pipeline de procesamiento de datos.
     with open('config.yaml', 'r') as f:
         config = yaml.safe_load(f)
     
