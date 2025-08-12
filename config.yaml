@@ -2,12 +2,15 @@
 # CONFIGURACIÓN DEL TUTOR COGNITIVO-AFECTIVO
 # ===========================================================
 
+mlflow:
+  experiment_name: "Tutor Cognitivo-Afectivo Tesis"
+  tracking_uri: "mlruns" # Carpeta local donde se guardarán los experimentos
+  
 # --- 1. RUTAS DE ARCHIVOS ---
 data_paths:
   demo_profiles: 'data/demo_profiles.csv'
 
   cognitive_training_data: 'data/cognitive_profiles.csv' # Ruta a los datos para entrenar el árbol de decisión
-
   
 model_paths:
   emotion_classifier: 'models/emotion_classifier'
