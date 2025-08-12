@@ -1,5 +1,3 @@
-# train.py (Pipeline de Entrenamiento Unificado)
-
 import yaml
 import traceback
 import argparse
