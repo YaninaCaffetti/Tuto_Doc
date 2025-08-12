@@ -12,7 +12,6 @@ model_paths:
 
 # --- 2. PARÁMETROS DE LOS MODELOS ---
 model_params:
-  # --- Clasificador de Emociones ---
   emotion_classifier:
     model_name: 'dccuchile/bert-base-spanish-wwm-cased'
     training_params:
@@ -23,13 +22,10 @@ model_params:
       weight_decay: 0.01
       logging_dir: './logs'
       logging_steps: 10
-      learning_rate: "2e-5" # Mantener como string, se convierte a float en el script
-    
-    # --- ¡NUEVO! Sección para controlar el aumento de datos ---
+      learning_rate: "2e-5"
     data_augmentation:
-      use_back_translation: true # Poner en 'false' para entrenar sin aumento
+      use_back_translation: true
 
-  # --- Tutor Cognitivo (Árbol de Decisión) ---
   cognitive_tutor:
     random_state: 42
     max_depth: 5
@@ -46,30 +42,26 @@ constants:
     - "Confianza"
     - "Anticipación"
 
-# --- Sección para umbrales y reglas de negocio ---
+  negative_emotions:
+    - "Ira"
+    - "Tristeza"
+    - "Miedo"
+
 system_thresholds:
   affective_engine:
-    min_emotion_probability: 0.1  # Probabilidad mínima para que una emoción active una regla
-    min_recommendation_weight: 0.15 # Peso normalizado mínimo para mostrar la recomendación de un experto
+    min_emotion_probability: 0.1
+    min_recommendation_weight: 0.15
 
-# Reglas que modulan la activación de los expertos según la emoción
 affective_rules:
-  # Si la emoción es IRA...
   Ira:
-    Com_Desafiado: 1.5  # ...aumenta la prioridad del Tutor de Interacción un 50%
-    Potencial_Latente: 1.3 # ...aumenta la del Tutor de Bienestar un 30%
-  
-  # Si la emoción es MIEDO...
+    Com_Desafiado: 1.5
+    Potencial_Latente: 1.3
   Miedo:
     Potencial_Latente: 1.6
     Cand_Nec_Sig: 1.4
-    
-  # Si la emoción es TRISTEZA...
   Tristeza:
     Potencial_Latente: 1.7
     Prof_Subutil: 1.2
-    
-  # Si la emoción es CONFIANZA...
   Confianza:
     Prof_Subutil: 1.5
     Nav_Informal: 1.3
