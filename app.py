@@ -1,4 +1,4 @@
- app.py 
+# app.py (Sincronizado con la nueva lógica del Tutor Cognitivo)
 
 import streamlit as st
 import yaml
@@ -25,20 +25,6 @@ except ImportError as e:
 def load_all_models_and_data(config_path: str = 'config.yaml') -> tuple:
     """
     Carga y prepara todos los artefactos necesarios para la aplicación.
-
-    Esta función, cacheada por Streamlit, se encarga de:
-    1. Cargar el archivo de configuración `config.yaml`.
-    2. Validar la existencia de las rutas a los modelos y datos.
-    3. Instanciar el clasificador de emociones.
-    4. Cargar el modelo del tutor cognitivo.
-    5. Cargar los perfiles de usuario de demostración.
-    6. Instanciar el sistema Mixture-of-Experts (MoE).
-
-    Args:
-        config_path (str): La ruta al archivo de configuración YAML.
-
-    Returns:
-        tuple: Una tupla conteniendo (emotion_classifier, cognitive_tutor_system, df_profiles).
     """
     with st.spinner("Cargando modelos y preparando el sistema..."):
         try:
@@ -64,18 +50,23 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> tuple:
         cognitive_model = joblib.load(paths['cognitive_tutor'])
         df_profiles = pd.read_csv(config['data_paths']['demo_profiles'], index_col='ID')
         feature_columns = [col for col in df_profiles.columns if '_memb' in col]
-        cognitive_tutor_system = MoESystem(cognitive_model, feature_columns, config['affective_rules'])
         
-        return emotion_classifier, cognitive_tutor_system, df_profiles
+        thresholds = config.get('system_thresholds', {})
+        cognitive_tutor_system = MoESystem(
+            cognitive_model, 
+            feature_columns, 
+            config['affective_rules'],
+            thresholds 
+        )
+        
+        
+        return emotion_classifier, cognitive_tutor_system, df_profiles, config
 
 # --- 3. FUNCIONES DE LA INTERFAZ DE USUARIO ---
 
 def get_initial_metrics() -> Dict:
     """
     Genera la estructura de diccionario para inicializar o reiniciar las métricas de la sesión.
-
-    Returns:
-        Dict: Un diccionario con contadores y acumuladores para las métricas de la sesión.
     """
     return {
         "total_interactions": 0,
@@ -85,15 +76,9 @@ def get_initial_metrics() -> Dict:
         "profile_emotion_counts": {}
     }
 
-def initialize_session_state(df_profiles: pd.DataFrame):
+def initialize_session_state(df_profiles: pd.DataFrame, config: Dict):
     """
     Inicializa las variables clave en el `session_state` de Streamlit si no existen.
-
-    Asegura que las claves 'messages', 'metrics' y 'selected_profile_id' tengan
-    un valor inicial al arrancar la aplicación por primera vez.
-
-    Args:
-        df_profiles (pd.DataFrame): El DataFrame de perfiles para obtener el ID inicial.
     """
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -101,24 +86,23 @@ def initialize_session_state(df_profiles: pd.DataFrame):
         st.session_state.metrics = get_initial_metrics()
     if 'selected_profile_id' not in st.session_state:
         st.session_state.selected_profile_id = df_profiles.index.tolist()[0]
+    # MEJORA: Almacenar la configuración en el estado de la sesión para un acceso fácil.
+    if 'config' not in st.session_state:
+        st.session_state.config = config
 
 def update_metrics(analysis: Dict):
     """
     Actualiza las métricas de la sesión con los datos de la última interacción.
-
-    Esta función se llama después de cada respuesta del asistente para registrar
-    la emoción detectada y actualizar los contadores correspondientes.
-
-    Args:
-        analysis (Dict): Un diccionario que contiene el análisis de la última respuesta del usuario,
-                         incluyendo 'top_emotion' y 'top_emotion_prob'.
     """
     metrics = st.session_state.metrics
     profile_id = st.session_state.selected_profile_id
     top_emotion = analysis['top_emotion']
 
+    # MEJORA: La lista de emociones negativas ahora se lee desde la configuración.
+    negative_emotions = st.session_state.config.get('constants', {}).get('negative_emotions', [])
+    
     metrics["total_interactions"] += 1
-    if top_emotion in ["Ira", "Tristeza", "Miedo"]:
+    if top_emotion in negative_emotions:
         metrics["negative_emotion_count"] += 1
 
     metrics["emotion_counts"][top_emotion] = metrics["emotion_counts"].get(top_emotion, 0) + 1
@@ -132,13 +116,6 @@ def update_metrics(analysis: Dict):
 def render_sidebar(df_profiles: pd.DataFrame):
     """
     Crea y muestra todo el contenido de la barra lateral de la aplicación.
-
-    Incluye la información del proyecto, los controles de simulación (selección de perfil,
-    reinicio) y el dashboard de métricas de la sesión en tiempo real.
-
-    Args:
-        df_profiles (pd.DataFrame): El DataFrame que contiene los perfiles de usuario
-                                    para poblar el selector.
     """
     with st.sidebar:
         st.header("Sobre el Proyecto")
@@ -188,18 +165,6 @@ def render_sidebar(df_profiles: pd.DataFrame):
 def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor_system: MoESystem, df_profiles: pd.DataFrame):
     """
     Renderiza la interfaz de chat principal y maneja la lógica de la conversación.
-
-    Esta función se encarga de:
-    1. Mostrar el historial de la conversación.
-    2. Capturar la nueva entrada del usuario.
-    3. Orquestar la llamada al clasificador de emociones y al tutor cognitivo.
-    4. Mostrar la respuesta del asistente y el análisis detallado.
-    5. Actualizar el estado de la sesión.
-
-    Args:
-        emotion_classifier (EmotionClassifier): Instancia del clasificador de emociones.
-        cognitive_tutor_system (MoESystem): Instancia del sistema MoE.
-        df_profiles (pd.DataFrame): DataFrame con los perfiles de usuario.
     """
     st.title("🧠 Tutor Cognitivo Adaptativo con IA Afectiva 🤖")
 
@@ -225,12 +190,18 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     user_profile = df_profiles.loc[st.session_state.selected_profile_id]
                     emotion_probs = emotion_classifier.predict_proba(prompt)[0] 
                     top_emotion = max(emotion_probs, key=emotion_probs.get)
-                    cognitive_plan = cognitive_tutor_system.get_cognitive_plan(user_profile, emotion_probs)
-                    predicted_archetype = cognitive_tutor_system.cognitive_model.predict(user_profile[cognitive_tutor_system.feature_columns].values.reshape(1, -1))[0]
+                    
+                    cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
+                        user_profile, 
+                        emotion_probs
+                    )
 
-                    if top_emotion in ["Ira", "Tristeza", "Miedo"]: 
+                    negative_emotions = st.session_state.config.get('constants', {}).get('negative_emotions', [])
+                    positive_emotions = ["Anticipación", "Alegría", "Confianza"] # Esto también podría moverse al config
+
+                    if top_emotion in negative_emotions: 
                         intro_message = f"Percibo que puedes sentirte con un poco de **{top_emotion.lower()}**. Revisemos esto juntos."
-                    elif top_emotion in ["Anticipación", "Alegría", "Confianza"]: 
+                    elif top_emotion in positive_emotions: 
                         intro_message = f"¡Excelente! Percibo un estado de **{top_emotion.lower()}**. Para potenciar ese impulso, este es el plan:"
                     else: 
                         intro_message = "Entendido. Este es el plan de acción sugerido:"
@@ -257,15 +228,12 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
 def main():
     """
     Función principal que orquesta la ejecución de la aplicación Streamlit.
-
-    Configura la página, carga los datos y modelos, y renderiza los componentes
-    de la interfaz de usuario en el orden correcto.
     """
     st.set_page_config(page_title="Tutor Cognitivo Adaptativo", layout="centered", initial_sidebar_state="expanded")
 
-    emotion_classifier, cognitive_tutor_system, df_profiles = load_all_models_and_data()
+    emotion_classifier, cognitive_tutor_system, df_profiles, config = load_all_models_and_data()
     
-    initialize_session_state(df_profiles)
+    initialize_session_state(df_profiles, config)
     render_sidebar(df_profiles)
     render_chat_interface(emotion_classifier, cognitive_tutor_system, df_profiles)
 
