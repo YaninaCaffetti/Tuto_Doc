@@ -1,25 +1,25 @@
 # ===========================================================
 # CONFIGURACIÓN DEL TUTOR COGNITIVO-AFECTIVO
 # ===========================================================
-
 mlflow:
   experiment_name: "Tutor Cognitivo-Afectivo Tesis"
-  tracking_uri: "mlruns" # Carpeta local donde se guardarán los experimentos
-  
-# --- 1. RUTAS DE ARCHIVOS ---
+  tracking_uri: "mlruns"
+
 data_paths:
   demo_profiles: 'data/demo_profiles.csv'
+  cognitive_training_data: 'data/cognitive_profiles.csv'
 
-  cognitive_training_data: 'data/cognitive_profiles.csv' # Ruta a los datos para entrenar el árbol de decisión
-  
 model_paths:
   emotion_classifier: 'models/emotion_classifier'
   cognitive_tutor: 'models/cognitive_tutor.joblib'
 
-# --- 2. PARÁMETROS DE LOS MODELOS ---
 model_params:
   emotion_classifier:
     model_name: 'dccuchile/bert-base-spanish-wwm-cased'
+    data_augmentation:
+      use_back_translation: true
+    
+    early_stopping_patience: 2
     training_params:
       num_train_epochs: 3
       per_device_train_batch_size: 16
@@ -29,15 +29,16 @@ model_params:
       logging_dir: './logs'
       logging_steps: 10
       learning_rate: "2e-5"
-    data_augmentation:
-      use_back_translation: true
+ 
+      evaluation_strategy: epoch
+      save_strategy: epoch
+      metric_for_best_model: f1_macro
 
   cognitive_tutor:
     random_state: 42
     max_depth: 5
     min_samples_leaf: 10
 
-# --- 3. CONSTANTES Y REGLAS DEL SISTEMA ---
 constants:
   emotion_labels:
     - "Alegría"
@@ -46,7 +47,7 @@ constants:
     - "Miedo"
     - "Sorpresa"
     - "Confianza"
-    - "Anticipación"
+    - "Anticipación"   # Nota: viene solo del corpus propio
 
   negative_emotions:
     - "Ira"
