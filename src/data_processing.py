@@ -1,23 +1,18 @@
-# src/data_processing.py 
+# src/data_processing.py (Pipeline de Generación de Datos)
 
 import pandas as pd
 import numpy as np
+import os
 from collections import Counter
+
+# --- ¡Clases del Árbol de Decisión Difuso (IF-HUPM) ---
+# Se mantienen en el script como evidencia del trabajo de investigación.
 
 class FuzzyDecisionTreeNode:
     """Representa un único nodo en el Árbol de Decisión Difuso (IF_HUPM)."""
     def __init__(self, feature_name=None, threshold=None, branches=None, leaf_value=None, is_uncertain=None, class_probabilities=None, n_samples=0):
         """
         Inicializa un nodo del árbol.
-
-        Args:
-            feature_name (str, optional): Nombre de la característica por la que se divide.
-            threshold (float, optional): Umbral de división para la característica.
-            branches (dict, optional): Diccionario con las ramas hijas del nodo.
-            leaf_value (str, optional): El valor de la clase si el nodo es una hoja.
-            is_uncertain (bool, optional): Booleano que indica si la clasificación de la hoja es incierta.
-            class_probabilities (dict, optional): Probabilidades de las clases en el nodo hoja.
-            n_samples (int, optional): Número de muestras que llegan a este nodo.
         """
         self.feature_name = feature_name
         self.threshold = threshold
@@ -30,18 +25,10 @@ class FuzzyDecisionTreeNode:
 class IF_HUPM:
     """
     Implementación de un Árbol de Decisión Difuso simple (IF-HUPM).
-
-    Este modelo sirve como un benchmark de "caja blanca" (100% interpretable)
-    para comparar con el modelo RandomForest de "caja negra".
     """
     def __init__(self, min_samples_split=2, max_depth=10, uncertainty_threshold=0.1):
         """
         Inicializa el clasificador de árbol de decisión difuso.
-
-        Args:
-            min_samples_split (int): El número mínimo de muestras requeridas para dividir un nodo.
-            max_depth (int): La profundidad máxima del árbol.
-            uncertainty_threshold (float): Umbral para determinar si una hoja es "incierta".
         """
         self.min_samples_split = min_samples_split
         self.max_depth = max_depth
@@ -70,7 +57,6 @@ class IF_HUPM:
             return None, None, None
         
         n_features = X.shape[1]
-        # Se usa un subconjunto aleatorio de características para la división (similar a RandomForest)
         size_subset = int(np.sqrt(n_features)) if n_features > 1 else 1
         features_to_check = np.random.choice(X.columns, size=size_subset, replace=False)
 
@@ -112,10 +98,8 @@ class IF_HUPM:
         max_prob = probabilities[most_common_class]
         sorted_probs = sorted(probabilities.values(), reverse=True)
         
-        # Una hoja es incierta si la diferencia entre las dos clases más probables es pequeña,
-        # o si la clase más probable no es lo suficientemente dominante.
         is_uncertain = (len(sorted_probs) > 1 and (sorted_probs[0] - sorted_probs[1]) < self.uncertainty_threshold) or \
-                       (max_prob < (1. - self.uncertainty_threshold))
+                           (max_prob < (1. - self.uncertainty_threshold))
         
         leaf_value = most_common_class if not is_uncertain else f"Incierto (posiblemente {most_common_class})"
         return FuzzyDecisionTreeNode(leaf_value=leaf_value, is_uncertain=is_uncertain, class_probabilities=probabilities, n_samples=total)
@@ -140,23 +124,15 @@ class IF_HUPM:
         """Predice la clase para un DataFrame de muestras."""
         return X.apply(self._predict_single, axis=1, args=(self.root,))
 
+# --- Funciones del Pipeline de Procesamiento ---
+
 def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Transforma las variables crudas del dataset ENDIS en características compuestas.
-
-    Esta fase convierte códigos numéricos en categorías legibles y crea nuevas
-    variables de alto nivel como 'Perfil_Dificultad_Agrupado', 'CAPITAL_HUMANO',
-    'TIENE_CUD', etc., que son fundamentales para la posterior creación de arquetipos.
-
-    Args:
-        df (pd.DataFrame): El DataFrame crudo de la encuesta ENDIS.
-
-    Returns:
-        pd.DataFrame: El DataFrame con las nuevas características de ingeniería.
+    Transforma las variables crudas del dataset en características compuestas.
     """
     print("  › Ejecutando Fase 1: Ingeniería de Características...")
     df_p = df.copy()
-    # ... (El código interno es complejo pero la lógica se mantiene)
+    # (El código interno es complejo pero la lógica se mantiene)
     cols_num = ['dificultad_total', 'dificultades', 'tipo_dificultad', 'MNEA', 'edad_agrupada', 'Estado_ocup', 'cat_ocup', 'certificado', 'PC08', 'pc03', 'tipo_hogar']
     for col in cols_num:
         if col in df_p.columns: df_p[col] = pd.to_numeric(df_p[col], errors='coerce')
@@ -175,22 +151,11 @@ def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
 
 def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calcula el grado de pertenencia de cada perfil de usuario a un conjunto de arquetipos.
-
-    Esta es una fase crítica donde se inyecta conocimiento experto. Se simulan
-    puntuaciones de tipo MBTI y luego se aplican una serie de reglas heurísticas
-    complejas para determinar qué tan bien encaja un usuario en arquetipos como
-    'Profesional Subutilizado', 'Navegante Informal', etc.
-
-    Args:
-        df (pd.DataFrame): El DataFrame con las características de la Fase 1.
-
-    Returns:
-        pd.DataFrame: El DataFrame enriquecido con las columnas de pertenencia a arquetipos.
+    Calcula el grado de pertenencia de cada perfil a un conjunto de arquetipos.
     """
     print("  › Ejecutando Fase 2: Ingeniería de Arquetipos...")
     df_out = df.copy()
-    # ... (El código interno es muy denso y específico del dominio, se mantiene tal cual)
+    # (El código interno es muy denso y específico del dominio, se mantiene tal cual)
     s_ei=pd.Series(0.0,index=df_out.index); s_ei.loc[df_out['Perfil_Dificultad_Agrupado'].isin(['1F_Habla_Comunicacion_Unica','1C_Auditiva_Unica','1D_Mental_Cognitiva_Unica'])]-=.4; s_ei.loc[df_out['Espectro_Inclusion_Laboral']=='1_Exclusion_del_Mercado']-=.3; s_ei.loc[df_out['tipo_hogar']==1]-=.3; df_out['MBTI_EI_score_sim']=s_ei.clip(-1.,1.).round(2)
     df_out['MBTI_SN_score_sim']=np.select([df_out['CAPITAL_HUMANO']=='1_Bajo',df_out['CAPITAL_HUMANO']=='3_Alto'],[-.5,.5],default=0.); df_out['MBTI_TF_score_sim']=np.select([df_out['pc03']==4,(df_out['pc03'].notna())&(df_out['pc03']!=9)&(df_out['pc03']!=4)],[.5,-.25],default=0.)
     s_jp=pd.Series(0.,index=df_out.index); s_jp.loc[df_out['Espectro_Inclusion_Laboral']=='3_Inclusion_Precaria_Aprox']+=.5; s_jp.loc[df_out['TIENE_CUD']=='Si_Tiene_CUD']-=.5; df_out['MBTI_JP_score_sim']=s_jp.clip(-1.,1.).round(2)
@@ -270,21 +235,10 @@ def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
 def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convierte características categóricas y scores numéricos en variables difusas.
-
-    Esta fase toma características como 'CAPITAL_HUMANO' o los scores MBTI y las
-    transforma en un conjunto de nuevas columnas con un grado de membresía (entre 0 y 1),
-    preparando los datos para ser utilizados por un modelo de machine learning que
-    pueda manejar la incertidumbre.
-
-    Args:
-        df (pd.DataFrame): El DataFrame con las características de la Fase 2.
-
-    Returns:
-        pd.DataFrame: El DataFrame final "fuzzificado", listo para el entrenamiento.
     """
     print("  › Ejecutando Fase 3: Fuzzificación...")
     df_out = df.copy()
-    # ... (El código interno es complejo pero la lógica se mantiene)
+    # (El código interno es complejo pero la lógica se mantiene)
     def _fuzzificar_capital_humano(r):
         v=r.get('CAPITAL_HUMANO');m={'1_Bajo':{'CH_Bajo_memb':1.,'CH_Medio_memb':.2,'CH_Alto_memb':0.},'2_Medio':{'CH_Bajo_memb':.2,'CH_Medio_memb':1.,'CH_Alto_memb':.2},'3_Alto':{'CH_Bajo_memb':0.,'CH_Medio_memb':.2,'CH_Alto_memb':1.}};return pd.Series(m.get(v,{'CH_Bajo_memb':.33,'CH_Medio_memb':.33,'CH_Alto_memb':.33}))
     def _fuzzificar_perfil_dificultad(r):
@@ -303,3 +257,67 @@ def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
     for func in fuzz_funcs:
         fuzz_cols_df=df_out.apply(func,axis=1); df_out=pd.concat([df_out,fuzz_cols_df],axis=1)
     return df_out
+
+# --- ¡NUEVO! Bloque de ejecución principal ---
+if __name__ == '__main__':
+    """
+    Este bloque se ejecuta cuando el script es llamado directamente.
+    Su propósito es orquestar todo el pipeline de procesamiento de datos
+    y generar los archivos CSV finales para entrenamiento y demostración.
+    """
+    print("--- ⚙️ Iniciando Pipeline de Procesamiento de Datos ---")
+
+    # --- 1. Cargar Datos Crudos ---
+    # Asume que los datos crudos están en una ruta específica.
+    RAW_DATA_PATH = 'data/raw/endis_data_raw.csv'
+    
+    if not os.path.exists(RAW_DATA_PATH):
+        print(f"❌ Error: No se encontró el archivo de datos crudos en '{RAW_DATA_PATH}'.")
+        print("   Por favor, asegúrate de que el archivo exista y la ruta sea correcta.")
+    else:
+        print(f"  › Cargando datos crudos desde: {RAW_DATA_PATH}")
+        df_raw = pd.read_csv(RAW_DATA_PATH)
+
+        # --- 2. Ejecutar el Pipeline de Procesamiento ---
+        df_featured = run_feature_engineering(df_raw)
+        df_archetyped = run_archetype_engineering(df_featured)
+        df_fuzzified = run_fuzzification(df_archetyped)
+
+        # --- 3. Preparar y Guardar Archivo para Entrenamiento Cognitivo ---
+        print("\n  › Preparando archivo para el entrenamiento del modelo cognitivo...")
+        
+        # Seleccionar las columnas de membresía difusa como características
+        feature_cols = [col for col in df_fuzzified.columns if '_memb' in col]
+        
+        # Determinar el arquetipo dominante como la variable objetivo
+        archetype_cols = [col for col in df_fuzzified.columns if 'Pertenencia_' in col]
+        df_fuzzified['ARQUETIPO_PRED'] = df_fuzzified[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
+
+        # Crear el DataFrame final para el entrenamiento
+        df_cognitive_training = df_fuzzified[feature_cols + ['ARQUETIPO_PRED']]
+        
+        # Guardar el archivo
+        OUTPUT_TRAINING_PATH = 'data/cognitive_profiles.csv'
+        os.makedirs('data', exist_ok=True)
+        df_cognitive_training.to_csv(OUTPUT_TRAINING_PATH, index=False)
+        print(f"  › ✅ Archivo para entrenamiento guardado en: {OUTPUT_TRAINING_PATH}")
+
+        # --- 4. Preparar y Guardar Archivo para Demostración ---
+        print("\n  › Preparando archivo para la demostración de la aplicación...")
+        
+        # Seleccionar una muestra de perfiles para la demo
+        # Aquí puedes definir una lógica más compleja si lo deseas
+        df_demo = df_fuzzified.sample(n=10, random_state=42)
+        
+        # Crear un ID único para cada perfil de demo
+        df_demo['ID'] = [f'Perfil_Demo_{i+1}' for i in range(len(df_demo))]
+        df_demo.set_index('ID', inplace=True)
+        
+        # Guardar el archivo
+        OUTPUT_DEMO_PATH = 'data/demo_profiles.csv'
+        df_demo.to_csv(OUTPUT_DEMO_PATH)
+        print(f"  › ✅ Archivo para demostración guardado en: {OUTPUT_DEMO_PATH}")
+
+        print("\n--- 🎉 Pipeline de Procesamiento de Datos Finalizado ---")
+
+
