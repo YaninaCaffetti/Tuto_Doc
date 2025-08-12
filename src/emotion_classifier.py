@@ -133,7 +133,7 @@ def train_and_evaluate_emotion_classifier(config: dict):
     """Orquesta el pipeline completo para el clasificador de emociones, registrando los resultados en MLflow."""
     print("\n--- 🎭 Iniciando entrenamiento del Clasificador de Emociones... ---")
     
-    # --- ¡NUEVO! Configurar MLflow para el Trainer de Hugging Face ---
+    # --- Configurar MLflow para el Trainer de Hugging Face ---
     os.environ["MLFLOW_TRACKING_URI"] = config['mlflow']['tracking_uri']
     os.environ["MLFLOW_EXPERIMENT_NAME"] = config['mlflow']['experiment_name']
     
@@ -164,7 +164,7 @@ def train_and_evaluate_emotion_classifier(config: dict):
     training_params = cfg_emo['training_params']
     training_params['learning_rate'] = float(training_params['learning_rate'])
     
-    # --- ¡CAMBIO! Añadir 'report_to' en TrainingArguments ---
+    # --- Añadir 'report_to' en TrainingArguments ---
     training_args = TrainingArguments(
         output_dir="./results_emotion_training",
         report_to="mlflow", # Activar el logging a MLflow
