@@ -258,7 +258,7 @@ def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
         fuzz_cols_df=df_out.apply(func,axis=1); df_out=pd.concat([df_out,fuzz_cols_df],axis=1)
     return df_out
 
-# --- ¡NUEVO! Bloque de ejecución principal ---
+# --- Bloque de ejecución principal ---
 if __name__ == '__main__':
     """
     Este bloque se ejecuta cuando el script es llamado directamente.
@@ -269,7 +269,7 @@ if __name__ == '__main__':
 
     # --- 1. Cargar Datos Crudos ---
     # Asume que los datos crudos están en una ruta específica.
-    RAW_DATA_PATH = 'data/raw/endis_data_raw.csv'
+    RAW_DATA_PATH = 'data/base_estudio_discapacidad_2018.csv'
     
     if not os.path.exists(RAW_DATA_PATH):
         print(f"❌ Error: No se encontró el archivo de datos crudos en '{RAW_DATA_PATH}'.")
