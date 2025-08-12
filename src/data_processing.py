@@ -368,7 +368,7 @@ if __name__ == '__main__':
     print("--- ⚙️ Iniciando Pipeline de Procesamiento de Datos ---")
 
     # --- 1. Cargar Datos Crudos ---
-    RAW_DATA_PATH = 'data/raw/endis_data_raw.csv'
+    RAW_DATA_PATH = 'data/base_estudio_discapacidad_2018.csv'
     
     if not os.path.exists(RAW_DATA_PATH):
         print(f"❌ Error: No se encontró el archivo de datos crudos en '{RAW_DATA_PATH}'.")
