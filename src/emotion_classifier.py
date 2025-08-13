@@ -163,7 +163,7 @@ def load_base_dataset(emotion_labels: List[str]) -> pd.DataFrame:
     """
     print("  › Cargando dataset 'emotion' (HF) + dominio...")
     try:
-        dataset = Dataset.from_hf_dataset(load_dataset("emotion", split='train'))
+        dataset = load_dataset("emotion", split='train')
         df_public = dataset.to_pandas()
         label_map = {0: 'Tristeza', 1: 'Alegría', 2: 'Amor/Confianza', 3: 'Ira', 4: 'Miedo', 5: 'Sorpresa'}
         df_public['emotion'] = df_public['label'].map(label_map).replace({'Amor/Confianza': 'Confianza'})
