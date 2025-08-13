@@ -6,6 +6,7 @@ mlflow:
   tracking_uri: "mlruns"
 
 data_paths:
+  raw_data: 'data/raw/base_estudio_discapacidad_2018.csv'
   demo_profiles: 'data/demo_profiles.csv'
   cognitive_training_data: 'data/cognitive_profiles.csv'
 
