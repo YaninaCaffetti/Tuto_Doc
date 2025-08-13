@@ -1,5 +1,3 @@
- src/cognitive_model_trainer.py
-
 import pandas as pd
 import joblib
 import os
