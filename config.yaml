@@ -11,8 +11,8 @@ data_paths:
   cognitive_training_data: 'data/cognitive_profiles.csv'
 
 model_paths:
-  emotion_classifier: 'models/emotion_classifier'
-  cognitive_tutor: 'models/cognitive_tutor.joblib'
+  emotion_classifier: 'saved_models/emotion_classifier'
+  cognitive_tutor: 'saved_models/cognitive_tutor.joblib'
 
 model_params:
   emotion_classifier:
