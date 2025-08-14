@@ -1,12 +1,7 @@
-
 Tuto_Doc: Proyecto de Tesis - Tutor Cognitivo Adaptativo con IA Afectiva
----
-Autora: Mgter. Ing. Yanina A. Caffetti.
-
+Autora: Mgter. Ing. Yanina A. Caffetti
 Institución: Universidad Nacional de Misiones, Argentina.
-
-Programa: Doctorado en Informática.
-
+Programa: Doctorado en Informática
 ---
 
 1. Descripción del Proyecto
@@ -18,9 +13,8 @@ La investigación sigue un riguroso proceso de Machine Learning Operations (MLOp
 
 Palabras Clave: Tutor Cognitivo, Computación Afectiva, Mezcla de Expertos (MoE), MLOps, Procesamiento del Lenguaje Natural (PLN), XAI.
 
----
 2. Características Principales
-🧠 Módulo de Razonamiento Cognitivo: Utiliza un modelo RandomForestClassifier para clasificar perfiles de usuario (basados en datos de la encuesta ENDIS 2018 presente en la carpeta data/raw/base_estudio_discapacidad_2018.csv) en arquetipos predefinidos heurísticamente. El rendimiento de este componente fue optimizado mediante la técnica SMOTE para manejar el severo desbalance de clases durenate el entrenamiento.
+🧠 Módulo de Razonamiento Cognitivo: Utiliza un modelo RandomForestClassifier para clasificar perfiles de usuario (basados en datos de la encuesta ENDIS 2018) en arquetipos predefinidos heurísticamente. Su rendimiento fue optimizado para manejar el desbalance de clases con la técnica SMOTE durante el entrenamiento.
 
 ❤️ Módulo de Percepción Afectiva: Emplea un modelo de la familia BETO (dccuchile/bert-base-spanish-wwm-cased) fine-tuned para clasificar el texto del usuario en una de 7 emociones clave. Para superar la escasez de datos de dominio, se implementó una estrategia de aumentación de datos por retrotraducción (back-translation).
 
@@ -28,7 +22,6 @@ Palabras Clave: Tutor Cognitivo, Computación Afectiva, Mezcla de Expertos (MoE)
 
 🔬 Pipeline de Evaluación Riguroso: El proyecto incluye un pipeline completo para el benchmarking de modelos y la validación de la significancia estadística de los resultados, utilizando el Test de McNemar para comparar el rendimiento del modelo final contra los benchmarks establecidos.
 
----
 3. Estructura del Proyecto
 El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
 
@@ -50,7 +43,6 @@ El código está organizado siguiendo las mejores prácticas para facilitar su m
 ├── requirements.txt
 └── train.py
 
----
 4. Metodología y Tecnologías
 Lenguaje y Librerías Principales: Python, PyTorch, Scikit-learn, Pandas.
 
@@ -60,14 +52,11 @@ MLOps y Experimentación: MLflow.
 
 Aplicación Web: Streamlit.
 
----
 5. Instalación y Ejecución
 Este proyecto está diseñado para ser reproducible. La aplicación interactiva se puede ejecutar localmente o desplegar en servicios como Streamlit Cloud.
 
 Instalación
 Clona el repositorio:
-
-Bash
 
 git clone https://github.com/YaninaCaffetti/Tuto_Doc.git
 cd Tuto_Doc
@@ -75,28 +64,24 @@ cd Tuto_Doc
 Descargar los modelos grandes (Git LFS):
 Este repositorio usa Git LFS. Si no lo tienes, instálalo desde git-lfs.github.com.
 
-Bash
-
 git lfs install
 git lfs pull
-Crea y activa un entorno virtual:
 
-Bash
+Crea y activa un entorno virtual:
 
 python3 -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
-Instala las dependencias:
-El archivo requirements.txt contiene las dependencias probadas del proyecto.
 
-Bash
+Instala las dependencias:
+El archivo requirements.txt contiene las dependencias mínimas y probadas del proyecto.
 
 pip install -r requirements.txt
+
 Ejecución de la Aplicación de Demostración
 El repositorio ya incluye los modelos pre-entrenados. Para lanzar la aplicación interactiva, simplemente ejecuta:
 
-Bash
-
 streamlit run app.py
+
 Re-entrenamiento de Modelos (Opcional)
 Si deseas volver a generar todos los modelos desde cero:
 
@@ -104,20 +89,14 @@ Asegúrate de tener tu dataset en la ruta correcta: data/raw/base_estudio_discap
 
 Ejecuta el pipeline de entrenamiento completo:
 
-Bash
-
 python train.py --model all
 
----
 6. Resumen de Hallazgos
-   
 Modelo Cognitivo: Se validó que un RandomForestClassifier entrenado con datos balanceados por SMOTE es una solución óptima para la clasificación de arquetipos, alcanzando un 91% de accuracy y un F1-score macro de 0.79.
 
 Clasificador de Emociones: La estrategia de aumentación de datos por retrotraducción fue altamente efectiva. El modelo BETO fine-tuned alcanzó un rendimiento perfecto en el conjunto de prueba del dominio (F1-score macro de 1.00), superando significativamente al robusto benchmark clásico (F1-score de 0.96).
 
 Trade-off XAI vs. Rendimiento: Se demostró un claro compromiso entre la interpretabilidad y el rendimiento predictivo. Mientras que un modelo de "caja blanca" (IF-HUPM) resultó frágil, el enfoque de "caja negra" (RandomForestClassifier) proporcionó una solución robusta y superior, justificando empíricamente la necesidad de aplicar técnicas XAI post-hoc.
-
----
 
 7. Trabajo Futuro
 Explicabilidad del Modelo Final: Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para intentar explicar sus predicciones.
