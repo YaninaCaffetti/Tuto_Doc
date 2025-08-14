@@ -35,8 +35,7 @@ La investigación sigue un riguroso proceso de Machine Learning Operations (MLOp
 ## 3. Estructura del Proyecto:
    
 El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
-
-`
+````
 .
 ├── data/
 │   ├── raw/
@@ -54,7 +53,8 @@ El código está organizado siguiendo las mejores prácticas para facilitar su m
 ├── config.yaml
 ├── requirements.txt
 └── train.py
-`
+
+````
 ---
 
 ## 4. Metodología y Tecnologías:
