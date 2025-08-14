@@ -31,7 +31,7 @@ from sklearn.metrics import (
 from sklearn.utils.class_weight import compute_class_weight
 
 # Hugging Face
-from datasets import Dataset
+from datasets import Dataset,load_dataset
 from transformers import (
     AutoTokenizer, AutoModelForSequenceClassification,
     TrainingArguments, Trainer, DataCollatorWithPadding,
