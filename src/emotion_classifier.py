@@ -119,6 +119,17 @@ def get_custom_domain_data() -> pd.DataFrame:
         ("No sé cómo voy a superar esto.", "Miedo"),
         ("¡Qué maravilla! No esperaba este resultado.", "Sorpresa"),
         ("Estoy listo para empezar, ¿cuál es el primer paso?", "Anticipación"),
+        ("No puedo esperar a ver los resultados de este experimento.", "Anticipación")
+        ("Esto es inaceptable, nadie responde mis correos.", "Ira"),
+        ("Perdimos el financiamiento del proyecto.", "Tristeza"),
+        ("El prototipo funciona mejor de lo que esperaba.", "Alegría"),
+        ("Confío en que el equipo resolverá esto.", "Confianza"),
+        ("Me preocupa no cumplir con el plazo de entrega.", "Miedo"),
+        ("¡No puedo creer que aprobamos la auditoría!", "Sorpresa"),
+        ("Tengo muchas ganas de empezar la capacitación la semana próxima.", "Anticipación"),
+        ("Con el CUD podré acceder a más beneficios para postularme.", "Confianza"),
+        ("Gracias, la orientación me devolvió el ánimo.", "Alegría"),
+        ("Basta de demoras!.", "Ira"),
     ]
     return pd.DataFrame(data_custom_list, columns=['text', 'emotion'])
 
