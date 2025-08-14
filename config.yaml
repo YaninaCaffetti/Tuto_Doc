@@ -7,8 +7,8 @@ mlflow:
 
 data_paths:
   raw_data: 'data/raw/base_estudio_discapacidad_2018.csv'
-  demo_profiles: 'data/demo_profiles.csv'
-  cognitive_training_data: 'data/cognitive_profiles.csv'
+  demo_profiles: 'data/raw/demo_profiles.csv'
+  cognitive_training_data: 'data/raw/cognitive_profiles.csv'
 
 model_paths:
   emotion_classifier: 'saved_models/emotion_classifier'
