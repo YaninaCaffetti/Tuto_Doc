@@ -1,8 +1,12 @@
 
 Tuto_Doc: Proyecto de Tesis - Tutor Cognitivo Adaptativo con IA Afectiva
-Autora: Mgter. Ing. Yanina A. Caffetti
+---
+Autora: Mgter. Ing. Yanina A. Caffetti.
+
 Institución: Universidad Nacional de Misiones, Argentina.
-Programa: Doctorado en Informática
+
+Programa: Doctorado en Informática.
+
 ---
 
 1. Descripción del Proyecto
