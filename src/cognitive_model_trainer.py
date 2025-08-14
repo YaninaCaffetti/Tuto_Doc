@@ -1,23 +1,24 @@
 import pandas as pd
 import joblib
 import os
-import mlflow 
+import mlflow
 import mlflow.sklearn
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 
 def train_cognitive_tutor(config: dict):
     """
     Entrena, evalúa y registra el modelo del tutor cognitivo usando MLflow.
+    Ahora utiliza RandomForestClassifier.
     """
-    print("\n--- 🧠 Iniciando entrenamiento del Tutor Cognitivo... ---")
+    print("\n--- 🧠 Iniciando entrenamiento del Tutor Cognitivo (RandomForest)... ---")
     
     # --- Configurar y iniciar ejecución de MLflow ---
     mlflow.set_tracking_uri(config['mlflow']['tracking_uri'])
     mlflow.set_experiment(config['mlflow']['experiment_name'])
     
-    with mlflow.start_run(run_name="train_cognitive_model"):
+    with mlflow.start_run(run_name="train_cognitive_model_rfc"):
         
         # --- 1. Cargar Datos y Registrar Parámetros ---
         cfg_tutor = config['model_params']['cognitive_tutor']
@@ -38,10 +39,12 @@ def train_cognitive_tutor(config: dict):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=cfg_tutor['random_state'], stratify=y)
 
         # --- 2. Entrenar Modelo ---
-        model = DecisionTreeClassifier(
+        model = RandomForestClassifier(
+            n_estimators=cfg_tutor['n_estimators'],      
             max_depth=cfg_tutor['max_depth'],
             min_samples_leaf=cfg_tutor['min_samples_leaf'],
-            random_state=cfg_tutor['random_state']
+            random_state=cfg_tutor['random_state'],
+            n_jobs=-1  # Usa todos los núcleos de CPU disponibles para acelerar
         )
         model.fit(X_train, y_train)
 
@@ -71,4 +74,3 @@ def train_cognitive_tutor(config: dict):
         print(f"\n  › Modelo guardado en: {model_save_path} y registrado en MLflow.")
         
     print("\n--- ✅ Pipeline del Tutor Cognitivo Finalizado. ---")
-
