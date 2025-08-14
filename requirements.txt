@@ -1,22 +1,26 @@
-# requirements.txt (Versión corregida y mínima)
-
 # Core data and ML
+scikit-learn
 pandas
 numpy
-scikit-learn
 joblib
 
-# Configuración y MLOps
-PyYAML
-mlflow
-
-# Deep Learning para NLP
+# Deep Learning para NLP y optimización
 torch
 transformers
+accelerate
 datasets
 sentencepiece
+sacremoses
 
-# Visualización y App
-streamlit
+# Utilidades de ML y Visualización
+imbalanced-learn
+mlxtend
+seaborn
 matplotlib
-ngrok
+Pillow
+
+# Configuración, MLOps y App
+PyYAML
+mlflow
+streamlit
+pyngrok
