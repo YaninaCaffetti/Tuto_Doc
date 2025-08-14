@@ -132,7 +132,7 @@ Trade-off XAI vs. Rendimiento: Se demostró un claro compromiso entre la interpr
 
 ---
 
-7. Trabajo Futuro:
+## 7. Trabajo Futuro:
    
 Explicabilidad del Modelo Final: Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para intentar explicar sus predicciones.
 
