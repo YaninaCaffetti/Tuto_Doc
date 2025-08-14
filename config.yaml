@@ -16,7 +16,7 @@ model_paths:
 
 model_params:
   emotion_classifier:
-    model_name: 'dccuchile/bert-base-spanish-wwm-cased'
+    model_name: 'dccuchile/bert-base-spanish-wwm-uncased'
     data_augmentation:
       use_back_translation: true
     
