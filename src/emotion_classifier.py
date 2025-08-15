@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import nn
-
+from tqdm import tqdm
 # SKLearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
@@ -150,7 +150,8 @@ def augment_with_back_translation(df: pd.DataFrame, lang_src: str = 'es', lang_t
         mt_ts = MarianMTModel.from_pretrained(model_name_tgt_src).to(device)
 
         augmented = []
-        for text in df['text']:
+        # Bucle con la barra de progreso
+        for text in tqdm(df['text'], desc="Retrotraduciendo frases"):
             inputs = tok_st(text, return_tensors="pt", padding=True, truncation=True).to(device)
             translated_ids = mt_st.generate(**inputs, max_new_tokens=128)
             text_tgt = tok_st.decode(translated_ids[0], skip_special_tokens=True)
