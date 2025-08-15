@@ -151,7 +151,7 @@ def augment_with_back_translation(df: pd.DataFrame, lang_src: str = 'es', lang_t
 
         augmented = []
         # Bucle con la barra de progreso
-        for text in tqdm(df['text'], desc="Retrotraduciendo frases"):
+        for text in tqdm(df['text'], desc="Retrotraduciendo frases", mininterval=10.0):
             inputs = tok_st(text, return_tensors="pt", padding=True, truncation=True).to(device)
             translated_ids = mt_st.generate(**inputs, max_new_tokens=128)
             text_tgt = tok_st.decode(translated_ids[0], skip_special_tokens=True)
