@@ -313,9 +313,9 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         output_dir="./results_emotion_training",
         report_to="mlflow",
         run_name="train_emotion_classifier",
-        evaluation_strategy: "epoch",
-        save_strategy: "epoch",
-        metric_for_best_model: "f1_macro",
+        evaluation_strategy= "epoch",
+        save_strategy= "epoch",
+        metric_for_best_model= "f1_macro",
         load_best_model_at_end=True,
         fp16=torch.cuda.is_available(),
         **training_params
