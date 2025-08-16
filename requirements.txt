@@ -6,7 +6,7 @@ joblib
 
 # Deep Learning para NLP y optimización
 torch
-transformers
+transformers==4.55.0
 accelerate
 datasets
 sentencepiece
