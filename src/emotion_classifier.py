@@ -1,17 +1,17 @@
-# src/emotion_classifier.py (Integrado con mejoras: split+BT solo en train, seeds, MLflow, collator, metrics)
+# src/emotion_classifier.py (Versión final con constructor de argumentos robusto)
 """
 Módulo de entrenamiento e inferencia para clasificación de emociones en español
 con Transformers. Incluye:
 - Preparación de datos + back-translation (solo en train)
 - Entrenamiento con pérdida ponderada por clase
 - Registro de métricas y artefactos en MLflow, incluyendo matriz de confusión
-- Pipeline reproducible con fijación de semillas
+- Pipeline reproducible con fijación de semillas y tolerante a versiones.
 """
 
 from __future__ import annotations
 
 import os
-import io
+import inspect # Importación clave para la nueva función
 import json
 import random
 import warnings
@@ -22,6 +22,7 @@ import pandas as pd
 import torch
 from torch import nn
 from tqdm import tqdm
+
 # SKLearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
@@ -31,7 +32,7 @@ from sklearn.metrics import (
 from sklearn.utils.class_weight import compute_class_weight
 
 # Hugging Face
-from datasets import Dataset,load_dataset
+from datasets import Dataset, load_dataset
 from transformers import (
     AutoTokenizer, AutoModelForSequenceClassification,
     TrainingArguments, Trainer, DataCollatorWithPadding,
@@ -111,7 +112,7 @@ class EmotionClassifier:
 # ==============================
 
 def get_custom_domain_data() -> pd.DataFrame:
-    """Pequeño corpus de dominio propio."""
+    """Pequeño corpus de dominio propio, enriquecido para robustez."""
     data_custom_list = [
         ("¡Esto nunca funciona como debería!", "Ira"),
         ("Mi hipótesis fue refutada", "Tristeza"),
@@ -135,7 +136,7 @@ def get_custom_domain_data() -> pd.DataFrame:
 
 
 def augment_with_back_translation(df: pd.DataFrame, lang_src: str = 'es', lang_tgt: str = 'en') -> pd.DataFrame:
-    """Back-Translation de textos (con MarianMT)."""
+    """Back-Translation de textos (con MarianMT) y barra de progreso."""
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f"  › Back-Translation en: {device.upper()}")
@@ -150,8 +151,8 @@ def augment_with_back_translation(df: pd.DataFrame, lang_src: str = 'es', lang_t
         mt_ts = MarianMTModel.from_pretrained(model_name_tgt_src).to(device)
 
         augmented = []
-        # Bucle con la barra de progreso
-        for text in tqdm(df['text'], desc="Retrotraduciendo frases", mininterval=10.0):
+        # Bucle con barra de progreso optimizada para no sobrecargar la UI
+        for text in tqdm(df['text'], desc="Retrotraduciendo frases", mininterval=1.0):
             inputs = tok_st(text, return_tensors="pt", padding=True, truncation=True).to(device)
             translated_ids = mt_st.generate(**inputs, max_new_tokens=128)
             text_tgt = tok_st.decode(translated_ids[0], skip_special_tokens=True)
@@ -209,7 +210,7 @@ class WeightedLossTrainer(Trainer):
         if self.class_weights is not None:
             print(f"  › Pesos de clase: {np.round(self.class_weights.detach().cpu().numpy(), 3)}")
 
-    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+    def compute_loss(self, model, inputs, return_outputs=False):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.get("logits")
@@ -229,6 +230,52 @@ def compute_metrics_fn(eval_pred) -> Dict[str, float]:
     p, r, f1, _ = precision_recall_fscore_support(labels, preds, average='macro', zero_division=0)
     acc = accuracy_score(labels, preds)
     return {"accuracy": acc, "precision_macro": p, "recall_macro": r, "f1_macro": f1}
+
+
+# ==============================
+# NUEVA FUNCIÓN ROBUSTA PARA TrainingArguments
+# ==============================
+
+def build_compatible_training_args(training_params: dict) -> TrainingArguments:
+    """
+    Construye TrainingArguments de forma compatible con la versión instalada de transformers.
+    
+    Esta función inspecciona la firma del constructor de TrainingArguments para:
+    1. Filtrar claves desconocidas que puedan estar en el config.yaml.
+    2. Manejar cambios de nombre en los parámetros (ej. 'evaluation_strategy' vs 'eval_strategy').
+    
+    Args:
+        training_params (dict): Diccionario de parámetros cargado desde config.yaml.
+        
+    Returns:
+        TrainingArguments: Una instancia configurada de forma segura.
+    """
+    # Obtiene los parámetros válidos para el constructor de la versión actual de TrainingArguments
+    valid_params = inspect.signature(TrainingArguments).parameters
+    
+    # Parámetros base que no vienen del config.yaml
+    args = {
+        "output_dir": "./results_emotion_training",
+        "report_to": "mlflow",
+        "run_name": "train_emotion_classifier",
+        "load_best_model_at_end": True,
+        "fp16": torch.cuda.is_available(),
+    }
+    
+    # Fusiona los parámetros del config.yaml, dando prioridad a los del config
+    args.update(training_params)
+
+    # Maneja el cambio de nombre de 'evaluation_strategy' a 'eval_strategy' en versiones antiguas
+    if "evaluation_strategy" in args and "evaluation_strategy" not in valid_params:
+        if "eval_strategy" in valid_params:
+            args["eval_strategy"] = args.pop("evaluation_strategy")
+            print("  › INFO: 'evaluation_strategy' renombrado a 'eval_strategy' por compatibilidad.")
+
+    # Filtro final: solo pasamos los argumentos que la función realmente acepta
+    final_args = {k: v for k, v in args.items() if k in valid_params}
+    
+    print(f"  › Argumentos de entrenamiento finales: {list(final_args.keys())}")
+    return TrainingArguments(**final_args)
 
 
 # ==============================
@@ -274,9 +321,9 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         print("  › Aumentando SOLO train con Back-Translation...")
         df_train_aug = augment_with_back_translation(train_df[['text', 'emotion']])
         if not df_train_aug.empty:
+            df_train_aug['label'] = df_train_aug['emotion'].map(label2id)
             train_df = pd.concat([train_df, df_train_aug], ignore_index=True)
             train_df = train_df.drop_duplicates(subset=['text'], keep='first').reset_index(drop=True)
-            train_df['label'] = train_df['emotion'].map(label2id)
 
     # 4) Tokenizador y datasets
     tokenizer = AutoTokenizer.from_pretrained(cfg_emo['model_name'], use_fast=True)
@@ -304,19 +351,13 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
     )
     class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
 
-    # 7) Args de entrenamiento
+    # 7) Args de entrenamiento (AHORA USA LA NUEVA FUNCIÓN)
     training_params = dict(cfg_emo['training_params'])
     if 'learning_rate' in training_params:
         training_params['learning_rate'] = float(training_params['learning_rate'])
-        
-        training_args = TrainingArguments(
-            output_dir="./results_emotion_training",
-            report_to="mlflow",
-            run_name="train_emotion_classifier",
-            load_best_model_at_end=True,
-            fp16=torch.cuda.is_available(), 
-            **training_params
-)
+    
+    # Llamada a la nueva función robusta que construye los argumentos
+    training_args = build_compatible_training_args(training_params)
 
     # 8) Entrenador
     trainer = WeightedLossTrainer(
@@ -371,7 +412,6 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
                    ylabel='Etiqueta Real',
                    xlabel='Predicción')
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-            # Loop over data dimensions and create text annotations.
             for i in range(cm.shape[0]):
                 for j in range(cm.shape[1]):
                     ax.text(j, i, format(cm[i, j], 'd'),
@@ -396,3 +436,4 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
 
     print("\n--- ✅ Pipeline del Clasificador de Emociones Finalizado. ---")
     return final_metrics
+
