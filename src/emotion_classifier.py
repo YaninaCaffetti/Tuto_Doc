@@ -307,16 +307,15 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
     # 7) Args de entrenamiento
     training_params = dict(cfg_emo['training_params'])
     if 'learning_rate' in training_params:
-    training_params['learning_rate'] = float(training_params['learning_rate'])
-
-    training_args = TrainingArguments(
-        output_dir="./results_emotion_training",
-        report_to="mlflow",
-        run_name="train_emotion_classifier",
-        load_best_model_at_end=True,
-        fp16=torch.cuda.is_available(), 
-    # Simplemente desempacamos el diccionario completo del config.yaml
-        **training_params
+        training_params['learning_rate'] = float(training_params['learning_rate'])
+        
+        training_args = TrainingArguments(
+            output_dir="./results_emotion_training",
+            report_to="mlflow",
+            run_name="train_emotion_classifier",
+            load_best_model_at_end=True,
+            fp16=torch.cuda.is_available(), 
+            **training_params
 )
 
     # 8) Entrenador
