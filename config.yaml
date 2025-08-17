@@ -29,6 +29,9 @@ model_params:
       logging_dir: './logs'
       logging_steps: 10
       learning_rate: "2e-5"
+      evaluation_strategy: "epoch"
+      save_strategy: "epoch"
+      metric_for_best_model: "f1_macro"
  
  
   cognitive_tutor:
