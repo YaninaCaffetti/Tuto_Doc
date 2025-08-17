@@ -1,0 +1,14 @@
+artifact_uri: /content/Tuto_Doc/mlruns/870664109355197580/53c25a7047634fedae6c5f641b5251ce/artifacts
+end_time: 1755470966702
+entry_point_name: ''
+experiment_id: '870664109355197580'
+lifecycle_stage: active
+run_id: 53c25a7047634fedae6c5f641b5251ce
+run_name: train_emotion_classifier_final
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755470966211
+status: 4
+tags: []
+user_id: root
