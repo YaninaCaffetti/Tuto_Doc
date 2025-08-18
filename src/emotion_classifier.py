@@ -1,4 +1,4 @@
-# src/emotion_classifier.py (Versión final con constructor de argumentos robusto)
+# src/emotion_classifier.py 
 """
 Módulo de entrenamiento e inferencia para clasificación de emociones en español
 con Transformers. Incluye:
@@ -210,12 +210,16 @@ class WeightedLossTrainer(Trainer):
         if self.class_weights is not None:
             print(f"  › Pesos de clase: {np.round(self.class_weights.detach().cpu().numpy(), 3)}")
 
-    def compute_loss(self, model, inputs, return_outputs=False, **kwargs): 
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        """
+        Calcula la pérdida. Corregido para aceptar **kwargs y usar .view(-1) correctamente.
+        """
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.get("logits")
         loss_fct = nn.CrossEntropyLoss(weight=self.class_weights)
-        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(--1))
+        # CORRECCIÓN: Se usa -1 en lugar de --1 para aplanar el tensor de etiquetas.
+        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
         return (loss, outputs) if return_outputs else loss
 
 
@@ -233,7 +237,7 @@ def compute_metrics_fn(eval_pred) -> Dict[str, float]:
 
 
 # ==============================
-# NUEVA FUNCIÓN ROBUSTA PARA TrainingArguments
+# Constructor Robusto para TrainingArguments
 # ==============================
 
 def build_compatible_training_args(training_params: dict) -> TrainingArguments:
@@ -436,4 +440,3 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
 
     print("\n--- ✅ Pipeline del Clasificador de Emociones Finalizado. ---")
     return final_metrics
-
