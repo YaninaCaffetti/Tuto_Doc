@@ -70,7 +70,7 @@ class MoESystem:
         Inicializa el sistema MoE.
         
         Args:
-            cognitive_model: El modelo de árbol de decisión entrenado.
+            cognitive_model: El modelo cognitivo entrenado (RandomForestClassifier).
             feature_columns (list): Lista de columnas usadas para la predicción.
             affective_rules (dict): Reglas para modular pesos según la emoción.
             thresholds (dict): Umbrales de configuración del sistema (ej. probabilidad mínima).
