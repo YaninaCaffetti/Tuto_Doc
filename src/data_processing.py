@@ -197,7 +197,7 @@ if __name__ == '__main__':
         logging.error(f"No se encontró el archivo de datos crudos en '{RAW_DATA_PATH}'.")
     else:
         logging.info(f"Cargando datos crudos desde: {RAW_DATA_PATH}")
-        df_raw = pd.read_csv(RAW_DATA_PATH)
+        df_raw = pd.read_csv(RAW_DATA_PATH, delimiter=';')
         df_featured = run_feature_engineering(df_raw)
         df_archetyped = run_archetype_engineering(df_featured)
         df_fuzzified = run_fuzzification(df_archetyped)
