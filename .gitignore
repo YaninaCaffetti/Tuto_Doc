@@ -6,7 +6,8 @@ __pycache__/
 # Ignorar el entorno virtual
 venv/
 
-# Ignorar carpetas de resultados y logs de entrenamiento (contienen archivos >100MB)
+# Ignorar carpetas de resultados y logs de entrenamiento
 /results_emotion/
 /results_emotion_augmented/
 /wandb/
+/mlruns/
