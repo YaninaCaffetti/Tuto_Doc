@@ -27,7 +27,7 @@ constants:
 data_paths:
   cognitive_training_data: data/cognitive_profiles.csv
   demo_profiles: data/demo_profiles.csv
-  raw_data: /content/drive/MyDrive/base_estudio_discapacidad_2018.csv
+  raw_data: /content/drive/MyDrive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv
 mlflow:
   experiment_name: Tutor Cognitivo-Afectivo Tesis
   tracking_uri: mlruns
