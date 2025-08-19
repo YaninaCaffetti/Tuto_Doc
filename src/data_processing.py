@@ -117,6 +117,7 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         pf=pb*fei*ftf*fjp;return round(max(0.,min(pf,1.)),2)
     def _clasificar_candidato_necesidades_sig(r):
         pdif,slab,ei,tf,jp=r.get('Perfil_Dificultad_Agrupado'),r.get('Espectro_Inclusion_Laboral'),r.get('MBTI_EI_score_sim'),r.get('MBTI_TF_score_sim'),r.get('MBTI_JP_score_sim');pb=0;
+        p_mod_lab = 0. 
         if pdif=='3_Tres_o_Mas_Dificultades':pb=.95
         elif pdif=='1E_Autocuidado_Unica':pb=.85
         elif pdif=='2_Dos_Dificultades':pb=.75
