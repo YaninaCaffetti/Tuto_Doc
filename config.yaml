@@ -5,7 +5,7 @@
 # --- Rutas de los Archivos ---
 data_paths:
   # Ruta al archivo de datos crudos (leído por data_processing.py)
-  raw_data: 'data/raw/base_estudio_discapacidad_2018.csv'
+  raw_data: '/content/drive/MyDrive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv'
   
   # Rutas a los archivos generados (escritos por data_processing.py y leídos por otros scripts)
   demo_profiles: 'data/demo_profiles.csv'
