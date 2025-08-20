@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 # --- Módulos a Probar ---
 from data_processing import run_archetype_engineering
-from constants import ARCHETYPE_PROF_SUBUTIL, ARCHETYPE_JOVEN_TRANSICION
+from constants import ARCHETYPE_PROF_SUBUTIL, ARCHETYPE_JOVEN_TRANSICION, ALL_ARCHETYPES
 
 # --- Fixtures de Datos de Prueba ---
 
