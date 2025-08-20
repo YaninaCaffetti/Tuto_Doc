@@ -70,10 +70,75 @@ class IF_HUPM:
 # --- Funciones del Pipeline de Procesamiento ---
 
 def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Transforma las variables crudas del dataset en características compuestas."""
+    """Transforma las variables crudas del dataset en características compuestas (versión refactorizada)."""
     logging.info("Ejecutando Fase 1: Ingeniería de Características...")
-    df_p=df.copy();cols_num=['dificultad_total','dificultades','tipo_dificultad','MNEA','edad_agrupada','Estado_ocup','cat_ocup','certificado','PC08','pc03','tipo_hogar'];[df_p[col].apply(pd.to_numeric, errors='coerce') for col in cols_num if col in df_p.columns];c_dificultad=[df_p['dificultad_total']==0,df_p['tipo_dificultad']==1,df_p['tipo_dificultad']==2,df_p['tipo_dificultad']==3,df_p['tipo_dificultad']==4,df_p['tipo_dificultad']==5,df_p['tipo_dificultad']==6,df_p['tipo_dificultad']==7,df_p['tipo_dificultad']==8,(df_p['tipo_dificultad']==9)|(df_p['dificultades']==4),df_p['dificultad_total']==1];ch_dificultad=['0_Sin_Dificultad_Registrada','1A_Motora_Unica','1B_Visual_Unica','1C_Auditiva_Unica','1D_Mental_Cognitiva_Unica','1E_Autocuidado_Unica','1F_Habla_Comunicacion_Unica','2_Dos_Dificultades','3_Tres_o_Mas_Dificultades','4_Solo_Certificado','5_Dificultad_General_No_Detallada'];df_p['Perfil_Dificultad_Agrupado']=pd.Series(np.select(c_dificultad,ch_dificultad,default='9_Ignorado_o_No_Clasificado'),index=df_p.index);c_capital=[df_p['MNEA']==5,df_p['MNEA']==4,df_p['MNEA'].isin([1,2,3])];ch_capital=['3_Alto','2_Medio','1_Bajo'];df_p['CAPITAL_HUMANO']=pd.Series(np.select(c_capital,ch_capital,default='9_No_Sabe_o_NC'),index=df_p.index);df_p['GRUPO_ETARIO_INDEC']=df_p['edad_agrupada'].map({1:'0A_0_a_5_anios',2:'0B_6_a_13_anios',3:'1_Joven_Adulto_Temprano (14-39)',4:'2_Adulto_Medio (40-64)',5:'3_Adulto_Mayor (65+)'}).fillna('No Especificado_Edad');df_p['TIENE_CUD']=df_p['certificado'].map({1:'Si_Tiene_CUD',2:'No_Tiene_CUD',9:'Ignorado_CUD'}).fillna('Desconocido_CUD');c_inclusion=[df_p['Estado_ocup']==3,df_p['Estado_ocup']==2,(df_p['Estado_ocup']==1)&(df_p['cat_ocup'].isin([1,3])),(df_p['Estado_ocup']==1)&(df_p['cat_ocup'].isin([2,4]))];ch_inclusion=['1_Exclusion_del_Mercado','2_Busqueda_Sin_Exito','4_Inclusion_Plena_Aprox','3_Inclusion_Precaria_Aprox'];base_inclusion=pd.Series(np.select(c_inclusion,ch_inclusion,default='No_Clasificado_Laboral'),index=df_p.index);df_p['Espectro_Inclusion_Laboral']=base_inclusion.where((df_p['edad_agrupada']>=3)&(df_p['dificultad_total']==1));return df_p
+    df_p = df.copy()
 
+    # 1. Forzar columnas clave a tipo numérico para evitar errores
+    cols_to_numeric = [
+        'dificultad_total', 'dificultades', 'tipo_dificultad', 'MNEA', 'edad_agrupada', 
+        'Estado_ocup', 'cat_ocup', 'certificado', 'PC08', 'pc03', 'tipo_hogar'
+    ]
+    for col in cols_to_numeric:
+        if col in df_p.columns:
+            df_p[col] = pd.to_numeric(df_p[col], errors='coerce')
+
+    # 2. Crear 'Perfil_Dificultad_Agrupado' de forma legible
+    conditions_dificultad = [
+        df_p['dificultad_total'] == 0, df_p['tipo_dificultad'] == 1,
+        df_p['tipo_dificultad'] == 2, df_p['tipo_dificultad'] == 3,
+        df_p['tipo_dificultad'] == 4, df_p['tipo_dificultad'] == 5,
+        df_p['tipo_dificultad'] == 6, df_p['tipo_dificultad'] == 7,
+        df_p['tipo_dificultad'] == 8, (df_p['tipo_dificultad'] == 9) | (df_p['dificultades'] == 4),
+        df_p['dificultad_total'] == 1
+    ]
+    choices_dificultad = [
+        '0_Sin_Dificultad_Registrada', '1A_Motora_Unica', '1B_Visual_Unica', '1C_Auditiva_Unica',
+        '1D_Mental_Cognitiva_Unica', '1E_Autocuidado_Unica', '1F_Habla_Comunicacion_Unica',
+        '2_Dos_Dificultades', '3_Tres_o_Mas_Dificultades', '4_Solo_Certificado',
+        '5_Dificultad_General_No_Detallada'
+    ]
+    df_p['Perfil_Dificultad_Agrupado'] = np.select(
+        conditions_dificultad, choices_dificultad, default='9_Ignorado_o_No_Clasificado'
+    )
+
+    # 3. Crear 'CAPITAL_HUMANO'
+    conditions_capital = [df_p['MNEA'] == 5, df_p['MNEA'] == 4, df_p['MNEA'].isin([1, 2, 3])]
+    choices_capital = ['3_Alto', '2_Medio', '1_Bajo']
+    df_p['CAPITAL_HUMANO'] = np.select(conditions_capital, choices_capital, default='9_No_Sabe_o_NC')
+
+    # 4. Crear 'GRUPO_ETARIO_INDEC'
+    edad_map = {
+        1: '0A_0_a_5_anios', 2: '0B_6_a_13_anios', 3: '1_Joven_Adulto_Temprano (14-39)',
+        4: '2_Adulto_Medio (40-64)', 5: '3_Adulto_Mayor (65+)'
+    }
+    df_p['GRUPO_ETARIO_INDEC'] = df_p['edad_agrupada'].map(edad_map).fillna('No Especificado_Edad')
+
+    # 5. Crear 'TIENE_CUD'
+    cud_map = {1: 'Si_Tiene_CUD', 2: 'No_Tiene_CUD', 9: 'Ignorado_CUD'}
+    df_p['TIENE_CUD'] = df_p['certificado'].map(cud_map).fillna('Desconocido_CUD')
+
+    # 6. Crear 'Espectro_Inclusion_Laboral'
+    conditions_inclusion = [
+        df_p['Estado_ocup'] == 3, df_p['Estado_ocup'] == 2,
+        (df_p['Estado_ocup'] == 1) & (df_p['cat_ocup'].isin([1, 3])),
+        (df_p['Estado_ocup'] == 1) & (df_p['cat_ocup'].isin([2, 4]))
+    ]
+    choices_inclusion = [
+        '1_Exclusion_del_Mercado', '2_Busqueda_Sin_Exito',
+        '4_Inclusion_Plena_Aprox', '3_Inclusion_Precaria_Aprox'
+    ]
+    base_inclusion = pd.Series(
+        np.select(conditions_inclusion, choices_inclusion, default='No_Clasificado_Laboral'),
+        index=df_p.index
+    )
+    # Aplicar filtro para que solo se aplique a la población en edad de trabajar con dificultad
+    df_p['Espectro_Inclusion_Laboral'] = base_inclusion.where(
+        (df_p['edad_agrupada'] >= 3) & (df_p['dificultad_total'] == 1)
+    )
+
+    return df_p
+    
 def _simulate_mbti_scores(df: pd.DataFrame) -> pd.DataFrame:
     """Simula scores de personalidad tipo MBTI basados en características existentes."""
     df_out=df.copy();s_ei=pd.Series(0.0,index=df_out.index);s_ei.loc[df_out['Perfil_Dificultad_Agrupado'].isin(['1F_Habla_Comunicacion_Unica','1C_Auditiva_Unica','1D_Mental_Cognitiva_Unica'])]-=.4;s_ei.loc[df_out['Espectro_Inclusion_Laboral']=='1_Exclusion_del_Mercado']-=.3;s_ei.loc[df_out['tipo_hogar']==1]-=.3;df_out['MBTI_EI_score_sim']=s_ei.clip(-1.,1.).round(2);df_out['MBTI_SN_score_sim']=np.select([df_out['CAPITAL_HUMANO']=='1_Bajo',df_out['CAPITAL_HUMANO']=='3_Alto'],[-.5,.5],default=0.);df_out['MBTI_TF_score_sim']=np.select([df_out['pc03']==4,(df_out['pc03'].notna())&(df_out['pc03']!=9)&(df_out['pc03']!=4)],[.5,-.25],default=0.);s_jp=pd.Series(0.,index=df_out.index);s_jp.loc[df_out['Espectro_Inclusion_Laboral']=='3_Inclusion_Precaria_Aprox']+=.5;s_jp.loc[df_out['TIENE_CUD']=='Si_Tiene_CUD']-=.5;df_out['MBTI_JP_score_sim']=s_jp.clip(-1.,1.).round(2)
