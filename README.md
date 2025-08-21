@@ -1,141 +1,123 @@
-# Tuto_Doc: Proyecto de Tesis - Tutor Cognitivo Adaptativo con IA Afectiva.
-
-## Autora: Mgter. Ing. Yanina A. Caffetti
-
-### Institución: Universidad Nacional de Misiones, Argentina.
-
-### Programa: Doctorado en Informática
+# Tuto_Doc: Tutor Cognitivo Adaptativo con IA Afectiva
+Prototipo de Tesis Doctoral - Mgter. Ing. Yanina A. Caffetti
+Institución: Universidad Nacional de Misiones, Argentina.
+Programa: Doctorado en Informática
 
 ---
 
-## 1. Descripción del Proyecto:
-   
-Este repositorio contiene el prototipo funcional y el pipeline experimental desarrollado como parte de la tesis doctoral "Diseño de un proceso para la integración de un tutor cognitivo adaptativo basado en arquetipos de usuario y computación afectiva".
+## 1. Descripción del Proyecto
+Este repositorio contiene el prototipo funcional y el pipeline experimental desarrollado para la tesis doctoral "Proceso para la integración de un tutor cognitivo de consultas referidas a la legislación argentina sobre discapacidad. Estudio de caso: Agente inteligente de connotaciones emocionales definidas por el usuario".
 
-El proyecto explora la sinergia entre un módulo de razonamiento cognitivo, que clasifica perfiles de usuario complejos, y un módulo de percepción afectiva, que detecta la emoción en el lenguaje del usuario. El objetivo principal es crear un sistema de tutoría que no solo ofrezca un plan de acción basado en el perfil del estudiante, sino que también adapte su interacción y recomendaciones en tiempo real al estado emocional detectado, generando una intervención más holística y empática.
+El proyecto implementa un agente inteligente que funciona como un tutor cognitivo. Su principal innovación es la capacidad de adaptar sus respuestas y planes de acción basándose en el estado afectivo del usuario, el cual es inferido en tiempo real a partir del texto de sus consultas. El sistema utiliza una arquitectura Mixture of Experts (MoE), donde un componente cognitivo es modulado por un componente afectivo para generar una interacción más empática y efectiva.
 
-La investigación sigue un riguroso proceso de Machine Learning Operations (MLOps), incluyendo la evaluación de modelos, benchmarking, tratamiento de desbalance de clases, validación estadística y, finalmente, la refactorización a una arquitectura de software modular.
+La investigación sigue un riguroso proceso de Machine Learning, incluyendo el preprocesamiento de datos, la evaluación robusta de modelos mediante validación cruzada, y la refactorización a una arquitectura de software modular y probada unitariamente.
 
-### Palabras Clave: Tutor Cognitivo, Computación Afectiva, Mezcla de Expertos (MoE), MLOps, Procesamiento del Lenguaje Natural (PLN), XAI.
-
----
-
-## 2. Características Principales:
-   
-🧠 Módulo de Razonamiento Cognitivo: Utiliza un modelo RandomForestClassifier para clasificar perfiles de usuario (basados en datos de la encuesta ENDIS 2018) en arquetipos predefinidos heurísticamente. Su rendimiento fue optimizado para manejar el desbalance de clases con la técnica SMOTE durante el entrenamiento.
-
-❤️ Módulo de Percepción Afectiva: Emplea un modelo de la familia BETO (dccuchile/bert-base-spanish-wwm-cased) fine-tuned para clasificar el texto del usuario en una de 7 emociones clave. Para superar la escasez de datos de dominio, se implementó una estrategia de aumentación de datos por retrotraducción (back-translation).
-
-✨ Sistema de Adaptación Afectiva: Una arquitectura de Mezcla de Expertos (Mixture of Experts) orquesta la respuesta final. El arquetipo predicho por el módulo cognitivo selecciona al "tutor experto" principal, pero la clave de la innovación reside en que el vector completo de probabilidades de emoción modula los pesos de todos los expertos. Esto permite, por ejemplo, que una alta probabilidad de "tristeza" aumente la prioridad del "Tutor de Bienestar", generando un plan de acción mixto y verdaderamente adaptativo.
-
-🔬 Pipeline de Evaluación Riguroso: El proyecto incluye un pipeline completo para el benchmarking de modelos y la validación de la significancia estadística de los resultados, utilizando el Test de McNemar para comparar el rendimiento del modelo final contra los benchmarks establecidos.
+Palabras Clave: Tutor Cognitivo, Computación Afectiva, Mezcla de Expertos (MoE), MLOps, Procesamiento del Lenguaje Natural (PLN), XAI, Validación Cruzada.
 
 ---
 
-## 3. Estructura del Proyecto:
-   
-El código está organizado siguiendo las mejores prácticas para facilitar su mantenibilidad y comprensión.
-````
-.
-├── data/
-│   ├── raw/
-│   └── cognitive_profiles.csv
-├── models/
-│   ├── cognitive_tutor.joblib
-│   └── emotion_classifier/
-├── src/
-│   ├── __init__.py
-│   ├── cognitive_model_trainer.py
-│   ├── cognitive_tutor.py
-│   ├── data_processing.py
-│   └── emotion_classifier.py
-├── app.py
-├── config.yaml
-├── requirements.txt
-└── train.py
+## 2. Arquitectura del Sistema
+El sistema está diseñado de forma modular para facilitar su mantenimiento, prueba y escalabilidad.
 
-````
----
+Pipeline de Procesamiento de Datos (src/data_processing.py): Un script de ETL que toma el dataset crudo, aplica una serie de transformaciones basadas en reglas de negocio expertas (ingeniería de características, creación de arquetipos) y lo convierte en un conjunto de datos "fuzzificado" listo para el entrenamiento.
 
-## 4. Metodología y Tecnologías:
-   
-Lenguaje y Librerías Principales: Python, PyTorch, Scikit-learn, Pandas.
+Clasificador de Emociones (src/emotion_classifier.py): Un modelo de lenguaje (dccuchile/bert-base-spanish-wwm-uncased) fine-tuneado para clasificar texto en 7 emociones. Este es el componente afectivo del sistema.
 
-NLP y Transformers: Hugging Face (Transformers, Datasets).
+Tutor Cognitivo (src/cognitive_model_trainer.py): Un modelo RandomForestClassifier que asigna a cada usuario un arquetipo cognitivo. Su rendimiento se valida rigurosamente mediante validación cruzada estratificada.
 
-MLOps y Experimentación: MLflow.
-
-Aplicación Web: Streamlit.
+Aplicación Interactiva (app.py): Una interfaz de usuario desarrollada con Streamlit que integra todos los componentes y permite la interacción en tiempo real con el tutor.
 
 ---
 
-## 5. Instalación y Ejecución:
-   
-Este proyecto está diseñado para ser reproducible. La aplicación interactiva se puede ejecutar localmente o desplegar en servicios como Streamlit Cloud.
+## 3. Características Principales
+✨ Adaptación Afectiva (MoE): El arquetipo predicho selecciona al "tutor experto" principal, pero el vector de probabilidades de emoción modula los pesos de todos los expertos, generando un plan de acción mixto y verdaderamente adaptativo.
 
-Instalación
-Clona el repositorio:
+🔬 Evaluación Robusta: El rendimiento del modelo cognitivo se valida con Validación Cruzada Estratificada (K-Fold) para obtener una métrica fiable y académicamente defendible.
 
-```
+🔧 Código Refactorizado y Probado: La lógica de negocio ha sido refactorizada para máxima legibilidad y validada con una suite de pruebas unitarias (pytest), garantizando su robustez.
+
+📊 Seguimiento de Experimentos: Integración con MLflow para registrar parámetros, métricas y artefactos de cada ejecución de entrenamiento.
+
+---
+
+## 4. Guía de Instalación y Uso
+Siga estos pasos para configurar y ejecutar el proyecto en un entorno como Google Colab.
+
+### Paso 1: Clonar el Repositorio
+
+´´´´
 git clone https://github.com/YaninaCaffetti/Tuto_Doc.git
 cd Tuto_Doc
-```
+´´´´
 
-Descargar los modelos grandes (Git LFS):
-Este repositorio usa Git LFS. Si no lo tienes, instálalo desde git-lfs.github.com.
+### Paso 2: Configuración del Dataset Crudo (Vía Google Drive)
+Este proyecto está diseñado para leer el dataset crudo (base_estudio_discapacidad_2018.csv) desde Google Drive para evitar problemas con los límites de Git LFS.
 
-```
-git lfs install
-git lfs pull
-```
+Suba el archivo base_estudio_discapacidad_2018.csv a su Google Drive.
 
-Crea y activa un entorno virtual:
+En un entorno de Colab, monte su Drive:
 
-```
-python3 -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-```
+from google.colab import drive
+drive.mount('/content/drive')
 
-Instala las dependencias:
-El archivo requirements.txt contiene las dependencias mínimas y probadas del proyecto.
+Actualice la configuración: Abra el archivo config.yaml y modifique la clave raw_data para que apunte a la ruta de su archivo en Drive.
 
-```
+# Ejemplo de configuración en config.yaml
+data_paths:
+  raw_data: '/content/drive/MyDrive/ruta/a/su/base_estudio_discapacidad_2018.csv'
+
+### Paso 3: Instalar Dependencias
 pip install -r requirements.txt
-```
-Ejecución de la Aplicación de Demostración
 
-El repositorio ya incluye los modelos pre-entrenados. Para lanzar la aplicación interactiva, simplemente ejecuta:
+### Paso 4: Ejecutar el Pipeline de Procesamiento de Datos
+Este comando es obligatorio y debe ejecutarse primero. Tomará el dataset crudo de su Drive, lo procesará y generará el archivo data/cognitive_profiles.csv necesario para el entrenamiento.
 
-```
-streamlit run app.py
-```
-Re-entrenamiento de Modelos (Opcional)
-Si deseas volver a generar todos los modelos desde cero:
+python src/data_processing.py
 
-Asegúrate de tener tu dataset en la ruta correcta: data/raw/base_estudio_discapacidad_2018.csv.
+### Paso 5: Entrenar los Modelos
+Utilice el script train.py para entrenar los componentes.
 
-Ejecuta el pipeline de entrenamiento completo:
+Entrenar solo el Tutor Cognitivo (rápido, recomendado para pruebas):
 
-```
+python train.py --model cognitive
+
+Entrenar ambos modelos (ejecución completa):
+
 python train.py --model all
-```
 
----
+### Paso 6: Lanzar la Aplicación
+Una vez que los modelos han sido entrenados (y la carpeta saved_models ha sido creada), puede lanzar la interfaz interactiva.
 
-## 6. Resumen de Hallazgos:
-   
-Modelo Cognitivo: Se validó que un RandomForestClassifier entrenado con datos balanceados por SMOTE es una solución óptima para la clasificación de arquetipos, alcanzando un 91% de accuracy y un F1-score macro de 0.79.
+streamlit run app.py
 
-Clasificador de Emociones: La estrategia de aumentación de datos por retrotraducción fue altamente efectiva. El modelo BETO fine-tuned alcanzó un rendimiento perfecto en el conjunto de prueba del dominio (F1-score macro de 1.00), superando significativamente al robusto benchmark clásico (F1-score de 0.96).
+## 5. Resumen de Hallazgos Clave
+Modelo Cognitivo (Validación Cruzada): La evaluación robusta mediante K-Fold Estratificado arrojó un F1-Score Macro promedio de 0.811 ± 0.029. Este resultado realista y estable reemplaza métricas iniciales que sugerían sobreajuste, demostrando una sólida y fiable capacidad de generalización del modelo RandomForestClassifier.
 
-Trade-off XAI vs. Rendimiento: Se demostró un claro compromiso entre la interpretabilidad y el rendimiento predictivo. Mientras que un modelo de "caja blanca" (IF-HUPM) resultó frágil, el enfoque de "caja negra" (RandomForestClassifier) proporcionó una solución robusta y superior, justificando empíricamente la necesidad de aplicar técnicas XAI post-hoc.
+Clasificador de Emociones: El modelo fine-tuneado alcanzó un F1-Score Macro de 0.759. Se identificó una debilidad específica en la clase "Anticipación" (F1-Score de 0.00), atribuida a una representación casi nula en los datos de entrenamiento, lo que constituye un hallazgo importante sobre el impacto del desbalance de clases.
 
----
+Trade-off XAI vs. Rendimiento: Se demostró un claro compromiso entre la interpretabilidad y el rendimiento predictivo. Mientras que un modelo de "caja blanca" resultó frágil en las fases iniciales, el enfoque de "caja negra" (RandomForestClassifier) proporcionó una solución robusta y superior, justificando empíricamente la necesidad de aplicar técnicas de XAI (Explainable AI) post-hoc.
 
-## 7. Trabajo Futuro:
-   
-Explicabilidad del Modelo Final: Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para intentar explicar sus predicciones.
+## 6. Pila Tecnológica (Stack)
+Lenguaje: Python 3.10+
 
-Validación con Usuarios: Realizar un estudio formal con usuarios finales para medir cuantitativamente el impacto de la adaptación afectiva en la percepción de empatía, la confianza en el sistema y el éxito en las tareas propuestas.
+Análisis de Datos: Pandas, NumPy
 
-Aprendizaje de Reglas Afectivas: Explorar métodos para aprender las affective_rules desde datos de interacción, en lugar de definirlas heurísticamente.
+Machine Learning: Scikit-learn, PyTorch
+
+NLP: Transformers (Hugging Face)
+
+Interfaz de Usuario: Streamlit
+
+Seguimiento de Experimentos: MLflow
+
+Pruebas: Pytest
+
+## 7. Trabajo Futuro
+Explicabilidad del Modelo Final (XAI): Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para interpretar las características más influyentes en la predicción de cada arquetipo.
+
+Validación con Usuarios: Realizar un estudio formal con usuarios finales para medir cuantitativamente el impacto de la adaptación afectiva en la percepción de empatía y la confianza en el sistema.
+
+Aprendizaje de Reglas Afectivas: Explorar métodos de aprendizaje por refuerzo para que el sistema aprenda las affective_rules desde datos de interacción, en lugar de definirlas heurísticamente.
+
+## 8. Licencia
+Este proyecto se distribuye bajo la licencia MIT. Consulte el archivo LICENSE para más detalles.
