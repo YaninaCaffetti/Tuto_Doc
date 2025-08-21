@@ -1,8 +1,23 @@
-
+# Archivos de caché de Python
 __pycache__/
 *.pyc
+
+# Ignorar el entorno virtual
 venv/
-/results_emotion/
-/results_emotion_augmented/
-/wandb/
-/mlruns/
+
+# Ignorar carpetas de datos (crudos y generados)
+data/
+
+# Ignorar logs y resultados de MLflow
+mlruns/
+
+# Ignorar modelos entrenados y otros artefactos guardados
+saved_models/
+
+# Ignorar carpetas de resultados de Transformers (si se generan)
+results_emotion/
+results_emotion_augmented/
+
+# Ignorar logs de otras herramientas
+wandb/
+.DS_Store
