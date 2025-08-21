@@ -52,7 +52,7 @@ cd Tuto_Doc
 ### Paso 2: Configuración del Dataset Crudo (Vía Google Drive)
 Este proyecto está diseñado para leer el dataset crudo (`base_estudio_discapacidad_2018.csv`) desde Google Drive para evitar problemas con los límites de Git LFS.
 
-Suba el archivo `base_estudio_discapacidad_2018.csv` a su Google Drive.
+Suba el archivo `base_estudio_discapacidad_2018.csv` a su Google Drive descargándolo desde: https://www.indec.gob.ar/indec/web/Institucional-Indec-BasesDeDatos-7 
 
 En un entorno de Colab, monte su Drive:
 
