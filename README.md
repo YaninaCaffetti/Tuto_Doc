@@ -14,7 +14,6 @@ La investigación sigue un riguroso proceso de Machine Learning, incluyendo el p
 
 Palabras Clave: Tutor Cognitivo, Computación Afectiva, Mezcla de Expertos (MoE), MLOps, Procesamiento del Lenguaje Natural (PLN), XAI, Validación Cruzada.
 
----
 
 ## 2. Arquitectura del Sistema
 El sistema está diseñado de forma modular para facilitar su mantenimiento, prueba y escalabilidad.
@@ -27,7 +26,6 @@ Tutor Cognitivo (src/cognitive_model_trainer.py): Un modelo RandomForestClassifi
 
 Aplicación Interactiva (app.py): Una interfaz de usuario desarrollada con Streamlit que integra todos los componentes y permite la interacción en tiempo real con el tutor.
 
----
 
 ## 3. Características Principales
 ✨ Adaptación Afectiva (MoE): El arquetipo predicho selecciona al "tutor experto" principal, pero el vector de probabilidades de emoción modula los pesos de todos los expertos, generando un plan de acción mixto y verdaderamente adaptativo.
@@ -38,66 +36,83 @@ Aplicación Interactiva (app.py): Una interfaz de usuario desarrollada con Strea
 
 📊 Seguimiento de Experimentos: Integración con MLflow para registrar parámetros, métricas y artefactos de cada ejecución de entrenamiento.
 
----
 
 ## 4. Guía de Instalación y Uso
 Siga estos pasos para configurar y ejecutar el proyecto en un entorno como Google Colab.
 
 ### Paso 1: Clonar el Repositorio
 
-´´´´
+```
 git clone https://github.com/YaninaCaffetti/Tuto_Doc.git
 cd Tuto_Doc
-´´´´
+```
 
 ### Paso 2: Configuración del Dataset Crudo (Vía Google Drive)
-Este proyecto está diseñado para leer el dataset crudo (base_estudio_discapacidad_2018.csv) desde Google Drive para evitar problemas con los límites de Git LFS.
+Este proyecto está diseñado para leer el dataset crudo (`base_estudio_discapacidad_2018.csv`) desde Google Drive para evitar problemas con los límites de Git LFS.
 
 Suba el archivo base_estudio_discapacidad_2018.csv a su Google Drive.
 
 En un entorno de Colab, monte su Drive:
 
+```
 from google.colab import drive
 drive.mount('/content/drive')
+```
 
-Actualice la configuración: Abra el archivo config.yaml y modifique la clave raw_data para que apunte a la ruta de su archivo en Drive.
+Actualice la configuración: Abra el archivo `config.yaml` y modifique la clave raw_data para que apunte a la ruta de su archivo en Drive.
 
 # Ejemplo de configuración en config.yaml
+
+```
 data_paths:
   raw_data: '/content/drive/MyDrive/ruta/a/su/base_estudio_discapacidad_2018.csv'
+```
 
 ### Paso 3: Instalar Dependencias
+
+```
 pip install -r requirements.txt
+```
 
 ### Paso 4: Ejecutar el Pipeline de Procesamiento de Datos
-Este comando es obligatorio y debe ejecutarse primero. Tomará el dataset crudo de su Drive, lo procesará y generará el archivo data/cognitive_profiles.csv necesario para el entrenamiento.
+Este comando es obligatorio y debe ejecutarse primero. Tomará el dataset crudo de su Drive, lo procesará y generará el archivo `data/cognitive_profiles.csv` necesario para el entrenamiento.
 
+```
 python src/data_processing.py
+```
 
 ### Paso 5: Entrenar los Modelos
-Utilice el script train.py para entrenar los componentes.
+Utilice el script `train.py` para entrenar los componentes.
 
 Entrenar solo el Tutor Cognitivo (rápido, recomendado para pruebas):
 
+```
 python train.py --model cognitive
+```
 
 Entrenar ambos modelos (ejecución completa):
 
+```
 python train.py --model all
+```
 
 ### Paso 6: Lanzar la Aplicación
-Una vez que los modelos han sido entrenados (y la carpeta saved_models ha sido creada), puede lanzar la interfaz interactiva.
+Una vez que los modelos han sido entrenados (y la carpeta `saved_models` ha sido creada), puede lanzar la interfaz interactiva.
 
+```
 streamlit run app.py
+```
 
 ## 5. Resumen de Hallazgos Clave
+
 Modelo Cognitivo (Validación Cruzada): La evaluación robusta mediante K-Fold Estratificado arrojó un F1-Score Macro promedio de 0.811 ± 0.029. Este resultado realista y estable reemplaza métricas iniciales que sugerían sobreajuste, demostrando una sólida y fiable capacidad de generalización del modelo RandomForestClassifier.
 
-Clasificador de Emociones: El modelo fine-tuneado alcanzó un F1-Score Macro de 0.759. Se identificó una debilidad específica en la clase "Anticipación" (F1-Score de 0.00), atribuida a una representación casi nula en los datos de entrenamiento, lo que constituye un hallazgo importante sobre el impacto del desbalance de clases.
+Clasificador de Emociones: El modelo fine-tuneado alcanzó un F1-Score Macro de 0.759. Se identificó una debilidad específica en la clase "Anticipación" (F1-Score de 0.00), atribuida a una representación casi nula en los datos de entrenamiento, lo que constituye un hallazgo importante sobre el impacto del desbalance de clases. "Anticipación" solamente se encuentra en el corpus propio. 
 
-Trade-off XAI vs. Rendimiento: Se demostró un claro compromiso entre la interpretabilidad y el rendimiento predictivo. Mientras que un modelo de "caja blanca" resultó frágil en las fases iniciales, el enfoque de "caja negra" (RandomForestClassifier) proporcionó una solución robusta y superior, justificando empíricamente la necesidad de aplicar técnicas de XAI (Explainable AI) post-hoc.
+Trade-off XAI vs. Rendimiento: Se demostró un claro compromiso entre la interpretabilidad y el rendimiento predictivo. Mientras que un modelo de "caja blanca" (IF-HUPM) resultó frágil en las fases iniciales, el enfoque de "caja negra" (RandomForestClassifier) proporcionó una solución robusta y superior, justificando empíricamente la necesidad de aplicar técnicas de XAI (Explainable AI) post-hoc.
 
 ## 6. Pila Tecnológica (Stack)
+
 Lenguaje: Python 3.10+
 
 Análisis de Datos: Pandas, NumPy
@@ -115,9 +130,9 @@ Pruebas: Pytest
 ## 7. Trabajo Futuro
 Explicabilidad del Modelo Final (XAI): Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para interpretar las características más influyentes en la predicción de cada arquetipo.
 
-Validación con Usuarios: Realizar un estudio formal con usuarios finales para medir cuantitativamente el impacto de la adaptación afectiva en la percepción de empatía y la confianza en el sistema.
+Validación con Usuarios: Realizar un estudio con familas y/o tutores de personas con discapacidad para medir cuantitativamente el impacto de la adaptación afectiva en la percepción de empatía y la confianza en el sistema.
 
-Aprendizaje de Reglas Afectivas: Explorar métodos de aprendizaje por refuerzo para que el sistema aprenda las affective_rules desde datos de interacción, en lugar de definirlas heurísticamente.
+Aprendizaje de Reglas Afectivas: Explorar métodos de aprendizaje por refuerzo para que el sistema aprenda las `affective_rules` desde datos de interacción, en lugar de definirlas heurísticamente.
 
 ## 8. Licencia
 Este proyecto se distribuye bajo la licencia MIT. Consulte el archivo LICENSE para más detalles.
