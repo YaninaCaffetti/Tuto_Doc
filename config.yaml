@@ -13,13 +13,13 @@ affective_rules:
     Prof_Subutil: 1.2
 constants:
   emotion_labels:
-  - "Alegr\xEDa"
+  - Alegria
   - Tristeza
   - Ira
   - Miedo
   - Sorpresa
   - Confianza
-  - "Anticipaci\xF3n"
+  - Anticipacion
   negative_emotions:
   - Ira
   - Tristeza
