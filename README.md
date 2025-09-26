@@ -134,8 +134,6 @@ Pruebas: Pytest
 
 ## 7. Trabajo Futuro
 
-Explicabilidad del Modelo Final (XAI): Aplicar técnicas de XAI post-hoc (como SHAP o LIME) sobre el RandomForestClassifier para interpretar las características más influyentes en la predicción de cada arquetipo.
-
 Validación con Usuarios: Realizar un estudio con familas y/o tutores de personas con discapacidad para medir cuantitativamente el impacto de la adaptación afectiva en la percepción de empatía y la confianza en el sistema.
 
 Aprendizaje de Reglas Afectivas: Explorar métodos de aprendizaje por refuerzo para que el sistema aprenda las `affective_rules` desde datos de interacción, en lugar de definirlas heurísticamente.
