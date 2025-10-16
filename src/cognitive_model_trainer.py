@@ -41,10 +41,11 @@ def train_cognitive_tutor(config: dict):
             max_depth=cfg_tutor['max_depth'],
             min_samples_leaf=cfg_tutor['min_samples_leaf'],
             random_state=cfg_tutor['random_state'],
+            class_weight='balanced', 
             n_jobs=-1
         )
 
-        # Usamos 5 pliegues estratificados. 'shuffle=True' es una buena práctica.
+       
         cv_strategy = StratifiedKFold(n_splits=5, shuffle=True, random_state=cfg_tutor['random_state'])
 
         # --- 3. Ejecutar la Validación Cruzada ---
@@ -69,7 +70,7 @@ def train_cognitive_tutor(config: dict):
     # Una vez validada la configuración del modelo, lo re-entrenamos con todos los datos
     # para que aprenda lo máximo posible. Este es el modelo que se usará en producción.
     print("\n--- 🚂 Re-entrenando modelo final con el 100% de los datos... ---")
-    final_model = RandomForestClassifier(**cfg_tutor, n_jobs=-1).fit(X, y)
+    final_model = RandomForestClassifier(**cfg_tutor, class_weight='balanced', n_jobs=-1).fit(X, y)
     
     # --- 6. Guardar Modelo Final y Registrar Artefacto ---
     model_save_path = config['model_paths']['cognitive_tutor']
