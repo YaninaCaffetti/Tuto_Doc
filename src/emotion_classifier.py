@@ -348,15 +348,31 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
     )
 
     # 6) Pesos de clase
-    all_class_labels = np.arange(len(EMOTION_LABELS))
-    class_weights = compute_class_weight(
+    print("  › Calculando pesos de clase de forma robusta...")
+    # Paso 1: Identificar las clases que SÍ están en el conjunto de entrenamiento
+    unique_labels_in_train = np.unique(train_df['label'])
+    # Paso 2: Calcular pesos solo para esas clases presentes
+    class_weights_present = compute_class_weight(
         class_weight='balanced',
-        classes=np.unique(train_df['label']),
+        classes=unique_labels_in_train,
         y=train_df['label']
     )
-    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
+    # Paso 3: Crear un mapa de {id_de_clase -> peso}
+    
+    label_to_weight_map = dict(zip(unique_labels_in_train, class_weights_present))
+    # Paso 4: Construir el tensor final de 7 elementos
+    # Se inicializan todos los pesos a 1.0 (sin ponderación)
 
-    # 7) Args de entrenamiento (AHORA USA LA NUEVA FUNCIÓN)
+    num_classes = len(EMOTION_LABELS)
+    final_weights = torch.ones(num_classes, dtype=torch.float)
+
+    # Se actualizan los pesos para las clases que sí estaban en el train set
+    for label_id, weight in label_to_weight_map.items():
+        final_weights[label_id] = float(weight)
+    # El tensor final ahora se llama 'final_weights'
+    class_weights_tensor = final_weights
+    
+    # 7) Args de entrenamiento 
     training_params = dict(cfg_emo['training_params'])
     if 'learning_rate' in training_params:
         training_params['learning_rate'] = float(training_params['learning_rate'])
@@ -372,7 +388,7 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         eval_dataset=val_ds,
         data_collator=data_collator,
         compute_metrics=compute_metrics_fn,
-        class_weights=class_weights_tensor,
+        class_weights=final_weights,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=cfg_emo.get('early_stopping_patience', 2))]
     )
 
