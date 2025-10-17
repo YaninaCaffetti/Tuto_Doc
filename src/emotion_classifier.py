@@ -378,7 +378,6 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
 
     # 9) Entrenamiento y evaluación dentro de un run de MLflow
     with mlflow.start_run(run_name="train_emotion_classifier_final"):
-        mlflow.log_params(cfg_emo['training_params'])
         mlflow.log_param("use_back_translation", cfg_emo.get('data_augmentation', {}).get('use_back_translation', True))
         mlflow.log_dict({'label2id': label2id, 'id2label': id2label}, "mappings/labels.json")
 
