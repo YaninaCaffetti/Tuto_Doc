@@ -348,6 +348,7 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
     )
 
     # 6) Pesos de clase
+    all_class_labels = np.arange(len(EMOTION_LABELS))
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=np.unique(train_df['label']),
