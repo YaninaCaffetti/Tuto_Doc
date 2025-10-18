@@ -24,6 +24,11 @@ constants:
   - Ira
   - Tristeza
   - Miedo
+  positive_emotions:
+  - Alegria
+  - Confianza
+  - Anticipacion
+  - Sorpresa
 data_paths:
   cognitive_training_data: data/cognitive_profiles.csv
   demo_profiles: data/demo_profiles.csv
