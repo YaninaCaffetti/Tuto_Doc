@@ -163,12 +163,16 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     emotion_probs = emotion_classifier.predict_proba(prompt)[0]
                     top_emotion = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
                     
+                    # --- ¡CAMBIO CLAVE! Normalización a formato Título ---
+                    # Para evitar problemas de mayúsculas/minúsculas (ej. "alegria" vs "Alegria"),
+                    # estandarizamos la emoción para que la primera letra sea mayúscula.
+                    top_emotion_normalized = top_emotion.capitalize()
+
                     cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
                         user_profile, 
                         emotion_probs
                     )
 
-                    # --- LÓGICA CONVERSACIONAL BASADA EN DICCIONARIO (ROBUSTA Y COMPLETA) ---
                     empathetic_responses = {
                         "Alegria": "¡Qué buena noticia! Me alegra sentir tu optimismo. Para potenciar ese impulso, este es el plan:",
                         "Confianza": "¡Excelente! Percibo mucha seguridad en tus palabras. Usemos esa confianza como base para el siguiente plan de acción:",
@@ -177,18 +181,18 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                         "Miedo": "Comprendo que esta situación pueda generar incertidumbre. No te preocupes, estamos aquí para afrontarla. Este es el plan:",
                         "Ira": "Percibo tu frustración. Es una reacción válida. Vamos a canalizar esa energía de manera constructiva con este plan de acción:",
                         "Sorpresa": "¡Vaya! Parece que esto te ha tomado por sorpresa. Analicemos con calma la situación. Este es el plan:",
-                        "Desconocida": "Entendido. Este es el plan de acción sugerido:" # Fallback
+                        "Desconocida": "Entendido. Este es el plan de acción sugerido:"
                     }
 
-                   
-                    intro_message = empathetic_responses.get(top_emotion, empathetic_responses["Desconocida"])
+                    # Usamos la versión normalizada para la búsqueda en el diccionario
+                    intro_message = empathetic_responses.get(top_emotion_normalized, empathetic_responses["Desconocida"])
                     
                     full_response = f"{intro_message}\n\n{cognitive_plan}"
                     st.markdown(full_response)
                     
                     analysis_data = {
                         "archetype": predicted_archetype,
-                        "top_emotion": top_emotion,
+                        "top_emotion": top_emotion, # Guardamos la emoción original para el análisis
                         "top_emotion_prob": emotion_probs.get(top_emotion, 0.0),
                         "emotion_probs": emotion_probs
                     }
