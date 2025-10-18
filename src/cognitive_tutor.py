@@ -1,4 +1,4 @@
-# src/cognitive_tutor.py (Versión Refactorizada y Optimizada)
+# src/cognitive_tutor.py 
 
 import pandas as pd
 import warnings
