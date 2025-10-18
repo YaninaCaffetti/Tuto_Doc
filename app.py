@@ -24,7 +24,7 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> tuple:
     """Carga y prepara todos los artefactos necesarios para la aplicación."""
     with st.spinner("Cargando modelos y preparando el sistema..."):
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 if not config:
                     st.error(f"Error Crítico: El archivo '{config_path}' está vacío o mal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                 try:
                     user_profile = df_profiles.loc[st.session_state.selected_profile_id]
                     emotion_probs = emotion_classifier.predict_proba(prompt)[0]
-                    top_emotion = max(emotion_probs, key=emotion_probs.get)
+                    top_emotion = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
                     
                     cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
                         user_profile, 
                         emotion_probs
                     )
 
-                    # --- LÓGICA CONVERSACIONAL MEJORADA Y CENTRALIZADA ---
-                    # Las listas de emociones ahora se leen desde la configuración
-                    constants = st.session_state.config.get('constants', {})
-                    negative_emotions = constants.get('negative_emotions', [])
-                    positive_emotions = constants.get('positive_emotions', []) 
+                    # --- LÓGICA CONVERSACIONAL BASADA EN DICCIONARIO (ROBUSTA Y COMPLETA) ---
+                    empathetic_responses = {
+                        "Alegria": "¡Qué buena noticia! Me alegra sentir tu optimismo. Para potenciar ese impulso, este es el plan:",
+                        "Confianza": "¡Excelente! Percibo mucha seguridad en tus palabras. Usemos esa confianza como base para el siguiente plan de acción:",
+                        "Anticipacion": "Noto tu expectativa. ¡Esa energía es muy valiosa! Enfoquémosla con el siguiente plan:",
+                        "Tristeza": "Entiendo que puedas sentirte así. Analicemos la situación juntos. Te propongo el siguiente plan para que avancemos:",
+                        "Miedo": "Comprendo que esta situación pueda generar incertidumbre. No te preocupes, estamos aquí para afrontarla. Este es el plan:",
+                        "Ira": "Percibo tu frustración. Es una reacción válida. Vamos a canalizar esa energía de manera constructiva con este plan de acción:",
+                        "Sorpresa": "¡Vaya! Parece que esto te ha tomado por sorpresa. Analicemos con calma la situación. Este es el plan:",
+                        "Desconocida": "Entendido. Este es el plan de acción sugerido:" # Fallback
+                    }
 
-                    if top_emotion in negative_emotions:
-                        intro_message = f"Percibo que puedes sentirte con un poco de **{top_emotion.lower()}**. Analicemos esto juntos con el siguiente plan:"
-                    elif top_emotion in positive_emotions:
-                        intro_message = f"¡Excelente! Percibo un estado de **{top_emotion.lower()}**. Para potenciar ese impulso, este es el plan:"
-                    elif top_emotion == "Sorpresa":
-                        intro_message = f"¡Vaya! Parece que esto te ha generado **{top_emotion.lower()}**. Veamos la situación con más detalle:"
-                    else: 
-                        intro_message = "Entendido. Este es el plan de acción sugerido:"
+                   
+                    intro_message = empathetic_responses.get(top_emotion, empathetic_responses["Desconocida"])
                     
                     full_response = f"{intro_message}\n\n{cognitive_plan}"
                     st.markdown(full_response)
@@ -189,7 +189,7 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     analysis_data = {
                         "archetype": predicted_archetype,
                         "top_emotion": top_emotion,
-                        "top_emotion_prob": emotion_probs[top_emotion],
+                        "top_emotion_prob": emotion_probs.get(top_emotion, 0.0),
                         "emotion_probs": emotion_probs
                     }
                     st.session_state.messages.append({"role": "assistant", "content": full_response, "analysis": analysis_data})
@@ -206,12 +206,16 @@ def main():
     """Función principal que orquesta la ejecución de la aplicación Streamlit."""
     st.set_page_config(page_title="Tutor Cognitivo Adaptativo", layout="centered", initial_sidebar_state="expanded")
 
-    emotion_classifier, cognitive_tutor_system, df_profiles, config = load_all_models_and_data()
-    
-    initialize_session_state(df_profiles, config)
-    render_sidebar(df_profiles)
-    render_chat_interface(emotion_classifier, cognitive_tutor_system, df_profiles)
+    try:
+        emotion_classifier, cognitive_tutor_system, df_profiles, config = load_all_models_and_data()
+        
+        initialize_session_state(df_profiles, config)
+        render_sidebar(df_profiles)
+        render_chat_interface(emotion_classifier, cognitive_tutor_system, df_profiles)
+    except Exception as e:
+        st.error("Ocurrió un error fatal al iniciar la aplicación.")
+        st.exception(e)
+
 
 if __name__ == '__main__':
     main()
-
