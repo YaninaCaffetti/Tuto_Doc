@@ -62,8 +62,12 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> tuple:
 def get_initial_metrics() -> Dict:
     """Genera la estructura de diccionario para inicializar o reiniciar las métricas."""
     return {
-        "total_interactions": 0, "negative_emotion_count": 0, "emotion_counts": {},
-        "emotion_confidence_sum": {}, "profile_emotion_counts": {}
+        "total_interactions": 0,
+        "negative_emotion_count": 0,
+        "positive_emotion_count": 0,  # <-- NUEVO CONTADOR
+        "emotion_counts": {},
+        "emotion_confidence_sum": {},
+        "profile_emotion_counts": {}
     }
 
 def initialize_session_state(df_profiles: pd.DataFrame, config: Dict):
@@ -83,12 +87,16 @@ def update_metrics(analysis: Dict):
     profile_id = st.session_state.selected_profile_id
     top_emotion = analysis['top_emotion']
     
+    # Lee ambas listas de emociones desde la configuración
     constants = st.session_state.config.get('constants', {})
     negative_emotions = constants.get('negative_emotions', [])
+    positive_emotions = constants.get('positive_emotions', []) # <-- NUEVO
     
     metrics["total_interactions"] += 1
     if top_emotion in negative_emotions:
         metrics["negative_emotion_count"] += 1
+    elif top_emotion in positive_emotions: # <-- NUEVA LÓGICA
+        metrics["positive_emotion_count"] += 1
 
     metrics["emotion_counts"][top_emotion] = metrics["emotion_counts"].get(top_emotion, 0) + 1
     metrics["emotion_confidence_sum"][top_emotion] = metrics["emotion_confidence_sum"].get(top_emotion, 0) + analysis['top_emotion_prob']
@@ -126,8 +134,16 @@ def render_sidebar(df_profiles: pd.DataFrame):
         st.header("Métricas de la Sesión")
         metrics = st.session_state.metrics
         if metrics["total_interactions"] > 0:
-            neg_rate = (metrics["negative_emotion_count"] / metrics["total_interactions"]) * 100
-            st.metric(label="Tasa de Emociones Negativas", value=f"{neg_rate:.1f}%")
+            # --- SECCIÓN DE MÉTRICAS MEJORADA ---
+            col1, col2 = st.columns(2)
+
+            with col1:
+                neg_rate = (metrics["negative_emotion_count"] / metrics["total_interactions"]) * 100
+                st.metric(label="Tasa Negativa", value=f"{neg_rate:.1f}%")
+
+            with col2:
+                pos_rate = (metrics["positive_emotion_count"] / metrics["total_interactions"]) * 100
+                st.metric(label="Tasa Positiva", value=f"{pos_rate:.1f}%")
 
             st.subheader("Distribución General de Emociones")
             if metrics["emotion_counts"]:
@@ -161,12 +177,12 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                 try:
                     user_profile = df_profiles.loc[st.session_state.selected_profile_id]
                     emotion_probs = emotion_classifier.predict_proba(prompt)[0]
-                    top_emotion = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
+                    top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
                     
-                    # --- ¡CAMBIO CLAVE! Normalización a formato Título ---
-                    # Para evitar problemas de mayúsculas/minúsculas (ej. "alegria" vs "Alegria"),
-                    # estandarizamos la emoción para que la primera letra sea mayúscula.
-                    top_emotion_normalized = top_emotion.capitalize()
+                    top_emotion_normalized = top_emotion_raw.strip().capitalize()
+                    
+                    if top_emotion_raw != top_emotion_normalized:
+                        st.warning(f"DEBUG: Se detectó inconsistencia de formato. Original: '{top_emotion_raw}', Normalizado: '{top_emotion_normalized}'")
 
                     cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
                         user_profile, 
@@ -184,7 +200,6 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                         "Desconocida": "Entendido. Este es el plan de acción sugerido:"
                     }
 
-                    # Usamos la versión normalizada para la búsqueda en el diccionario
                     intro_message = empathetic_responses.get(top_emotion_normalized, empathetic_responses["Desconocida"])
                     
                     full_response = f"{intro_message}\n\n{cognitive_plan}"
@@ -192,8 +207,8 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     
                     analysis_data = {
                         "archetype": predicted_archetype,
-                        "top_emotion": top_emotion, # Guardamos la emoción original para el análisis
-                        "top_emotion_prob": emotion_probs.get(top_emotion, 0.0),
+                        "top_emotion": top_emotion_raw,
+                        "top_emotion_prob": emotion_probs.get(top_emotion_raw, 0.0),
                         "emotion_probs": emotion_probs
                     }
                     st.session_state.messages.append({"role": "assistant", "content": full_response, "analysis": analysis_data})
@@ -223,3 +238,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
