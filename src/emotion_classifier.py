@@ -185,18 +185,38 @@ def get_custom_domain_data() -> pd.DataFrame:
         ("Siempre creí que este sistema funcionaría.", "Confianza"),
         ("No sé cómo voy a superar esto.", "Miedo"),
         ("¡Qué maravilla! No esperaba este resultado.", "Sorpresa"),
-        ("Estoy listo para empezar, ¿cuál es el primer paso?", "Anticipación"),
-        ("No puedo esperar a ver los resultados de este experimento.", "Anticipación"),
+        ("Estoy listo para empezar, ¿cuál es el primer paso?", "Anticipacion"),
+        ("No puedo esperar a ver los resultados de este experimento.", "Anticipacion"),
         ("Esto es inaceptable, nadie responde mis correos.", "Ira"),
         ("Perdimos el financiamiento del proyecto.", "Tristeza"),
-        ("El prototipo funciona mejor de lo que esperaba.", "Alegría"),
+        ("El prototipo funciona mejor de lo que esperaba.", "Alegria"),
         ("Confío en que el equipo resolverá esto.", "Confianza"),
         ("Me preocupa no cumplir con el plazo de entrega.", "Miedo"),
         ("¡No puedo creer que aprobamos la auditoría!", "Sorpresa"),
-        ("Tengo muchas ganas de empezar la capacitación la semana próxima.", "Anticipación"),
+        ("Tengo muchas ganas de empezar la capacitación la semana próxima.", "Anticipacion"),
         ("Con el CUD podré acceder a más beneficios para postularme.", "Confianza"),
-        ("Gracias, la orientación me devolvió el ánimo.", "Alegría"),
+        ("Gracias, la orientación me devolvió el ánimo.", "Alegria"),
         ("Basta de demoras!.", "Ira"),
+        ("¡Conseguí el trabajo! No puedo creerlo, estoy tan feliz.", "Alegria"),
+        ("El proyecto fue un éxito total, todo el equipo está celebrando.", "Alegria"),
+        ("Me acaban de confirmar la beca. ¡Qué gran noticia!", "Alegria"),
+        ("Finalmente logré superar ese obstáculo, me siento increíble.", "Alegria"),
+        ("Recibir este reconocimiento me llena de orgullo y felicidad.", "Alegria"),
+        ("Hoy es un día fantástico, todo está saliendo a la perfección.", "Alegria"),
+        ("Qué alegría ver que mi esfuerzo está dando frutos.", "Alegria"),
+        ("Estoy muy contento con los resultados obtenidos.", "Alegria"),
+        ("¡Lo logramos! El plan funcionó mejor de lo esperado.", "Alegria"),
+        ("Me siento optimista y lleno de energía positiva.", "Alegria"),
+        ("Mañana es la entrevista final, estoy nervioso pero expectante.", "Anticipacion"),
+        ("Falta solo una semana para el lanzamiento del proyecto.", "Anticipacion"),
+        ("Estoy ansioso por empezar este nuevo curso.", "Anticipacion"),
+        ("Ya quiero ver cómo reaccionarán cuando presente la propuesta.", "Anticipacion"),
+        ("La espera para conocer los resultados me tiene en vilo.", "Anticipacion"),
+        ("Contando los días para la conferencia, seguro aprenderé mucho.", "Anticipacion"),
+        ("Tengo muchas expectativas sobre esta nueva etapa.", "Anticipacion"),
+        ("¿Qué sorpresas nos deparará la reunión de mañana?", "Anticipacion"),
+        ("Estoy a punto de recibir el feedback, espero que sea bueno.", "Anticipacion"),
+        ("La próxima fase del proyecto promete ser muy interesante.", "Anticipacion"),
     ]
     return pd.DataFrame(data_custom_list, columns=['text', 'emotion'])
 
@@ -261,7 +281,7 @@ def load_base_dataset(emotion_labels: List[str]) -> pd.DataFrame:
         # El parámetro trust_remote_code se elimina por ser obsoleto.
         dataset = load_dataset("emotion", split='train')
         df_public = dataset.to_pandas()
-        label_map = {0: 'Tristeza', 1: 'Alegría', 2: 'Amor/Confianza', 3: 'Ira', 4: 'Miedo', 5: 'Sorpresa'}
+        label_map = {0: 'Tristeza', 1: 'Alegria', 2: 'Amor/Confianza', 3: 'Ira', 4: 'Miedo', 5: 'Sorpresa/Anticipacion'}
         df_public['emotion'] = df_public['label'].map(label_map).replace({'Amor/Confianza': 'Confianza'})
         df_public_clean = df_public.dropna(subset=['emotion'])[['text', 'emotion']]
 
