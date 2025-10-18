@@ -176,8 +176,11 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     emotion_probs = emotion_classifier.predict_proba(prompt)[0]
                     top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
                     
-                    # --- NORMALIZACIÓN CONSISTENTE ---
+                    # --- NORMALIZACIÓN Y DEPURACIÓN DEFINITIVA ---
                     top_emotion_normalized = top_emotion_raw.strip().capitalize()
+                    
+                    # Esta línea nos mostrará la verdad absoluta en una caja roja en la app.
+                    st.error(f"DEBUG FORENSE: Buscando la clave -> |{top_emotion_normalized}| en el diccionario.")
 
                     cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
                         user_profile, 
@@ -200,11 +203,9 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     full_response = f"{intro_message}\n\n{cognitive_plan}"
                     st.markdown(full_response)
                     
-                    # --- CORRECCIÓN FINAL ---
-                    # Pasamos la versión NORMALIZADA a los datos de análisis
                     analysis_data = {
                         "archetype": predicted_archetype,
-                        "top_emotion": top_emotion_normalized, # <-- CORREGIDO
+                        "top_emotion": top_emotion_normalized,
                         "top_emotion_prob": emotion_probs.get(top_emotion_raw, 0.0),
                         "emotion_probs": emotion_probs
                     }
@@ -235,4 +236,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
