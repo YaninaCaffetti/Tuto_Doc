@@ -64,7 +64,7 @@ def get_initial_metrics() -> Dict:
     return {
         "total_interactions": 0,
         "negative_emotion_count": 0,
-        "positive_emotion_count": 0,  # <-- NUEVO CONTADOR
+        "positive_emotion_count": 0,
         "emotion_counts": {},
         "emotion_confidence_sum": {},
         "profile_emotion_counts": {}
@@ -85,17 +85,16 @@ def update_metrics(analysis: Dict):
     """Actualiza las métricas de la sesión con los datos de la última interacción."""
     metrics = st.session_state.metrics
     profile_id = st.session_state.selected_profile_id
-    top_emotion = analysis['top_emotion']
+    top_emotion = analysis['top_emotion'] # Ahora recibe la versión normalizada
     
-    # Lee ambas listas de emociones desde la configuración
     constants = st.session_state.config.get('constants', {})
     negative_emotions = constants.get('negative_emotions', [])
-    positive_emotions = constants.get('positive_emotions', []) # <-- NUEVO
+    positive_emotions = constants.get('positive_emotions', [])
     
     metrics["total_interactions"] += 1
     if top_emotion in negative_emotions:
         metrics["negative_emotion_count"] += 1
-    elif top_emotion in positive_emotions: # <-- NUEVA LÓGICA
+    elif top_emotion in positive_emotions:
         metrics["positive_emotion_count"] += 1
 
     metrics["emotion_counts"][top_emotion] = metrics["emotion_counts"].get(top_emotion, 0) + 1
@@ -134,13 +133,10 @@ def render_sidebar(df_profiles: pd.DataFrame):
         st.header("Métricas de la Sesión")
         metrics = st.session_state.metrics
         if metrics["total_interactions"] > 0:
-            # --- SECCIÓN DE MÉTRICAS MEJORADA ---
             col1, col2 = st.columns(2)
-
             with col1:
                 neg_rate = (metrics["negative_emotion_count"] / metrics["total_interactions"]) * 100
                 st.metric(label="Tasa Negativa", value=f"{neg_rate:.1f}%")
-
             with col2:
                 pos_rate = (metrics["positive_emotion_count"] / metrics["total_interactions"]) * 100
                 st.metric(label="Tasa Positiva", value=f"{pos_rate:.1f}%")
@@ -163,6 +159,7 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                 with st.expander("Ver Análisis Detallado de esta Respuesta"):
                     analysis = message["analysis"]
                     st.info(f"**👤 Arquetipo Cognitivo:** {analysis['archetype']}")
+                    # Mostramos la emoción normalizada para consistencia
                     st.info(f"**🧠 Emoción Dominante:** {analysis['top_emotion']} ({analysis['top_emotion_prob']:.0%})")
                     df_probs = pd.DataFrame(analysis['emotion_probs'].items(), columns=['Emoción', 'Confianza'])
                     st.bar_chart(df_probs[df_probs['Confianza'] > 0.01].set_index('Emoción'))
@@ -179,10 +176,8 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     emotion_probs = emotion_classifier.predict_proba(prompt)[0]
                     top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
                     
+                    # --- NORMALIZACIÓN CONSISTENTE ---
                     top_emotion_normalized = top_emotion_raw.strip().capitalize()
-                    
-                    if top_emotion_raw != top_emotion_normalized:
-                        st.warning(f"DEBUG: Se detectó inconsistencia de formato. Original: '{top_emotion_raw}', Normalizado: '{top_emotion_normalized}'")
 
                     cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
                         user_profile, 
@@ -205,9 +200,11 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                     full_response = f"{intro_message}\n\n{cognitive_plan}"
                     st.markdown(full_response)
                     
+                    # --- CORRECCIÓN FINAL ---
+                    # Pasamos la versión NORMALIZADA a los datos de análisis
                     analysis_data = {
                         "archetype": predicted_archetype,
-                        "top_emotion": top_emotion_raw,
+                        "top_emotion": top_emotion_normalized, # <-- CORREGIDO
                         "top_emotion_prob": emotion_probs.get(top_emotion_raw, 0.0),
                         "emotion_probs": emotion_probs
                     }
