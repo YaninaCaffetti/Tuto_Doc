@@ -1,3 +1,5 @@
+# app.py 
+
 import streamlit as st
 import yaml
 import sys
@@ -8,7 +10,7 @@ import traceback
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import Dict, List
 
-# --- 1. CONFIGURACIÓN INICIAL Y CARGA DE MÓDulos ---
+# --- 1. CONFIGURACIÓN INICIAL Y CARGA DE MÓDULOS ---
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
 try:
@@ -21,10 +23,12 @@ except ImportError as e:
 # --- 2. FUNCIONES DE CARGA DE DATOS (CACHEADAS) ---
 @st.cache_resource
 def load_all_models_and_data(config_path: str = 'config.yaml') -> tuple:
-    """Carga y prepara todos los artefactos necesarios para la aplicación."""
+    """
+    Carga y prepara todos los artefactos necesarios para la aplicación.
+    """
     with st.spinner("Cargando modelos y preparando el sistema..."):
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
                 if not config:
                     st.error(f"Error Crítico: El archivo '{config_path}' está vacío o mal formado.")
@@ -55,47 +59,51 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> tuple:
             thresholds 
         )
         
+        
         return emotion_classifier, cognitive_tutor_system, df_profiles, config
 
 # --- 3. FUNCIONES DE LA INTERFAZ DE USUARIO ---
 
 def get_initial_metrics() -> Dict:
-    """Genera la estructura de diccionario para inicializar o reiniciar las métricas."""
+    """
+    Genera la estructura de diccionario para inicializar o reiniciar las métricas de la sesión.
+    """
     return {
         "total_interactions": 0,
         "negative_emotion_count": 0,
-        "positive_emotion_count": 0,
         "emotion_counts": {},
         "emotion_confidence_sum": {},
         "profile_emotion_counts": {}
     }
 
 def initialize_session_state(df_profiles: pd.DataFrame, config: Dict):
-    """Inicializa las variables clave en el `session_state` de Streamlit."""
+    """
+    Inicializa las variables clave en el `session_state` de Streamlit si no existen.
+    """
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "metrics" not in st.session_state:
         st.session_state.metrics = get_initial_metrics()
     if 'selected_profile_id' not in st.session_state:
         st.session_state.selected_profile_id = df_profiles.index.tolist()[0]
+    # MEJORA: Almacenar la configuración en el estado de la sesión para un acceso fácil.
     if 'config' not in st.session_state:
         st.session_state.config = config
 
 def update_metrics(analysis: Dict):
-    """Actualiza las métricas de la sesión con los datos de la última interacción."""
+    """
+    Actualiza las métricas de la sesión con los datos de la última interacción.
+    """
     metrics = st.session_state.metrics
     profile_id = st.session_state.selected_profile_id
-    top_emotion = analysis['top_emotion'] # Ahora recibe la versión normalizada
-    
-    constants = st.session_state.config.get('constants', {})
-    negative_emotions = constants.get('negative_emotions', [])
-    positive_emotions = constants.get('positive_emotions', [])
+    top_emotion = analysis['top_emotion']
+
+    # MEJORA: La lista de emociones negativas ahora se lee desde la configuración.
+    negative_emotions = st.session_state.config.get('constants', {}).get('negative_emotions', [])
     
     metrics["total_interactions"] += 1
     if top_emotion in negative_emotions:
         metrics["negative_emotion_count"] += 1
-    elif top_emotion in positive_emotions:
-        metrics["positive_emotion_count"] += 1
 
     metrics["emotion_counts"][top_emotion] = metrics["emotion_counts"].get(top_emotion, 0) + 1
     metrics["emotion_confidence_sum"][top_emotion] = metrics["emotion_confidence_sum"].get(top_emotion, 0) + analysis['top_emotion_prob']
@@ -106,7 +114,9 @@ def update_metrics(analysis: Dict):
     profile_metrics[top_emotion] = profile_metrics.get(top_emotion, 0) + 1
 
 def render_sidebar(df_profiles: pd.DataFrame):
-    """Crea y muestra todo el contenido de la barra lateral de la aplicación."""
+    """
+    Crea y muestra todo el contenido de la barra lateral de la aplicación.
+    """
     with st.sidebar:
         st.header("Sobre el Proyecto")
         st.markdown("Demostración del prototipo de tesis de la **Mgter. Ing. Yanina A. Caffetti**.")
@@ -114,6 +124,7 @@ def render_sidebar(df_profiles: pd.DataFrame):
         st.header("Configuración de la Simulación")
         
         def clear_chat_on_profile_change():
+            """Función callback para reiniciar el chat al cambiar de perfil."""
             st.session_state.messages = []
             st.session_state.metrics = get_initial_metrics()
 
@@ -121,7 +132,7 @@ def render_sidebar(df_profiles: pd.DataFrame):
             "Seleccione un Perfil de Usuario:",
             df_profiles.index.tolist(),
             key='selected_profile_id',
-            help="Cambiar de perfil reiniciará la conversación.",
+            help="El perfil se mantendrá durante toda la conversación. Cambiarlo reiniciará el chat.",
             on_change=clear_chat_on_profile_change
         )
         st.info(f"Perfil activo: **{st.session_state.selected_profile_id}**")
@@ -133,23 +144,28 @@ def render_sidebar(df_profiles: pd.DataFrame):
         st.header("Métricas de la Sesión")
         metrics = st.session_state.metrics
         if metrics["total_interactions"] > 0:
-            col1, col2 = st.columns(2)
-            with col1:
-                neg_rate = (metrics["negative_emotion_count"] / metrics["total_interactions"]) * 100
-                st.metric(label="Tasa Negativa", value=f"{neg_rate:.1f}%")
-            with col2:
-                pos_rate = (metrics["positive_emotion_count"] / metrics["total_interactions"]) * 100
-                st.metric(label="Tasa Positiva", value=f"{pos_rate:.1f}%")
+            neg_rate = (metrics["negative_emotion_count"] / metrics["total_interactions"]) * 100
+            st.metric(label="Tasa de Emociones Negativas", value=f"{neg_rate:.1f}%")
 
             st.subheader("Distribución General de Emociones")
             if metrics["emotion_counts"]:
                 df_emotion_dist = pd.DataFrame(metrics["emotion_counts"].items(), columns=['Emoción', 'Frecuencia'])
                 st.bar_chart(df_emotion_dist.set_index('Emoción'))
+
+            st.subheader(f"Emociones del Perfil: {st.session_state.selected_profile_id}")
+            profile_data = metrics["profile_emotion_counts"].get(st.session_state.selected_profile_id, {})
+            if profile_data:
+                df_profile_dist = pd.DataFrame(profile_data.items(), columns=['Emoción', 'Frecuencia'])
+                st.bar_chart(df_profile_dist.set_index('Emoción'))
+            else:
+                st.write("Aún no hay interacciones para este perfil.")
         else:
             st.info("Inicie una conversación para ver las métricas.")
 
 def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor_system: MoESystem, df_profiles: pd.DataFrame):
-    """Renderiza la interfaz de chat principal y maneja la lógica de la conversación."""
+    """
+    Renderiza la interfaz de chat principal y maneja la lógica de la conversación.
+    """
     st.title("🧠 Tutor Cognitivo Adaptativo con IA Afectiva 🤖")
 
     for message in st.session_state.messages:
@@ -159,7 +175,6 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
                 with st.expander("Ver Análisis Detallado de esta Respuesta"):
                     analysis = message["analysis"]
                     st.info(f"**👤 Arquetipo Cognitivo:** {analysis['archetype']}")
-                    # Mostramos la emoción normalizada para consistencia
                     st.info(f"**🧠 Emoción Dominante:** {analysis['top_emotion']} ({analysis['top_emotion_prob']:.0%})")
                     df_probs = pd.DataFrame(analysis['emotion_probs'].items(), columns=['Emoción', 'Confianza'])
                     st.bar_chart(df_probs[df_probs['Confianza'] > 0.01].set_index('Emoción'))
@@ -173,40 +188,31 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
             with st.spinner("Procesando..."):
                 try:
                     user_profile = df_profiles.loc[st.session_state.selected_profile_id]
-                    emotion_probs = emotion_classifier.predict_proba(prompt)[0]
-                    top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
+                    emotion_probs = emotion_classifier.predict_proba(prompt)[0] 
+                    top_emotion = max(emotion_probs, key=emotion_probs.get)
                     
-                    # --- NORMALIZACIÓN Y DEPURACIÓN DEFINITIVA ---
-                    top_emotion_normalized = top_emotion_raw.strip().capitalize()
-                    
-                    # Esta línea nos mostrará la verdad absoluta en una caja roja en la app.
-                    st.error(f"DEBUG FORENSE: Buscando la clave -> |{top_emotion_normalized}| en el diccionario.")
-
                     cognitive_plan, predicted_archetype = cognitive_tutor_system.get_cognitive_plan(
                         user_profile, 
                         emotion_probs
                     )
 
-                    empathetic_responses = {
-                        "Alegria": "¡Qué buena noticia! Me alegra sentir tu optimismo. Para potenciar ese impulso, este es el plan:",
-                        "Confianza": "¡Excelente! Percibo mucha seguridad en tus palabras. Usemos esa confianza como base para el siguiente plan de acción:",
-                        "Anticipacion": "Noto tu expectativa. ¡Esa energía es muy valiosa! Enfoquémosla con el siguiente plan:",
-                        "Tristeza": "Entiendo que puedas sentirte así. Analicemos la situación juntos. Te propongo el siguiente plan para que avancemos:",
-                        "Miedo": "Comprendo que esta situación pueda generar incertidumbre. No te preocupes, estamos aquí para afrontarla. Este es el plan:",
-                        "Ira": "Percibo tu frustración. Es una reacción válida. Vamos a canalizar esa energía de manera constructiva con este plan de acción:",
-                        "Sorpresa": "¡Vaya! Parece que esto te ha tomado por sorpresa. Analicemos con calma la situación. Este es el plan:",
-                        "Desconocida": "Entendido. Este es el plan de acción sugerido:"
-                    }
+                    negative_emotions = st.session_state.config.get('constants', {}).get('negative_emotions', [])
+                    positive_emotions = ["Anticipación", "Alegría", "Confianza"] # Esto también podría moverse al config
 
-                    intro_message = empathetic_responses.get(top_emotion_normalized, empathetic_responses["Desconocida"])
+                    if top_emotion in negative_emotions: 
+                        intro_message = f"Percibo que puedes sentirte con un poco de **{top_emotion.lower()}**. Revisemos esto juntos."
+                    elif top_emotion in positive_emotions: 
+                        intro_message = f"¡Excelente! Percibo un estado de **{top_emotion.lower()}**. Para potenciar ese impulso, este es el plan:"
+                    else: 
+                        intro_message = "Entendido. Este es el plan de acción sugerido:"
                     
                     full_response = f"{intro_message}\n\n{cognitive_plan}"
                     st.markdown(full_response)
                     
                     analysis_data = {
                         "archetype": predicted_archetype,
-                        "top_emotion": top_emotion_normalized,
-                        "top_emotion_prob": emotion_probs.get(top_emotion_raw, 0.0),
+                        "top_emotion": top_emotion,
+                        "top_emotion_prob": emotion_probs[top_emotion],
                         "emotion_probs": emotion_probs
                     }
                     st.session_state.messages.append({"role": "assistant", "content": full_response, "analysis": analysis_data})
@@ -220,19 +226,16 @@ def render_chat_interface(emotion_classifier: EmotionClassifier, cognitive_tutor
 
 # --- 4. PUNTO DE ENTRADA PRINCIPAL ---
 def main():
-    """Función principal que orquesta la ejecución de la aplicación Streamlit."""
+    """
+    Función principal que orquesta la ejecución de la aplicación Streamlit.
+    """
     st.set_page_config(page_title="Tutor Cognitivo Adaptativo", layout="centered", initial_sidebar_state="expanded")
 
-    try:
-        emotion_classifier, cognitive_tutor_system, df_profiles, config = load_all_models_and_data()
-        
-        initialize_session_state(df_profiles, config)
-        render_sidebar(df_profiles)
-        render_chat_interface(emotion_classifier, cognitive_tutor_system, df_profiles)
-    except Exception as e:
-        st.error("Ocurrió un error fatal al iniciar la aplicación.")
-        st.exception(e)
-
+    emotion_classifier, cognitive_tutor_system, df_profiles, config = load_all_models_and_data()
+    
+    initialize_session_state(df_profiles, config)
+    render_sidebar(df_profiles)
+    render_chat_interface(emotion_classifier, cognitive_tutor_system, df_profiles)
 
 if __name__ == '__main__':
     main()
