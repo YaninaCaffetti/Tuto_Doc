@@ -1,17 +1,15 @@
 """Pipeline de procesamiento de datos para el Tutor Cognitivo.
 
 Este script ejecuta un pipeline ETL (Extracción, Transformación, Carga) completo:
-1.  Carga los datos crudos de la encuesta.
+1.  Carga los datos crudos de la encuesta desde Google Drive.
 2.  Realiza la ingeniería de características para crear variables de alto nivel.
 3.  Aplica un conjunto de reglas expertas ("receta dorada") para calcular la
     pertenencia de cada perfil a 6 arquetipos, generando una base de conocimiento
     con alta separabilidad estadística.
 4.  Convierte las características a un formato de lógica difusa (fuzzification).
 5.  Limpia y valida los datos para asegurar que estén listos para el entrenamiento.
-6.  Genera dos archivos de salida:
-    a) `cognitive_profiles.csv`: El dataset completo para entrenar el modelo.
-    b) `demo_profiles.csv`: Un subconjunto curado y representativo para la
-       demostración en la aplicación Streamlit.
+6.  Genera dos archivos de salida y los guarda de forma PERMANENTE en una
+    subcarpeta 'data' dentro del directorio del proyecto en Google Drive.
 """
 
 import pandas as pd
@@ -32,11 +30,126 @@ except ImportError:
 # --- Configuración del Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# ==============================================================================
+# CLASES DE ÁRBOL DIFUSO (EVIDENCIA DE INVESTIGACIÓN)
+# Estas clases no se usan en el pipeline principal, pero se mantienen como
+# evidencia del estado del arte investigado para la tesis.
+# ==============================================================================
 
-# --- Funciones del Pipeline de Procesamiento ---
+class FuzzyDecisionTreeNode:
+    """Representa un único nodo en el Árbol de Decisión Difuso (IF_HUPM)."""
+    def __init__(self, feature_name=None, threshold=None, branches=None, leaf_value=None, is_uncertain=None, class_probabilities=None, n_samples=0):
+        self.feature_name = feature_name
+        self.threshold = threshold
+        self.branches = branches
+        self.leaf_value = leaf_value
+        self.is_uncertain = is_uncertain
+        self.class_probabilities = class_probabilities
+        self.n_samples = n_samples
+
+class IF_HUPM:
+    """Implementación de un Árbol de Decisión Difuso simple (IF-HUPM)."""
+    def __init__(self, min_samples_split=2, max_depth=10, uncertainty_threshold=0.1):
+        self.min_samples_split = min_samples_split
+        self.max_depth = max_depth
+        self.uncertainty_threshold = uncertainty_threshold
+        self.root = None
+
+    def _calculate_entropy(self, y):
+        n = len(y)
+        if n == 0: return 0
+        counts = np.array(list(Counter(y).values()))
+        probabilities = counts / n
+        return -np.sum(p * np.log2(p) for p in probabilities if p > 0)
+
+    def _information_gain(self, y, left_y, right_y):
+        n, n_left, n_right = len(y), len(left_y), len(right_y)
+        if n_left == 0 or n_right == 0: return 0
+        parent_entropy = self._calculate_entropy(y)
+        child_entropy = (n_left / n) * self._calculate_entropy(left_y) + (n_right / n) * self._calculate_entropy(right_y)
+        return parent_entropy - child_entropy
+
+    def _find_best_split(self, X, y):
+        best_gain, best_feature, best_threshold = -1, None, None
+        if len(y) < self.min_samples_split: return None, None, None
+        
+        num_features = X.shape[1]
+        features_to_check = np.random.choice(X.columns, size=int(np.sqrt(num_features)) if num_features > 1 else 1, replace=False)
+        
+        for feature_name in features_to_check:
+            thresholds = np.unique(X[feature_name])
+            for threshold in thresholds:
+                left_indices = y.index[X[feature_name] <= threshold]
+                right_indices = y.index[X[feature_name] > threshold]
+                if len(left_indices) == 0 or len(right_indices) == 0: continue
+                
+                gain = self._information_gain(y, y.loc[left_indices], y.loc[right_indices])
+                if gain > best_gain:
+                    best_gain, best_feature, best_threshold = gain, feature_name, threshold
+        return best_feature, best_threshold, best_gain
+
+    def _build_tree(self, X, y, depth=0):
+        if depth >= self.max_depth or len(y.unique()) == 1 or len(y) < self.min_samples_split:
+            return self._create_leaf_node(y)
+            
+        feature, threshold, gain = self._find_best_split(X, y)
+        if gain is None or gain <= 0:
+            return self._create_leaf_node(y)
+            
+        left_indices = y.index[X[feature] <= threshold]
+        right_indices = y.index[X[feature] > threshold]
+        
+        branches = {
+            '<= ' + str(threshold): self._build_tree(X.loc[left_indices], y.loc[left_indices], depth + 1),
+            '> ' + str(threshold): self._build_tree(X.loc[right_indices], y.loc[right_indices], depth + 1)
+        }
+        return FuzzyDecisionTreeNode(feature_name=feature, threshold=threshold, branches=branches, n_samples=len(y))
+
+    def _create_leaf_node(self, y):
+        counts = Counter(y)
+        if not counts:
+            return FuzzyDecisionTreeNode(leaf_value="Incierto (Hoja Vacía)", is_uncertain=True, class_probabilities={}, n_samples=0)
+            
+        total = len(y)
+        probabilities = {k: v / total for k, v in counts.items()}
+        most_common_class = max(probabilities, key=probabilities.get)
+        
+        sorted_probs = sorted(probabilities.values(), reverse=True)
+        is_uncertain = (len(sorted_probs) > 1 and (sorted_probs[0] - sorted_probs[1]) < self.uncertainty_threshold) or \
+                       (probabilities[most_common_class] < (1. - self.uncertainty_threshold))
+                       
+        leaf_value = most_common_class if not is_uncertain else f"Incierto (posiblemente {most_common_class})"
+        return FuzzyDecisionTreeNode(leaf_value=leaf_value, is_uncertain=is_uncertain, class_probabilities=probabilities, n_samples=total)
+
+    def fit(self, X, y):
+        self.root = self._build_tree(X, y)
+
+    def _predict_single(self, x, node):
+        if node.leaf_value:
+            return node.leaf_value
+        value = x.get(node.feature_name)
+        if value is None:
+            return "Incierto (Valor Faltante)"
+        branch_key = '<= ' + str(node.threshold) if value <= node.threshold else '> ' + str(node.threshold)
+        return self._predict_single(x, node.branches[branch_key])
+
+    def predict(self, X):
+        return X.apply(self._predict_single, axis=1, args=(self.root,))
+
+
+# ==============================================================================
+# FASE 1: INGENIERÍA DE CARACTERÍSTICAS
+# ==============================================================================
 
 def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Transforma las variables crudas del dataset en características compuestas."""
+    """Transforma las variables crudas del dataset en características compuestas.
+
+    Args:
+        df: El DataFrame crudo cargado desde la encuesta.
+
+    Returns:
+        El DataFrame con nuevas columnas de características de alto nivel.
+    """
     logging.info("Ejecutando Fase 1: Ingeniería de Características...")
     df_p = df.copy()
 
@@ -98,31 +211,37 @@ def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_p
 
+# ==============================================================================
+# FASE 2: INGENIERÍA DE ARQUETIPOS (CON REGLAS DE ALTO RENDIMIENTO)
+# ==============================================================================
 
 def _simulate_mbti_scores(df: pd.DataFrame) -> pd.DataFrame:
-    """Simula scores de personalidad tipo MBTI basados en características existentes."""
+    """Simula scores de personalidad tipo MBTI basados en características existentes.
+
+    Args:
+        df: DataFrame con características de la Fase 1.
+
+    Returns:
+        El DataFrame con 4 nuevas columnas de scores de personalidad simulados.
+    """
     df_out = df.copy()
     
-    # Simulación de Extraversión/Introversión (E/I)
     score_ei = pd.Series(0.0, index=df_out.index)
     score_ei.loc[df_out['Perfil_Dificultad_Agrupado'].isin(['1F_Habla_Comunicacion_Unica', '1C_Auditiva_Unica', '1D_Mental_Cognitiva_Unica'])] -= 0.4
     score_ei.loc[df_out['Espectro_Inclusion_Laboral'] == '1_Exclusion_del_Mercado'] -= 0.3
     score_ei.loc[df_out['tipo_hogar'] == 1] -= 0.3
     df_out['MBTI_EI_score_sim'] = score_ei.clip(-1., 1.).round(2)
 
-    # Simulación de Sensación/Intuición (S/N)
     df_out['MBTI_SN_score_sim'] = np.select(
         [df_out['CAPITAL_HUMANO'] == '1_Bajo', df_out['CAPITAL_HUMANO'] == '3_Alto'],
         [-0.5, 0.5], default=0.0
     )
 
-    # Simulación de Pensamiento/Sentimiento (T/F)
     df_out['MBTI_TF_score_sim'] = np.select(
         [df_out['pc03'] == 4, (df_out['pc03'].notna()) & (df_out['pc03'] != 9) & (df_out['pc03'] != 4)],
         [0.5, -0.25], default=0.0
     )
 
-    # Simulación de Juicio/Percepción (J/P)
     score_jp = pd.Series(0.0, index=df_out.index)
     score_jp.loc[df_out['Espectro_Inclusion_Laboral'] == '3_Inclusion_Precaria_Aprox'] += 0.5
     score_jp.loc[df_out['TIENE_CUD'] == 'Si_Tiene_CUD'] -= 0.5
@@ -132,7 +251,14 @@ def _simulate_mbti_scores(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
-    """Aplica las reglas expertas de la versión "dorada" para calcular la pertenencia a cada arquetipo."""
+    """Aplica las reglas expertas de la "receta dorada" para calcular la pertenencia a cada arquetipo.
+
+    Args:
+        df: DataFrame con características de Fase 1 y scores MBTI.
+
+    Returns:
+        El DataFrame con 6 nuevas columnas `Pertenencia_` con scores de 0 a 1.
+    """
     df_out = df.copy()
 
     # --- INICIO DE LAS REGLAS DE ALTO RENDIMIENTO (Refactorizadas para claridad) ---
@@ -290,40 +416,110 @@ def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Fase 2 completada.")
     return df_archetyped
 
+# ==============================================================================
+# FASE 3: FUZZIFICACIÓN
+# ==============================================================================
 
 def run_fuzzification(df: pd.DataFrame) -> pd.DataFrame:
-    """Convierte características y scores en variables difusas."""
+    """Convierte características categóricas y scores numéricos en variables difusas."""
     logging.info("Ejecutando Fase 3: Fuzzificación...")
     df_out = df.copy()
 
     def _fuzzificar_capital_humano(r):
-        v=r.get('CAPITAL_HUMANO'); m={'1_Bajo':{'CH_Bajo_memb':1.,'CH_Medio_memb':.2,'CH_Alto_memb':0.},'2_Medio':{'CH_Bajo_memb':.2,'CH_Medio_memb':1.,'CH_Alto_memb':.2},'3_Alto':{'CH_Bajo_memb':0.,'CH_Medio_memb':.2,'CH_Alto_memb':1.}}; return pd.Series(m.get(v,{'CH_Bajo_memb':.33,'CH_Medio_memb':.33,'CH_Alto_memb':.33}))
+        v = r.get('CAPITAL_HUMANO')
+        m = {
+            '1_Bajo': {'CH_Bajo_memb': 1., 'CH_Medio_memb': .2, 'CH_Alto_memb': 0.},
+            '2_Medio': {'CH_Bajo_memb': .2, 'CH_Medio_memb': 1., 'CH_Alto_memb': .2},
+            '3_Alto': {'CH_Bajo_memb': 0., 'CH_Medio_memb': .2, 'CH_Alto_memb': 1.}
+        }
+        return pd.Series(m.get(v, {'CH_Bajo_memb': .33, 'CH_Medio_memb': .33, 'CH_Alto_memb': .33}))
+
     def _fuzzificar_perfil_dificultad(r):
-        v=r.get('Perfil_Dificultad_Agrupado'); m={'1A_Motora_Unica':{'PD_Motora_memb':1.,'PD_Sensorial_memb':0.,'PD_ComCog_memb':0.,'PD_Autocuidado_memb':.1,'PD_Multiple_memb':0.},'1B_Visual_Unica':{'PD_Motora_memb':0.,'PD_Sensorial_memb':1.,'PD_ComCog_memb':.1,'PD_Autocuidado_memb':0.,'PD_Multiple_memb':0.},'1C_Auditiva_Unica':{'PD_Motora_memb':0.,'PD_Sensorial_memb':1.,'PD_ComCog_memb':.2,'PD_Autocuidado_memb':0.,'PD_Multiple_memb':0.},'1D_Mental_Cognitiva_Unica':{'PD_Motora_memb':.1,'PD_Sensorial_memb':.1,'PD_ComCog_memb':1.,'PD_Autocuidado_memb':.2,'PD_Multiple_memb':0.},'1E_Autocuidado_Unica':{'PD_Motora_memb':.2,'PD_Sensorial_memb':0.,'PD_ComCog_memb':.2,'PD_Autocuidado_memb':1.,'PD_Multiple_memb':0.},'1F_Habla_Comunicacion_Unica':{'PD_Motora_memb':.1,'PD_Sensorial_memb':.2,'PD_ComCog_memb':1.,'PD_Autocuidado_memb':0.,'PD_Multiple_memb':0.},'2_Dos_Dificultades':{'PD_Motora_memb':.4,'PD_Sensorial_memb':.4,'PD_ComCog_memb':.4,'PD_Autocuidado_memb':.4,'PD_Multiple_memb':1.},'3_Tres_o_Mas_Dificultades':{'PD_Motora_memb':.6,'PD_Sensorial_memb':.6,'PD_ComCog_memb':.6,'PD_Autocuidado_memb':.6,'PD_Multiple_memb':1.}}; return pd.Series(m.get(v,{'PD_Motora_memb':.2,'PD_Sensorial_memb':.2,'PD_ComCog_memb':.2,'PD_Autocuidado_memb':.2,'PD_Multiple_memb':.2}))
+        v = r.get('Perfil_Dificultad_Agrupado')
+        m = {
+            '1A_Motora_Unica': {'PD_Motora_memb': 1., 'PD_Sensorial_memb': 0., 'PD_ComCog_memb': 0., 'PD_Autocuidado_memb': .1, 'PD_Multiple_memb': 0.},
+            '1B_Visual_Unica': {'PD_Motora_memb': 0., 'PD_Sensorial_memb': 1., 'PD_ComCog_memb': .1, 'PD_Autocuidado_memb': 0., 'PD_Multiple_memb': 0.},
+            '1C_Auditiva_Unica': {'PD_Motora_memb': 0., 'PD_Sensorial_memb': 1., 'PD_ComCog_memb': .2, 'PD_Autocuidado_memb': 0., 'PD_Multiple_memb': 0.},
+            '1D_Mental_Cognitiva_Unica': {'PD_Motora_memb': .1, 'PD_Sensorial_memb': .1, 'PD_ComCog_memb': 1., 'PD_Autocuidado_memb': .2, 'PD_Multiple_memb': 0.},
+            '1E_Autocuidado_Unica': {'PD_Motora_memb': .2, 'PD_Sensorial_memb': 0., 'PD_ComCog_memb': .2, 'PD_Autocuidado_memb': 1., 'PD_Multiple_memb': 0.},
+            '1F_Habla_Comunicacion_Unica': {'PD_Motora_memb': .1, 'PD_Sensorial_memb': .2, 'PD_ComCog_memb': 1., 'PD_Autocuidado_memb': 0., 'PD_Multiple_memb': 0.},
+            '2_Dos_Dificultades': {'PD_Motora_memb': .4, 'PD_Sensorial_memb': .4, 'PD_ComCog_memb': .4, 'PD_Autocuidado_memb': .4, 'PD_Multiple_memb': 1.},
+            '3_Tres_o_Mas_Dificultades': {'PD_Motora_memb': .6, 'PD_Sensorial_memb': .6, 'PD_ComCog_memb': .6, 'PD_Autocuidado_memb': .6, 'PD_Multiple_memb': 1.}
+        }
+        return pd.Series(m.get(v, {'PD_Motora_memb': .2, 'PD_Sensorial_memb': .2, 'PD_ComCog_memb': .2, 'PD_Autocuidado_memb': .2, 'PD_Multiple_memb': .2}))
+
     def _fuzzificar_grupo_etario(r):
-        v=r.get('GRUPO_ETARIO_INDEC'); m={'1_Joven_Adulto_Temprano (14-39)':{'Edad_Infanto_Juvenil_memb':.1,'Edad_Joven_memb':1.,'Edad_Adulta_memb':.2,'Edad_Mayor_memb':0.},'2_Adulto_Medio (40-64)':{'Edad_Infanto_Juvenil_memb':0.,'Edad_Joven_memb':.2,'Edad_Adulta_memb':1.,'Edad_Mayor_memb':.2},'3_Adulto_Mayor (65+)':{'Edad_Infanto_Juvenil_memb':0.,'Edad_Joven_memb':0.,'Edad_Adulta_memb':.2,'Edad_Mayor_memb':1.},'0B_6_a_13_anios':{'Edad_Infanto_Juvenil_memb':1.,'Edad_Joven_memb':.2,'Edad_Adulta_memb':0.,'Edad_Mayor_memb':0.},'0A_0_a_5_anios':{'Edad_Infanto_Juvenil_memb':1.,'Edad_Joven_memb':0.,'Edad_Adulta_memb':0.,'Edad_Mayor_memb':0.}}; return pd.Series(m.get(v,{'Edad_Infanto_Juvenil_memb':.25,'Edad_Joven_memb':.25,'Edad_Adulta_memb':.25,'Edad_Mayor_memb':.25}))
+        v = r.get('GRUPO_ETARIO_INDEC')
+        m = {
+            '1_Joven_Adulto_Temprano (14-39)': {'Edad_Infanto_Juvenil_memb': .1, 'Edad_Joven_memb': 1., 'Edad_Adulta_memb': .2, 'Edad_Mayor_memb': 0.},
+            '2_Adulto_Medio (40-64)': {'Edad_Infanto_Juvenil_memb': 0., 'Edad_Joven_memb': .2, 'Edad_Adulta_memb': 1., 'Edad_Mayor_memb': .2},
+            '3_Adulto_Mayor (65+)': {'Edad_Infanto_Juvenil_memb': 0., 'Edad_Joven_memb': 0., 'Edad_Adulta_memb': .2, 'Edad_Mayor_memb': 1.},
+            '0B_6_a_13_anios': {'Edad_Infanto_Juvenil_memb': 1., 'Edad_Joven_memb': .2, 'Edad_Adulta_memb': 0., 'Edad_Mayor_memb': 0.},
+            '0A_0_a_5_anios': {'Edad_Infanto_Juvenil_memb': 1., 'Edad_Joven_memb': 0., 'Edad_Adulta_memb': 0., 'Edad_Mayor_memb': 0.}
+        }
+        return pd.Series(m.get(v, {'Edad_Infanto_Juvenil_memb': .25, 'Edad_Joven_memb': .25, 'Edad_Adulta_memb': .25, 'Edad_Mayor_memb': .25}))
+
     def _fuzzificar_ei_score(r):
-        s=r.get('MBTI_EI_score_sim',0.);s=0. if pd.isna(s)else s;return pd.Series({'MBTI_EI_Introvertido_memb':round(max(0,min(1,1.25*(-s-.2))),2),'MBTI_EI_Equilibrado_memb':round(max(0,min(1,1.25*(s+.8))),2)})
+        s = r.get('MBTI_EI_score_sim', 0.0)
+        s = 0.0 if pd.isna(s) else s
+        return pd.Series({
+            'MBTI_EI_Introvertido_memb': round(max(0, min(1, 1.25 * (-s - 0.2))), 2),
+            'MBTI_EI_Equilibrado_memb': round(max(0, min(1, 1.25 * (s + 0.8))), 2)
+        })
+
     def _fuzzificar_sn_score(r):
-        s=r.get('MBTI_SN_score_sim',0.);s=0. if pd.isna(s)else s;return pd.Series({'MBTI_SN_Sensing_memb':round(max(0,-s+.5),2),'MBTI_SN_Intuition_memb':round(max(0,s+.5),2)})
+        s = r.get('MBTI_SN_score_sim', 0.0)
+        s = 0.0 if pd.isna(s) else s
+        return pd.Series({
+            'MBTI_SN_Sensing_memb': round(max(0, -s + 0.5), 2),
+            'MBTI_SN_Intuition_memb': round(max(0, s + 0.5), 2)
+        })
+
     def _fuzzificar_tf_score(r):
-        s=r.get('MBTI_TF_score_sim',0.);s=0. if pd.isna(s)else s;sn=(s+.25)/.75;return pd.Series({'MBTI_TF_Thinking_memb':round(max(0,1-sn),2),'MBTI_TF_Feeling_memb':round(max(0,sn),2)})
+        s = r.get('MBTI_TF_score_sim', 0.0)
+        s = 0.0 if pd.isna(s) else s
+        sn = (s + 0.25) / 0.75
+        return pd.Series({
+            'MBTI_TF_Thinking_memb': round(max(0, 1 - sn), 2),
+            'MBTI_TF_Feeling_memb': round(max(0, sn), 2)
+        })
+
     def _fuzzificar_jp_score(r):
-        s=r.get('MBTI_JP_score_sim',0.);s=0. if pd.isna(s)else s;return pd.Series({'MBTI_JP_Judging_memb':round(max(0,-s+.5),2),'MBTI_JP_Perceiving_memb':round(max(0,s+.5),2)})
+        s = r.get('MBTI_JP_score_sim', 0.0)
+        s = 0.0 if pd.isna(s) else s
+        return pd.Series({
+            'MBTI_JP_Judging_memb': round(max(0, -s + 0.5), 2),
+            'MBTI_JP_Perceiving_memb': round(max(0, s + 0.5), 2)
+        })
     
-    fuzz_funcs=[_fuzzificar_capital_humano,_fuzzificar_perfil_dificultad,_fuzzificar_grupo_etario,_fuzzificar_ei_score,_fuzzificar_sn_score,_fuzzificar_tf_score,_fuzzificar_jp_score]
+    fuzz_funcs = [
+        _fuzzificar_capital_humano, _fuzzificar_perfil_dificultad, _fuzzificar_grupo_etario,
+        _fuzzificar_ei_score, _fuzzificar_sn_score, _fuzzificar_tf_score, _fuzzificar_jp_score
+    ]
     for func in fuzz_funcs:
-        fuzz_cols_df=df_out.apply(func,axis=1)
-        df_out=pd.concat([df_out,fuzz_cols_df],axis=1)
+        fuzz_cols_df = df_out.apply(func, axis=1)
+        df_out = pd.concat([df_out, fuzz_cols_df], axis=1)
     
     logging.info("Fase 3 completada.")
     return df_out
 
 
+# ==============================================================================
+# PUNTO DE ENTRADA PRINCIPAL
+# ==============================================================================
+
 if __name__ == '__main__':
-    with open('config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
-    
+    """
+    Orquesta la ejecución completa del pipeline de procesamiento de datos cuando
+    el script es llamado directamente desde la línea de comandos.
+    """
+    try:
+        with open('config.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        logging.error("Error crítico: No se encontró el archivo 'config.yaml'.")
+        exit() # Termina la ejecución si la configuración no existe.
+
     RAW_DATA_PATH = config['data_paths']['raw_data']
     
     logging.info("--- ⚙️ Iniciando Pipeline de Procesamiento de Datos ---")
@@ -331,12 +527,15 @@ if __name__ == '__main__':
         logging.error(f"No se encontró el archivo de datos crudos en '{RAW_DATA_PATH}'.")
     else:
         logging.info(f"Cargando datos crudos desde: {RAW_DATA_PATH}")
-        df_raw = pd.read_csv(RAW_DATA_PATH, delimiter=';')
+        # Especificar la codificación puede prevenir errores de lectura.
+        df_raw = pd.read_csv(RAW_DATA_PATH, delimiter=';', encoding='latin1', low_memory=False)
         
+        # --- Ejecución de las Fases del Pipeline ---
         df_featured = run_feature_engineering(df_raw)
         df_archetyped = run_archetype_engineering(df_featured)
         df_fuzzified = run_fuzzification(df_archetyped)
         
+        # --- Fase de Limpieza y Validación Final ---
         logging.info("Ejecutando Fase 4: Limpieza y Validación de Datos...")
         feature_cols = [col for col in df_fuzzified.columns if '_memb' in col]
         
@@ -344,8 +543,9 @@ if __name__ == '__main__':
             df_fuzzified[col] = pd.to_numeric(df_fuzzified[col], errors='coerce')
         
         df_fuzzified[feature_cols] = df_fuzzified[feature_cols].fillna(0.0)
-        logging.info("Fase 4 completada. Todas las columnas de características son numéricas.")
+        logging.info("Fase 4 completada. Todas las características son numéricas y están limpias.")
         
+        # --- Generación de la Columna Objetivo ---
         logging.info("Preparando archivo para el entrenamiento del modelo cognitivo...")
         archetype_cols = [col for col in df_fuzzified.columns if 'Pertenencia_' in col]
         df_fuzzified[TARGET_COLUMN] = df_fuzzified[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
@@ -357,12 +557,17 @@ if __name__ == '__main__':
         
         df_cognitive_training = df_fuzzified[feature_cols + [TARGET_COLUMN]]
         
-        OUTPUT_TRAINING_PATH = config['data_paths']['cognitive_training_data']
-        os.makedirs(os.path.dirname(OUTPUT_TRAINING_PATH), exist_ok=True)
+        # --- Guardado Permanente en Google Drive ---
+        logging.info("Configurando rutas de guardado permanente en Google Drive...")
+        THESIS_BASE_DIR = os.path.dirname(os.path.dirname(RAW_DATA_PATH))
+        OUTPUT_DATA_DIR = os.path.join(THESIS_BASE_DIR, 'data')
+        os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
+        
+        OUTPUT_TRAINING_PATH = os.path.join(OUTPUT_DATA_DIR, 'cognitive_profiles.csv')
         df_cognitive_training.to_csv(OUTPUT_TRAINING_PATH, index=False)
-        logging.info(f"✅ Archivo para entrenamiento guardado en: {OUTPUT_TRAINING_PATH}")
+        logging.info(f"✅ Archivo de entrenamiento guardado PERMANENTEMENTE en: {OUTPUT_TRAINING_PATH}")
 
-        # --- Creación de un Dataset de Demostración CURADO ---
+        # --- Creación del Dataset de Demostración Curado ---
         logging.info("Creando un archivo de demostración curado y representativo...")
         learned_archetypes = df_fuzzified[TARGET_COLUMN].unique().tolist()
         demo_profiles_list = []
@@ -374,18 +579,14 @@ if __name__ == '__main__':
         
         if demo_profiles_list:
             df_demo = pd.concat(demo_profiles_list)
-            logging.info(f"Se seleccionaron {len(df_demo)} perfiles para la demo, representando a los arquetipos: {learned_archetypes}")
+            df_demo['ID'] = [f'Perfil_Demo_{i+1}' for i in range(len(df_demo))]
+            df_demo.set_index('ID', inplace=True)
+            
+            OUTPUT_DEMO_PATH = os.path.join(OUTPUT_DATA_DIR, 'demo_profiles.csv')
+            df_demo.to_csv(OUTPUT_DEMO_PATH)
+            logging.info(f"✅ Archivo de demostración CURADO guardado PERMANENTEMENTE en: {OUTPUT_DEMO_PATH}")
         else:
-            logging.warning("No se pudieron seleccionar perfiles para la demo. Usando una muestra aleatoria como fallback.")
-            df_demo = df_fuzzified.sample(n=5, random_state=42)
-
-        df_demo['ID'] = [f'Perfil_Demo_{i+1}' for i in range(len(df_demo))]
-        df_demo.set_index('ID', inplace=True)
-        
-        OUTPUT_DEMO_PATH = config['data_paths']['demo_profiles']
-        os.makedirs(os.path.dirname(OUTPUT_DEMO_PATH), exist_ok=True)
-        df_demo.to_csv(OUTPUT_DEMO_PATH)
-        logging.info(f"✅ Archivo para demostración CURADO guardado en: {OUTPUT_DEMO_PATH}")
+            logging.warning("No se pudieron seleccionar perfiles para la demo. Se usará una muestra aleatoria como fallback.")
 
         logging.info("--- 🎉 Pipeline de Procesamiento de Datos Finalizado ---")
 
