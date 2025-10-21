@@ -1,84 +1,136 @@
-# ===========================================================
-# CONFIGURACIÓN DEL TUTOR COGNITIVO-AFECTIVO 
-# ===========================================================
+# ==============================================================================
+# CONFIGURACIÓN CENTRAL DEL PROYECTO - TUTOR COGNITIVO-AFECTIVO
+# ==============================================================================
+# Este archivo YAML sirve como la "fuente única de la verdad" para todos los
+# parámetros, rutas y umbrales del sistema. Modificar este archivo permite
+# experimentar y reconfigurar el pipeline sin alterar el código fuente.
+# ==============================================================================
 
-# --- Rutas de los Archivos ---
-data_paths:
-  # Ruta al archivo de datos crudos (leído por data_processing.py)
-  raw_data: 'data/raw/base_estudio_discapacidad_2018.csv'
-  
-  # Rutas a los archivos generados (escritos por data_processing.py y leídos por otros scripts)
-  demo_profiles: 'data/demo_profiles.csv'
-  cognitive_training_data: 'data/cognitive_profiles.csv'
-
-model_paths:
-  emotion_classifier: 'saved_models/emotion_classifier'
-  cognitive_tutor: 'saved_models/cognitive_tutor.joblib'
-
-# --- Configuración de MLflow ---
-mlflow:
-  experiment_name: "Tutor Cognitivo-Afectivo Tesis"
-  tracking_uri: "mlruns"
-
-# --- Hiperparámetros y Configuración de los Modelos ---
-model_params:
-  emotion_classifier:
-    model_name: 'dccuchile/bert-base-spanish-wwm-uncased'
-    data_augmentation:
-      use_back_translation: true
-    early_stopping_patience: 2
-    training_params:
-      num_train_epochs: 3
-      per_device_train_batch_size: 16
-      per_device_eval_batch_size: 16
-      warmup_steps: 500
-      weight_decay: 0.01
-      logging_dir: './logs'
-      logging_steps: 10
-      learning_rate: "2e-5"
-      evaluation_strategy: "epoch"
-      save_strategy: "epoch"
-      metric_for_best_model: "f1_macro"
-
-  cognitive_tutor:
-    random_state: 42
-    n_estimators: 100
-    max_depth: 5
-    min_samples_leaf: 10
-
-# --- Constantes del Sistema ---
-constants:
-  emotion_labels:
-    - "Alegría"
-    - "Tristeza"
-    - "Ira"
-    - "Miedo"
-    - "Sorpresa"
-    - "Confianza"
-    - "Anticipación"
-
-  negative_emotions:
-    - "Ira"
-    - "Tristeza"
-    - "Miedo"
-
-# --- Reglas de Negocio y Umbrales ---
-
-system_thresholds:
-  affective_engine:
-    min_emotion_probability: 0.1
-    min_recommendation_weight: 0.15
-
+# ------------------------------------------------------------------------------
+# SECCIÓN 1: REGLAS DEL MOTOR AFECTIVO (Affective Engine Rules)
+# ------------------------------------------------------------------------------
+# Define cómo el estado emocional del usuario modula la prioridad de los tutores.
+# - Clave principal: Nombre de la emoción detectada.
+# - Sub-claves: Arquetipo cuyo peso se modificará.
+# - Valor: Factor multiplicativo. > 1.0 aumenta la prioridad, < 1.0 la disminuye.
+# ------------------------------------------------------------------------------
 affective_rules:
+  Confianza:
+    Nav_Informal: 1.3
+    Prof_Subutil: 1.5
   Ira:
     Com_Desafiado: 1.5
     Potencial_Latente: 1.3
   Miedo:
-    Potencial_Latente: 1.6
     Cand_Nec_Sig: 1.4
+    Potencial_Latente: 1.6
   Tristeza:
     Potencial_Latente: 1.7
     Prof_Subutil: 1.2
-  Confianza:
-    Prof_Subutil: 1.5
-    Nav_Informal: 1.3
+
+# ------------------------------------------------------------------------------
+# SECCIÓN 2: CONSTANTES GLOBALES
+# ------------------------------------------------------------------------------
+# Define valores fijos y listas de referencia usadas en todo el proyecto para
+# garantizar la consistencia.
+# ------------------------------------------------------------------------------
+constants:
+  # Lista completa y ordenada de todas las emociones que el sistema puede reconocer.
+  emotion_labels:
+    - Alegria
+    - Tristeza
+    - Ira
+    - Miedo
+    - Sorpresa
+    - Confianza
+    - Anticipacion
+  
+  # Subconjunto de emociones usadas para lógicas específicas (ej. métricas).
+  negative_emotions:
+    - Ira
+    - Tristeza
+    - Miedo
+  
+  positive_emotions:
+    - Alegria
+    - Confianza
+    - Anticipacion
+
+# ------------------------------------------------------------------------------
+# SECCIÓN 3: RUTAS DE DATOS (Data Paths)
+# ------------------------------------------------------------------------------
+# Centraliza todas las rutas de archivos de entrada y salida. Es crucial para la
+# portabilidad del proyecto.
+# ------------------------------------------------------------------------------
+data_paths:
+  # Ruta al archivo CSV crudo de la encuesta.
+  raw_data: /content/drive/MyDrive/Tesis Doctoral - CAFFETTI/base_estudio_discapacidad_2018.csv
+  
+  # Ruta al archivo procesado, listo para entrenar el modelo cognitivo.
+  cognitive_training_data: /content/drive/MyDrive/data/cognitive_profiles.csv
+  
+  # Ruta al archivo con el "elenco" de perfiles para la app de demostración.
+  demo_profiles: /content/drive/MyDrive/data/demo_profiles.csv
+
+# ------------------------------------------------------------------------------
+# SECCIÓN 4: CONFIGURACIÓN DE MLFLOW
+# ------------------------------------------------------------------------------
+# Parámetros para el seguimiento de experimentos con MLflow.
+# ------------------------------------------------------------------------------
+mlflow:
+  experiment_name: Tutor Cognitivo-Afectivo Tesis
+  tracking_uri: mlruns # Directorio local donde se guardarán los logs de MLflow.
+
+# ------------------------------------------------------------------------------
+# SECCIÓN 5: HIPERPARÁMETROS DE LOS MODELOS
+# ------------------------------------------------------------------------------
+# Todos los parámetros ajustables para el entrenamiento de los modelos de IA.
+# ------------------------------------------------------------------------------
+model_params:
+  # Parámetros para el RandomForestClassifier del tutor cognitivo.
+  cognitive_tutor:
+    n_estimators: 100     # Número de árboles en el bosque.
+    max_depth: 5          # Profundidad máxima de cada árbol.
+    min_samples_leaf: 10  # Número mínimo de muestras en un nodo hoja.
+    random_state: 42      # Semilla para la reproducibilidad.
+
+  # Parámetros para el clasificador de emociones basado en Transformers.
+  emotion_classifier:
+    model_name: dccuchile/bert-base-spanish-wwm-uncased # Modelo base de Hugging Face.
+    data_augmentation:
+      use_back_translation: false # Desactivado porque ya enriquecimos el corpus.
+    early_stopping_patience: 2    # Paciencia para la detención temprana.
+
+    # Parámetros específicos del Trainer de Hugging Face.
+    training_params:
+      num_train_epochs: 3
+      learning_rate: 2.0e-5
+      per_device_train_batch_size: 16
+      per_device_eval_batch_size: 16
+      weight_decay: 0.01
+      warmup_steps: 500
+      evaluation_strategy: epoch
+      save_strategy: epoch
+      metric_for_best_model: f1_macro
+
+# ------------------------------------------------------------------------------
+# SECCIÓN 6: RUTAS DE GUARDADO DE MODELOS
+# ------------------------------------------------------------------------------
+# Define dónde se guardarán los artefactos de los modelos entrenados.
+# ------------------------------------------------------------------------------
+model_paths:
+  cognitive_tutor: saved_models/cognitive_tutor.joblib
+  emotion_classifier: saved_models/emotion_classifier
+
+# ------------------------------------------------------------------------------
+# SECCIÓN 7: UMBRALES DE COMPORTAMIENTO DEL SISTEMA
+# ------------------------------------------------------------------------------
+# Parámetros que controlan la lógica de decisión de la aplicación en tiempo real.
+# ------------------------------------------------------------------------------
+system_thresholds:
+  affective_engine:
+    # Probabilidad mínima que debe tener una emoción para activar las affective_rules.
+    min_emotion_probability: 0.1
+    
+    # Peso mínimo que debe tener un tutor para ser incluido en la recomendación final.
+    min_recommendation_weight: 0.15
