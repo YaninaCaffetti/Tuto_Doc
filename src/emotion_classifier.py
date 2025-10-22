@@ -1,17 +1,12 @@
-# src/emotion_classifier.py 
-"""
-Módulo de entrenamiento e inferencia para clasificación de emociones en español
-con Transformers. Incluye:
-- Preparación de datos + back-translation (solo en train)
-- Entrenamiento con pérdida ponderada por clase
-- Registro de métricas y artefactos en MLflow, incluyendo matriz de confusión
-- Pipeline reproducible con fijación de semillas y tolerante a versiones.
-"""
+"""Módulo de entrenamiento e inferencia para clasificación de emociones.
 
+Versión final con corpus enriquecido, división estratificada y cálculo
+robusto de pesos de clase, usando nomenclatura SIN tildes.
+"""
 from __future__ import annotations
 
 import os
-import inspect # Importación clave para la nueva función
+import inspect
 import json
 import random
 import warnings
@@ -23,32 +18,43 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
-# SKLearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
-    classification_report, f1_score, precision_score, recall_score,
-    precision_recall_fscore_support, accuracy_score, confusion_matrix
+    classification_report,
+    precision_recall_fscore_support,
+    accuracy_score,
+    confusion_matrix
 )
 from sklearn.utils.class_weight import compute_class_weight
 
-# Hugging Face
 from datasets import Dataset, load_dataset
 from transformers import (
-    AutoTokenizer, AutoModelForSequenceClassification,
-    TrainingArguments, Trainer, DataCollatorWithPadding,
-    EarlyStoppingCallback, set_seed as hf_set_seed
+    AutoTokenizer,
+    AutoModelForSequenceClassification,
+    TrainingArguments,
+    Trainer,
+    DataCollatorWithPadding,
+    EarlyStoppingCallback,
+    set_seed as hf_set_seed,
+    MarianMTModel,
+    MarianTokenizer
 )
-from transformers import MarianMTModel, MarianTokenizer
 
-# MLflow
 import mlflow
+
 
 # ==============================
 # Utilidades
 # ==============================
 
 def set_seed(seed: int) -> None:
-    """Fija semillas para reproducibilidad completa."""
+    """Fija las semillas aleatorias para garantizar la reproducibilidad.
+
+    Aplica la semilla a las librerías `random`, `numpy`, `torch` y `transformers`.
+
+    Args:
+        seed: El número entero a usar como semilla.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -58,12 +64,24 @@ def set_seed(seed: int) -> None:
 
 
 def ensure_list(text: Union[str, List[str]]) -> List[str]:
-    """Garantiza que la entrada sea una lista de strings."""
+    """Garantiza que la entrada de texto sea una lista de strings.
+
+    Si la entrada es un solo string, lo envuelve en una lista.
+
+    Args:
+        text: Un string o una lista de strings.
+
+    Returns:
+        Una lista de strings.
+
+    Raises:
+        TypeError: Si la entrada no es un string o una lista de strings.
+    """
     if isinstance(text, str):
         return [text]
     if isinstance(text, list) and all(isinstance(t, str) for t in text):
         return text
-    raise TypeError("`text` debe ser str o List[str].")
+    raise TypeError("La entrada `text` debe ser de tipo str o List[str].")
 
 
 # ==============================
@@ -71,248 +89,336 @@ def ensure_list(text: Union[str, List[str]]) -> List[str]:
 # ==============================
 
 class EmotionClassifier:
-    """Clasificador para inferencia de emociones a partir de texto."""
+    """Encapsula un modelo de Transformers para la inferencia de emociones.
 
+    Esta clase proporciona métodos de alto nivel para obtener predicciones
+    de un modelo de clasificación de secuencias ya entrenado.
+
+    Attributes:
+        device: El dispositivo computacional ('cuda' o 'cpu') donde se ejecuta el modelo.
+        model: El modelo de Transformers cargado.
+        tokenizer: El tokenizador asociado al modelo.
+    """
     def __init__(self, model: AutoModelForSequenceClassification, tokenizer: AutoTokenizer):
+        """Inicializa el clasificador de emociones.
+
+        Args:
+            model: Un modelo de secuencia de Hugging Face pre-entrenado.
+            tokenizer: El tokenizador correspondiente al modelo.
+        """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model.to(self.device)
         self.tokenizer = tokenizer
         print(f"Clasificador de Emociones inicializado en: {self.device.upper()}")
 
     def predict_proba(self, text: Union[str, List[str]]) -> List[Dict[str, float]]:
-        """Devuelve una lista de distribuciones de probabilidad por emoción."""
+        """Predice la distribución de probabilidad de emociones para un texto.
+
+        Args:
+            text: Un string o una lista de strings a clasificar.
+
+        Returns:
+            Una lista de diccionarios. Cada diccionario mapea el nombre de una
+            emoción a su probabilidad predicha. Utiliza .get() para manejar
+            posibles IDs de etiqueta faltantes en la configuración del modelo.
+        """
         texts = ensure_list(text)
         inputs = self.tokenizer(
-            texts,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=128
+            texts, return_tensors="pt", padding=True,
+            truncation=True, max_length=128
         ).to(self.device)
         with torch.no_grad():
             logits = self.model(**inputs).logits
         probabilities = torch.softmax(logits, dim=-1).cpu().numpy()
         id2label = self.model.config.id2label
         return [
-            {id2label[i]: float(p) for i, p in enumerate(row)}
+            {id2label.get(str(i), f"UNK_{i}"): float(p) for i, p in enumerate(row)}
             for row in probabilities
         ]
-
-    def predict(self, text: str, return_index: bool = False) -> Union[str, int]:
-        """Predice la emoción dominante en un texto; opcionalmente devuelve el índice."""
-        probs_list = self.predict_proba(text)[0]
-        labels = list(probs_list.keys())
-        values = list(probs_list.values())
-        idx = int(np.argmax(values))
-        return idx if return_index else labels[idx]
-
 
 # ==============================
 # Datos y Aumento
 # ==============================
 
 def get_custom_domain_data() -> pd.DataFrame:
-    """Pequeño corpus de dominio propio, enriquecido para robustez."""
+    """Crea y devuelve un corpus de dominio propio enriquecido (SIN tildes).
+
+    Esta versión incluye ejemplos adicionales para las clases minoritarias
+    'Alegria' y 'Anticipacion' para mejorar el balance del dataset.
+
+    Returns:
+        Un DataFrame de Pandas con columnas ['text', 'emotion'].
+    """
     data_custom_list = [
-        ("¡Esto nunca funciona como debería!", "Ira"),
-        ("Mi hipótesis fue refutada", "Tristeza"),
-        ("Siempre creí que este sistema funcionaría.", "Confianza"),
-        ("No sé cómo voy a superar esto.", "Miedo"),
-        ("¡Qué maravilla! No esperaba este resultado.", "Sorpresa"),
-        ("Estoy listo para empezar, ¿cuál es el primer paso?", "Anticipación"),
-        ("No puedo esperar a ver los resultados de este experimento.", "Anticipación"),
-        ("Esto es inaceptable, nadie responde mis correos.", "Ira"),
-        ("Perdimos el financiamiento del proyecto.", "Tristeza"),
-        ("El prototipo funciona mejor de lo que esperaba.", "Alegría"),
-        ("Confío en que el equipo resolverá esto.", "Confianza"),
-        ("Me preocupa no cumplir con el plazo de entrega.", "Miedo"),
-        ("¡No puedo creer que aprobamos la auditoría!", "Sorpresa"),
-        ("Tengo muchas ganas de empezar la capacitación la semana próxima.", "Anticipación"),
-        ("Con el CUD podré acceder a más beneficios para postularme.", "Confianza"),
-        ("Gracias, la orientación me devolvió el ánimo.", "Alegría"),
+        # Corpus original y enriquecido SIN tildes
+        ("¡Esto nunca funciona como debería!", "Ira"), ("Mi hipótesis fue refutada", "Tristeza"),
+        ("Siempre creí que este sistema funcionaría.", "Confianza"), ("No sé cómo voy a superar esto.", "Miedo"),
+        ("¡Qué maravilla! No esperaba este resultado.", "Sorpresa"), ("Estoy listo para empezar, ¿cuál es el primer paso?", "Anticipacion"),
+        ("No puedo esperar a ver los resultados de este experimento.", "Anticipacion"), ("Esto es inaceptable, nadie responde mis correos.", "Ira"),
+        ("Perdimos el financiamiento del proyecto.", "Tristeza"), ("El prototipo funciona mejor de lo que esperaba.", "Alegria"),
+        ("Confío en que el equipo resolverá esto.", "Confianza"), ("Me preocupa no cumplir con el plazo de entrega.", "Miedo"),
+        ("¡No puedo creer que aprobamos la auditoría!", "Sorpresa"), ("Tengo muchas ganas de empezar la capacitación.", "Anticipacion"),
+        ("Con el CUD podré acceder a más beneficios.", "Confianza"), ("Gracias, la orientación me devolvió el ánimo.", "Alegria"),
         ("Basta de demoras!.", "Ira"),
+        ("¡Conseguí el trabajo! No puedo creerlo, estoy tan feliz.", "Alegria"),
+        ("El proyecto fue un éxito total, todo el equipo está celebrando.", "Alegria"),
+        ("Me acaban de confirmar la beca. ¡Qué gran noticia!", "Alegria"),
+        ("Finalmente logré superar ese obstáculo, me siento increíble.", "Alegria"),
+        ("Recibir este reconocimiento me llena de orgullo y felicidad.", "Alegria"),
+        ("Hoy es un día fantástico, todo está saliendo a la perfección.", "Alegria"),
+        ("Qué alegria ver que mi esfuerzo está dando frutos.", "Alegria"),
+        ("Estoy muy contento con los resultados obtenidos.", "Alegria"),
+        ("¡Lo logramos! El plan funcionó mejor de lo esperado.", "Alegria"),
+        ("Me siento optimista y lleno de energía positiva.", "Alegria"),
+        ("Mañana es la entrevista final, estoy nervioso pero expectante.", "Anticipacion"),
+        ("Falta solo una semana para el lanzamiento del proyecto.", "Anticipacion"),
+        ("Estoy ansioso por empezar este nuevo curso.", "Anticipacion"),
+        ("Ya quiero ver cómo reaccionarán cuando presente la propuesta.", "Anticipacion"),
+        ("La espera para conocer los resultados me tiene en vilo.", "Anticipacion"),
+        ("Contando los días para la conferencia, seguro aprenderé mucho.", "Anticipacion"),
+        ("Tengo muchas expectativas sobre esta nueva etapa.", "Anticipacion"),
+        ("¿Qué sorpresas nos deparará la reunión de mañana?", "Anticipacion"),
+        ("Estoy a punto de recibir el feedback, espero que sea bueno.", "Anticipacion"),
+        ("La próxima fase del proyecto promete ser muy interesante.", "Anticipacion"),
     ]
     return pd.DataFrame(data_custom_list, columns=['text', 'emotion'])
 
-
-def augment_with_back_translation(df: pd.DataFrame, lang_src: str = 'es', lang_tgt: str = 'en') -> pd.DataFrame:
-    """Back-Translation de textos (con MarianMT) y barra de progreso."""
-    try:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(f"  › Back-Translation en: {device.upper()}")
-
-        model_name_src_tgt = f'Helsinki-NLP/opus-mt-{lang_src}-{lang_tgt}'
-        model_name_tgt_src = f'Helsinki-NLP/opus-mt-{lang_tgt}-{lang_src}'
-
-        tok_st = MarianTokenizer.from_pretrained(model_name_src_tgt)
-        mt_st = MarianMTModel.from_pretrained(model_name_src_tgt).to(device)
-
-        tok_ts = MarianTokenizer.from_pretrained(model_name_tgt_src)
-        mt_ts = MarianMTModel.from_pretrained(model_name_tgt_src).to(device)
-
-        augmented = []
-        # Bucle con barra de progreso optimizada para no sobrecargar la UI
-        for text in tqdm(df['text'], desc="Retrotraduciendo frases", mininterval=1.0):
-            inputs = tok_st(text, return_tensors="pt", padding=True, truncation=True).to(device)
-            translated_ids = mt_st.generate(**inputs, max_new_tokens=128)
-            text_tgt = tok_st.decode(translated_ids[0], skip_special_tokens=True)
-
-            inputs_back = tok_ts(text_tgt, return_tensors="pt", padding=True, truncation=True).to(device)
-            back_ids = mt_ts.generate(**inputs_back, max_new_tokens=128)
-            text_back = tok_ts.decode(back_ids[0], skip_special_tokens=True)
-
-            augmented.append(text_back)
-
-        return pd.DataFrame({'text': augmented, 'emotion': df['emotion'].values})
-    except Exception as e:
-        warnings.warn(f"Back-Translation falló; se omite. Error: {e}")
-        return pd.DataFrame(columns=['text', 'emotion'])
-
-
 def load_base_dataset(emotion_labels: List[str]) -> pd.DataFrame:
+    """Carga y combina el dataset público 'emotion' con el de dominio propio.
+
+    Utiliza el corpus de dominio enriquecido, filtra las emociones según
+    `emotion_labels` y elimina duplicados de texto.
+
+    Args:
+        emotion_labels: Una lista de las emociones a incluir en el dataset final.
+
+    Returns:
+        Un DataFrame combinado y limpio con columnas ['text', 'emotion'].
     """
-    Carga el dataset público y lo combina con el corpus de dominio,
-    SIN aumentar ni partir. Devuelve columnas ['text','emotion'] filtradas y únicas.
-    """
-    print("  › Cargando dataset 'emotion' (HF) + dominio...")
+    print("  › Cargando dataset 'emotion' (HF) + dominio enriquecido...")
     try:
         dataset = load_dataset("emotion", split='train')
         df_public = dataset.to_pandas()
-        label_map = {0: 'Tristeza', 1: 'Alegría', 2: 'Amor/Confianza', 3: 'Ira', 4: 'Miedo', 5: 'Sorpresa'}
-        df_public['emotion'] = df_public['label'].map(label_map).replace({'Amor/Confianza': 'Confianza'})
+        # Mapa consistente SIN tildes
+        label_map = {0: 'Tristeza', 1: 'Alegria', 2: 'Confianza', 3: 'Ira', 4: 'Miedo', 5: 'Sorpresa'}
+        df_public['emotion'] = df_public['label'].map(label_map)
         df_public_clean = df_public.dropna(subset=['emotion'])[['text', 'emotion']]
 
         df_domain = get_custom_domain_data()
 
         df_base = pd.concat([df_public_clean, df_domain], ignore_index=True)
-        df_base = (
-            df_base[df_base['emotion'].isin(emotion_labels)]
-            .drop_duplicates(subset=['text'], keep='first')
-            .reset_index(drop=True)
-        )
+        # Filtramos ANTES de eliminar duplicados para asegurar que las etiquetas estén correctas
+        df_base = df_base[df_base['emotion'].isin(emotion_labels)]
+        df_base = df_base.drop_duplicates(subset=['text'], keep='first').reset_index(drop=True)
+        
         print(f"  › Base combinada con {len(df_base)} ejemplos únicos.")
         return df_base
     except Exception as e:
         warnings.warn(f"No se pudo descargar el dataset público. Se usa solo dominio. Error: {e}")
         return get_custom_domain_data()
 
-
 # ==============================
-# Trainer con pérdida ponderada
+# Lógica de Entrenamiento Personalizada
 # ==============================
 
 class WeightedLossTrainer(Trainer):
-    """Trainer con CrossEntropy ponderada por clase."""
+    """Un Trainer de Hugging Face que utiliza CrossEntropyLoss ponderada.
 
+    Esta clase sobrescribe el método `compute_loss` para aplicar pesos a
+    las clases durante el cálculo de la pérdida, lo cual es útil para
+    manejar datasets desbalanceados.
+    """
     def __init__(self, *args, class_weights=None, **kwargs):
+        """Inicializa el Trainer con pesos de clase opcionales.
+
+        Args:
+            class_weights: Un tensor de PyTorch con los pesos para cada clase.
+            *args, **kwargs: Argumentos estándar del Trainer de Hugging Face.
+        """
         super().__init__(*args, **kwargs)
         self.class_weights = class_weights.to(self.args.device) if class_weights is not None else None
         if self.class_weights is not None:
-            print(f"  › Pesos de clase: {np.round(self.class_weights.detach().cpu().numpy(), 3)}")
+            # Imprimimos los pesos que realmente se están usando
+            print(f"  › Pesos de clase aplicados (shape {self.class_weights.shape}): {np.round(self.class_weights.detach().cpu().numpy(), 3)}")
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-        """
-        Calcula la pérdida. Corregido para aceptar **kwargs y usar .view(-1) correctamente.
+        """Calcula la pérdida usando los pesos de clase proporcionados.
+
+        Args:
+            model: El modelo que se está entrenando.
+            inputs: Un diccionario con los datos de entrada (incluyendo 'labels').
+            return_outputs: Si True, devuelve también las salidas del modelo.
+
+        Returns:
+            La pérdida calculada (tensor) o una tupla (pérdida, salidas del modelo).
         """
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.get("logits")
+        # Aseguramos que num_labels sea correcto
+        num_labels = self.model.config.num_labels
         loss_fct = nn.CrossEntropyLoss(weight=self.class_weights)
-        # CORRECCIÓN: Se usa -1 en lugar de --1 para aplanar el tensor de etiquetas.
-        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        loss = loss_fct(logits.view(-1, num_labels), labels.view(-1))
         return (loss, outputs) if return_outputs else loss
 
-
 # ==============================
-# Métricas
+# Funciones Auxiliares del Pipeline
 # ==============================
 
-def compute_metrics_fn(eval_pred) -> Dict[str, float]:
-    """Calcula y devuelve métricas para la evaluación durante el entrenamiento."""
+# Variables globales para acceso en compute_metrics_fn
+id2label_global: Dict[int, str] = {}
+config_global: Dict = {}
+
+def compute_metrics_fn(eval_pred: Tuple[np.ndarray, np.ndarray]) -> Dict[str, float]:
+    """Calcula y devuelve las métricas de evaluación durante el entrenamiento.
+
+    Utiliza las variables globales `id2label_global` y `config_global` para
+    acceder a la configuración y mapeos necesarios. Calcula métricas macro
+    y métricas detalladas por clase.
+
+    Args:
+        eval_pred: Una tupla que contiene los logits del modelo (predicciones)
+                   y las etiquetas verdaderas (labels).
+
+    Returns:
+        Un diccionario con las métricas calculadas, incluyendo accuracy,
+        precision_macro, recall_macro, f1_macro y F1-score por clase.
+    """
+    global id2label_global, config_global
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
-    p, r, f1, _ = precision_recall_fscore_support(labels, preds, average='macro', zero_division=0)
+    labels = np.asarray(labels) # Asegurar formato numpy
+
+    # Obtener nombres y IDs de todas las clases posibles desde la config global
+    all_label_names = config_global.get('constants', {}).get('emotion_labels', [])
+    all_label_ids = np.arange(len(all_label_names))
+
+    # Calcular métricas macro promediando sobre todas las clases posibles
+    p, r, f1, _ = precision_recall_fscore_support(
+        labels, preds, average='macro', zero_division=0,
+        labels=all_label_ids # ¡Importante! Considerar todas las clases posibles
+    )
     acc = accuracy_score(labels, preds)
-    return {"accuracy": acc, "precision_macro": p, "recall_macro": r, "f1_macro": f1}
+    
+    metrics = {"accuracy": acc, "precision_macro": p, "recall_macro": r, "f1_macro": f1}
+    
+    # Calcular métricas detalladas por clase usando classification_report
+    try:
+        # Asegurarse de que target_names tenga la longitud correcta
+        if len(all_label_names) == len(all_label_ids):
+            report = classification_report(
+                labels, preds, output_dict=True, zero_division=0,
+                labels=all_label_ids, target_names=all_label_names
+            )
+            for label_name, scores in report.items():
+                label_name_str = str(label_name) # Clave string
+                if isinstance(scores, dict) and 'f1-score' in scores:
+                     metrics[f"f1_{label_name_str}"] = scores['f1-score']
+                elif label_name_str == 'accuracy': # Capturar accuracy global del reporte
+                    metrics['report_accuracy'] = scores # Es un float aquí
+                # Capturar promedios macro y ponderado del reporte para MLflow
+                elif 'macro avg' in label_name_str or 'weighted avg' in label_name_str:
+                     if isinstance(scores, dict):
+                        metrics[f"{label_name_str.replace(' ', '_')}_precision"] = scores.get('precision', 0.0)
+                        metrics[f"{label_name_str.replace(' ', '_')}_recall"] = scores.get('recall', 0.0)
+                        metrics[f"{label_name_str.replace(' ', '_')}_f1"] = scores.get('f1-score', 0.0)
+        else:
+             warnings.warn("Inconsistencia entre all_label_names y all_label_ids. No se calcularán métricas por clase.")
 
+    except ValueError as ve:
+         warnings.warn(f"Error al calcular classification_report (posiblemente etiquetas no vistas): {ve}")
+    except Exception as e:
+        warnings.warn(f"No se pudo generar el reporte detallado por clase: {e}")
 
-# ==============================
-# Constructor Robusto para TrainingArguments
-# ==============================
+    return metrics
+
 
 def build_compatible_training_args(training_params: dict) -> TrainingArguments:
-    """
-    Construye TrainingArguments de forma compatible con la versión instalada de transformers.
-    
-    Esta función inspecciona la firma del constructor de TrainingArguments para:
-    1. Filtrar claves desconocidas que puedan estar en el config.yaml.
-    2. Manejar cambios de nombre en los parámetros (ej. 'evaluation_strategy' vs 'eval_strategy').
-    
+    """Construye un objeto TrainingArguments de forma retrocompatible.
+
+    Inspecciona la firma del constructor de `TrainingArguments` para filtrar
+    parámetros desconocidos y manejar cambios de nombre (ej. 'evaluation_strategy'
+    a 'eval_strategy').
+
     Args:
-        training_params (dict): Diccionario de parámetros cargado desde config.yaml.
-        
+        training_params: Diccionario de parámetros cargado desde config.yaml.
+
     Returns:
-        TrainingArguments: Una instancia configurada de forma segura.
+        Una instancia de `TrainingArguments` configurada de forma segura.
     """
-    # Obtiene los parámetros válidos para el constructor de la versión actual de TrainingArguments
     valid_params = inspect.signature(TrainingArguments).parameters
-    
-    # Parámetros base que no vienen del config.yaml
     args = {
-        "output_dir": "./results_emotion_training",
-        "report_to": "mlflow",
-        "run_name": "train_emotion_classifier",
-        "load_best_model_at_end": True,
+        "output_dir": "./results_emotion_training", "report_to": "mlflow",
+        "run_name": "train_emotion_classifier", "load_best_model_at_end": True,
         "fp16": torch.cuda.is_available(),
     }
-    
-    # Fusiona los parámetros del config.yaml, dando prioridad a los del config
+    # Asegurarse de que learning_rate es float antes de actualizar
+    if 'learning_rate' in training_params:
+        try:
+            training_params['learning_rate'] = float(str(training_params['learning_rate']))
+        except ValueError:
+             warnings.warn(f"Valor inválido para learning_rate: {training_params['learning_rate']}. Usando default.")
+             training_params.pop('learning_rate') # Eliminar para usar default del Trainer
+             
     args.update(training_params)
 
-    # Maneja el cambio de nombre de 'evaluation_strategy' a 'eval_strategy' en versiones antiguas
+    # Maneja el cambio de nombre de 'evaluation_strategy'
     if "evaluation_strategy" in args and "evaluation_strategy" not in valid_params:
         if "eval_strategy" in valid_params:
             args["eval_strategy"] = args.pop("evaluation_strategy")
             print("  › INFO: 'evaluation_strategy' renombrado a 'eval_strategy' por compatibilidad.")
 
-    # Filtro final: solo pasamos los argumentos que la función realmente acepta
+    # Filtra argumentos no válidos para la versión actual de TrainingArguments
     final_args = {k: v for k, v in args.items() if k in valid_params}
+    
+    # Asegura la existencia de directorios de salida
+    if 'logging_dir' in final_args: os.makedirs(final_args['logging_dir'], exist_ok=True)
+    if 'output_dir' in final_args: os.makedirs(final_args['output_dir'], exist_ok=True)
     
     print(f"  › Argumentos de entrenamiento finales: {list(final_args.keys())}")
     return TrainingArguments(**final_args)
 
 
 # ==============================
-# Pipeline principal
+# Pipeline Principal de Entrenamiento
 # ==============================
 
 def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
-    """
-    Entrena y evalúa el clasificador; registra métricas y artefactos en MLflow.
-    Devuelve métricas finales de test.
-    """
-    print("\n--- 🎭 Iniciando entrenamiento del Clasificador de Emociones... ---")
+    """Orquesta el pipeline completo de entrenamiento y evaluación del clasificador.
 
-    # MLflow setup
+    Ejecuta todos los pasos: carga de datos, división estratificada,
+    tokenización, entrenamiento con pesos de clase, evaluación y guardado.
+
+    Args:
+        config: Diccionario con la configuración completa del proyecto.
+
+    Returns:
+        Diccionario con las métricas finales obtenidas en el conjunto de prueba.
+    """
+    global id2label_global, config_global
+    config_global = config # Hace la config accesible globalmente
+    print("\n--- 🎭 Iniciando entrenamiento del Clasificador de Emociones (Final)... ---")
+
+    # Configuración de MLflow
     mlflow.set_tracking_uri(config['mlflow']['tracking_uri'])
     mlflow.set_experiment(config['mlflow']['experiment_name'])
 
+    # Extracción de parámetros de configuración
     cfg_emo = config['model_params']['emotion_classifier']
     EMOTION_LABELS = config['constants']['emotion_labels']
     RANDOM_STATE = config['model_params']['cognitive_tutor']['random_state']
 
-    # Semillas para reproducibilidad
-    set_seed(RANDOM_STATE)
+    set_seed(RANDOM_STATE) # Fija la semilla para reproducibilidad
 
-    # 1) Cargar base de datos
+    # Carga y preparación inicial de datos
     df_base = load_base_dataset(EMOTION_LABELS)
-
-    # Map de etiquetas
     label2id = {label: i for i, label in enumerate(EMOTION_LABELS)}
     id2label = {i: label for label, i in label2id.items()}
+    id2label_global = id2label # Guarda para uso en compute_metrics_fn
     df_base['label'] = df_base['emotion'].map(label2id)
 
-    # 2) Split estratificado
+    # División estratificada de datos
+    print("  › Realizando división de datos ESTRATIFICADA...")
     train_val_df, test_df = train_test_split(
         df_base, test_size=0.20, random_state=RANDOM_STATE, stratify=df_base['label']
     )
@@ -320,123 +426,134 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         train_val_df, test_size=0.125, random_state=RANDOM_STATE, stratify=train_val_df['label']
     )
 
-    # 3) Augmentation SOLO en el conjunto de entrenamiento
-    if cfg_emo.get('data_augmentation', {}).get('use_back_translation', True):
-        print("  › Aumentando SOLO train con Back-Translation...")
-        df_train_aug = augment_with_back_translation(train_df[['text', 'emotion']])
-        if not df_train_aug.empty:
-            df_train_aug['label'] = df_train_aug['emotion'].map(label2id)
-            train_df = pd.concat([train_df, df_train_aug], ignore_index=True)
-            train_df = train_df.drop_duplicates(subset=['text'], keep='first').reset_index(drop=True)
-
-    # 4) Tokenizador y datasets
+    # Tokenización
     tokenizer = AutoTokenizer.from_pretrained(cfg_emo['model_name'], use_fast=True)
-
     def tokenize(batch):
-        return tokenizer(batch['text'], truncation=True, max_length=128)
+        # Asegura que todos los textos sean strings válidos
+        texts = [str(text) if text is not None else "" for text in batch['text']]
+        return tokenizer(texts, truncation=True, max_length=128)
 
+    # Conversión a formato Dataset y tokenización
     train_ds = Dataset.from_pandas(train_df[['text', 'label']]).map(tokenize, batched=True, remove_columns=['text'])
-    val_ds   = Dataset.from_pandas(val_df[['text', 'label']]).map(tokenize, batched=True, remove_columns=['text'])
-    test_ds  = Dataset.from_pandas(test_df[['text', 'label']]).map(tokenize, batched=True, remove_columns=['text'])
+    val_ds = Dataset.from_pandas(val_df[['text', 'label']]).map(tokenize, batched=True, remove_columns=['text'])
+    test_ds = Dataset.from_pandas(test_df[['text', 'label']]).map(tokenize, batched=True, remove_columns=['text'])
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    # 5) Modelo
+    # Carga del modelo pre-entrenado
     model = AutoModelForSequenceClassification.from_pretrained(
         cfg_emo['model_name'], num_labels=len(EMOTION_LABELS),
-        id2label=id2label, label2id=label2id
+        # Asegura que las claves id2label sean strings para compatibilidad JSON
+        id2label={str(k): v for k, v in id2label.items()},
+        label2id=label2id
     )
 
-    # 6) Pesos de clase
-    class_weights = compute_class_weight(
-        class_weight='balanced',
-        classes=np.unique(train_df['label']),
-        y=train_df['label']
-    )
-    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
-
-    # 7) Args de entrenamiento (AHORA USA LA NUEVA FUNCIÓN)
-    training_params = dict(cfg_emo['training_params'])
-    if 'learning_rate' in training_params:
-        training_params['learning_rate'] = float(training_params['learning_rate'])
+    # Cálculo robusto de pesos de clase
+    print("  › Calculando pesos de clase de forma robusta...")
+    unique_labels_in_train = np.unique(train_df['label'])
+    if len(unique_labels_in_train) == 0:
+        warnings.warn("El conjunto de entrenamiento está vacío o sin etiquetas. No se aplicarán pesos.")
+        class_weights_tensor = None
+    else:
+        # Calcula pesos solo para las clases presentes en el train set
+        class_weights_present = compute_class_weight(
+            class_weight='balanced', classes=unique_labels_in_train, y=train_df['label']
+        )
+        label_to_weight_map = dict(zip(unique_labels_in_train, class_weights_present))
+        
+        # Construye el tensor final con tamaño num_classes, inicializado a 1.0
+        num_classes = len(EMOTION_LABELS)
+        final_weights = torch.ones(num_classes, dtype=torch.float)
+        # Asigna los pesos calculados a las posiciones correspondientes
+        for label_id, weight in label_to_weight_map.items():
+            if 0 <= label_id < num_classes: # Chequeo de seguridad
+                final_weights[label_id] = float(weight)
+        class_weights_tensor = final_weights
     
-    # Llamada a la nueva función robusta que construye los argumentos
+    # Construcción de argumentos de entrenamiento
+    training_params = dict(cfg_emo['training_params'])
     training_args = build_compatible_training_args(training_params)
 
-    # 8) Entrenador
+    # Inicialización del Trainer personalizado
     trainer = WeightedLossTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=val_ds,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics_fn,
-        class_weights=class_weights_tensor,
+        model=model, args=training_args, train_dataset=train_ds,
+        eval_dataset=val_ds, data_collator=data_collator,
+        compute_metrics=compute_metrics_fn, class_weights=class_weights_tensor,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=cfg_emo.get('early_stopping_patience', 2))]
     )
 
-    # 9) Entrenamiento y evaluación dentro de un run de MLflow
+    # Inicio del run de MLflow para registrar el entrenamiento
     with mlflow.start_run(run_name="train_emotion_classifier_final"):
-        mlflow.log_params(cfg_emo['training_params'])
-        mlflow.log_param("use_back_translation", cfg_emo.get('data_augmentation', {}).get('use_back_translation', True))
+        # Registra artefactos y parámetros iniciales
         mlflow.log_dict({'label2id': label2id, 'id2label': id2label}, "mappings/labels.json")
+        # Nota: Los training_params se loguean automáticamente por el Trainer
 
         print("\n--- 🚂 Entrenando modelo... ---")
-        trainer.train()
+        train_result = trainer.train() # Guarda el resultado del entrenamiento
 
+        # Evaluación final en el conjunto de prueba
         print("\n--- 📊 Evaluando en el conjunto de prueba... ---")
         predictions = trainer.predict(test_ds)
         y_pred_labels = np.argmax(predictions.predictions, axis=1)
-        y_true_labels = np.array(list(test_ds['label']))
+        y_true_labels = np.array(test_ds["label"]) # Extraer labels del dataset
 
-        y_pred = [id2label[i] for i in y_pred_labels]
-        y_true = [id2label[i] for i in y_true_labels]
+        # Mapeo de IDs a nombres para el reporte y matriz de confusión
+        y_pred = [id2label.get(i, f"UNK_{i}") for i in y_pred_labels]
+        y_true = [id2label.get(i, f"UNK_{i}") for i in y_true_labels]
 
-        report_txt = classification_report(y_true, y_pred, labels=list(label2id.keys()), zero_division=0)
+        # Generación y registro del reporte de clasificación
+        report_txt = classification_report(
+            y_true, y_pred, labels=EMOTION_LABELS, zero_division=0
+        )
         print("\n  › Reporte de Clasificación (TEST):")
         print(report_txt)
         mlflow.log_text(report_txt, "reports/classification_report_test.txt")
 
+        # Cálculo y registro de métricas finales
         final_metrics = compute_metrics_fn((predictions.predictions, y_true_labels))
+        # Prefijo para distinguir métricas finales de las de evaluación
         mlflow.log_metrics({f"final_test_{k}": v for k, v in final_metrics.items()})
         
-        print(f"  › **F1-Score (Macro) Final:** {final_metrics['f1_macro']:.3f}")
+        print(f"  › **F1-Score (Macro) Final:** {final_metrics.get('f1_macro', 0.0):.3f}")
 
-        # --- Matriz de confusión como imagen ---
+        # Generación y registro de la matriz de confusión
         try:
             import matplotlib.pyplot as plt
-            cm = confusion_matrix(y_true, y_pred, labels=list(label2id.keys()))
-            fig, ax = plt.subplots(figsize=(8, 6))
+            # Usar las etiquetas presentes en y_true o y_pred para la matriz
+            cm_labels = sorted(list(set(y_true).union(set(y_pred))), key=lambda x: label2id.get(x, -1))
+            if not cm_labels: cm_labels = EMOTION_LABELS # Fallback
+
+            cm = confusion_matrix(y_true, y_pred, labels=cm_labels)
+            fig, ax = plt.subplots(figsize=(max(8, len(cm_labels)*1.2), max(6, len(cm_labels)*0.9)))
             im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
             ax.figure.colorbar(im, ax=ax)
-            ax.set(xticks=np.arange(cm.shape[1]),
-                   yticks=np.arange(cm.shape[0]),
-                   xticklabels=list(label2id.keys()), yticklabels=list(label2id.keys()),
-                   title='Matriz de Confusión (Test)',
-                   ylabel='Etiqueta Real',
-                   xlabel='Predicción')
+            ax.set(xticks=np.arange(cm.shape[1]), yticks=np.arange(cm.shape[0]),
+                   xticklabels=cm_labels, yticklabels=cm_labels,
+                   title='Matriz de Confusión (Test)', ylabel='Etiqueta Real', xlabel='Predicción')
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+            thresh = cm.max() / 2. if cm.max() > 0 else 0.1
             for i in range(cm.shape[0]):
                 for j in range(cm.shape[1]):
-                    ax.text(j, i, format(cm[i, j], 'd'),
-                            ha="center", va="center",
-                            color="white" if cm[i, j] > cm.max() / 2. else "black")
+                    ax.text(j, i, format(cm[i, j], 'd'), ha="center", va="center",
+                            color="white" if cm[i, j] > thresh else "black")
             fig.tight_layout()
             mlflow.log_figure(fig, "plots/confusion_matrix_test.png")
             plt.close(fig)
             print("  › Matriz de confusión registrada en MLflow.")
         except ImportError:
-            warnings.warn("Matplotlib no está instalado. No se pudo generar la matriz de confusión.")
+            warnings.warn("Matplotlib no disponible. No se generará la matriz de confusión.")
         except Exception as e:
             warnings.warn(f"No se pudo registrar la matriz de confusión: {e}")
 
-        # 10) Guardar modelo final
+        # Guardado final del modelo y tokenizador
         model_save_path = config['model_paths']['emotion_classifier']
-        print(f"\n  › Guardando modelo en: {model_save_path}")
+        print(f"\n  › Guardando modelo y tokenizador en: {model_save_path}")
         os.makedirs(model_save_path, exist_ok=True)
         trainer.save_model(model_save_path)
         tokenizer.save_pretrained(model_save_path)
+        # Registro del modelo como artefacto en MLflow
         mlflow.log_artifacts(model_save_path, artifact_path="emotion_classifier_model")
 
-    print("\n--- ✅ Pipeline del Clasificador de Emociones Finalizado. ---")
-    return final_metrics
+    print("\n--- ✅ Pipeline del Clasificador de Emociones (Final) Finalizado. ---")
+    return final_metrics if 'final_metrics' in locals() else {}
+
