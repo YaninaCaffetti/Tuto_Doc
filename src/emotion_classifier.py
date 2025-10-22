@@ -186,8 +186,8 @@ def get_custom_domain_data() -> pd.DataFrame:
     Returns:
         Un DataFrame de Pandas con columnas ['text', 'emotion'].
     """
+    # (Contenido de la función sin cambios, con los 20 ejemplos extra)
     data_custom_list = [
-        # Corpus original y enriquecido SIN tildes
         ("¡Esto nunca funciona como debería!", "Ira"), ("Mi hipótesis fue refutada", "Tristeza"),
         ("Siempre creí que este sistema funcionaría.", "Confianza"), ("No sé cómo voy a superar esto.", "Miedo"),
         ("¡Qué maravilla! No esperaba este resultado.", "Sorpresa"), ("Estoy listo para empezar, ¿cuál es el primer paso?", "Anticipacion"),
@@ -342,14 +342,12 @@ def compute_metrics_fn(eval_pred: Tuple[np.ndarray, np.ndarray]) -> Dict[str, fl
     all_label_names = config_global.get('constants', {}).get('emotion_labels', [])
     all_label_ids = np.arange(len(all_label_names))
 
-    # Métricas Macro
     p, r, f1, _ = precision_recall_fscore_support(
         labels, preds, average='macro', zero_division=0, labels=all_label_ids
     )
     acc = accuracy_score(labels, preds)
     metrics = {"accuracy": acc, "precision_macro": p, "recall_macro": r, "f1_macro": f1}
     
-    # Métricas por clase
     try:
         if len(all_label_names) == len(all_label_ids):
             report = classification_report(
@@ -484,7 +482,7 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         ignore_mismatched_sizes=True 
     )
 
-    # --- CÁLCULO DE PESOS ROBUSTO ---
+    # --- CÁLCULO DE PESOS ROBUSTO CON PODA (CLIPPING) ---
     print("  › Calculando pesos de clase de forma robusta...")
     unique_labels_in_train, counts = np.unique(train_df['label'], return_counts=True)
     
@@ -506,6 +504,13 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
                 final_weights[label_id] = float(weight)
             else:
                  warnings.warn(f"ID de etiqueta inválido ({label_id}). Se ignora para pesos.")
+        
+        # --- ¡PODA DE PESOS EXTREMOS! ---
+        # Limita el peso máximo para evitar sobre-ajuste a clases minoritarias.
+        max_weight = 10.0
+        final_weights.clamp_max_(max_weight)
+        print(f"  › Pesos de clase podados (max={max_weight}) para estabilidad.")
+        
         class_weights_tensor = final_weights
     
     training_params = dict(cfg_emo['training_params'])
@@ -547,7 +552,6 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         y_pred = [id2label.get(i, f"UNK_{i}") for i in y_pred_labels]
         y_true = [id2label.get(i, f"UNK_{i}") for i in y_true_labels]
 
-        # Asegurar que EMOTION_LABELS coincida con las claves de label2id
         report_labels = list(label2id.keys())
         report_txt = classification_report(
             y_true, y_pred, labels=report_labels, zero_division=0,
@@ -564,7 +568,7 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
 
         try:
             import matplotlib.pyplot as plt
-            cm_labels = report_labels # Usar las mismas etiquetas que el reporte
+            cm_labels = report_labels
             cm = confusion_matrix(y_true, y_pred, labels=cm_labels)
             fig, ax = plt.subplots(figsize=(max(8, len(cm_labels)*1.2), max(6, len(cm_labels)*0.9)))
             im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
@@ -595,6 +599,5 @@ def train_and_evaluate_emotion_classifier(config: dict) -> Dict[str, float]:
         mlflow.log_artifacts(model_save_path, artifact_path="emotion_classifier_model") 
 
     print("\n--- ✅ Pipeline del Clasificador de Emociones (Final) Finalizado. ---")
-    # Devolver las métricas finales calculadas
     return final_metrics if 'final_metrics' in locals() else {}
 
