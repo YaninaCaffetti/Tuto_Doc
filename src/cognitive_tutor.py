@@ -235,6 +235,7 @@ class MoESystem:
         """
         # 1. Predicción Cognitiva
         profile_df = pd.DataFrame([user_profile])
+        # Asegurarse de que las columnas están en el orden correcto
         profile_for_prediction = profile_df[self.feature_columns]
         predicted_archetype = self.cognitive_model.predict(profile_for_prediction)[0]
 
@@ -247,7 +248,8 @@ class MoESystem:
         affective_weights = self._apply_affective_modulation(base_weights, emotion_probs)
 
         # 4. Modulación Contextual (Memoria)
-        negative_emotions = config.get('constants', {}).get('negative_emotions', [])
+        constants = config.get('constants', {})
+        negative_emotions = constants.get('negative_emotions', [])
         conversational_weights = self._apply_conversational_modulation(
             affective_weights, conversation_context, negative_emotions
         )
@@ -259,6 +261,7 @@ class MoESystem:
         sorted_plan = sorted(final_weights.items(), key=lambda item: item[1], reverse=True)
         final_recs = []
         
+        # Regla Fija: GestorCUD siempre se activa si no tiene CUD
         if user_profile.get('TIENE_CUD') != 'Si_Tiene_CUD':
             final_recs.append(GestorCUD().generate_recommendation())
 
@@ -278,8 +281,9 @@ class MoESystem:
                 final_recs.append(f"  - (Prioridad: {weight:.0%}): {rec}")
                 recommendations_added += 1
 
-        if recommendations_added == 0:
-            final_recs.append("  - [Sistema]: No se pudo determinar un plan de acción de tutores adicional.")
+        if recommendations_added == 0 and len(final_recs) <= 1: # Si solo está el título (o CUD + título)
+             final_recs.append("  - [Sistema]: No hay recomendaciones adicionales de tutores para esta consulta específica.")
+
 
         plan_string = "\n".join(final_recs)
         
