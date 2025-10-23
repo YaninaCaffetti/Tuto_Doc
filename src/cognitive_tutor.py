@@ -1,8 +1,9 @@
+# cognitive_tutor.py
 """
 Define la arquitectura del Tutor Cognitivo (Versión Avanzada).
 
 Implementa una búsqueda semántica basada en embeddings y
-un mecanismo de Gating Afectivo de Intención para modular
+un mecanismo de Gating Afectivo de Intención  para modular
 las recomendaciones según la congruencia emocional detectada.
 """
 
@@ -240,7 +241,9 @@ class GestorCUD(Experto):
     """
     def __init__(self):
         """Inicializa el GestorCUD cargando su KB específica."""
-        super().__init__("GestorCUD") #
+        # --- CORRECCIÓN ---
+        super().__init__("GestorCUD") # Usar nombre corto
+        # --- FIN CORRECCIÓN ---
         self._initialize_knowledge_base() # Pre-calcula embeddings
 
     def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
@@ -283,7 +286,9 @@ class TutorCarrera(Experto):
     """Experto en estrategia profesional, CV, entrevistas y negociación."""
     def __init__(self):
         """Inicializa TutorCarrera, define su umbral y carga KB/embeddings."""
-        super().__init__("Tutor de Estrategia de Carrera") #
+        # --- CORRECCIÓN ---
+        super().__init__("TutorCarrera") # Usar nombre corto
+        # --- FIN CORRECCIÓN ---
         self.similarity_threshold = 0.6 # Umbral más alto para este tutor
         self._initialize_knowledge_base()
 
@@ -319,7 +324,7 @@ class TutorInteraccion(Experto):
     """Experto en habilidades blandas, comunicación y manejo de conflictos."""
     def __init__(self):
         """Inicializa TutorInteraccion y carga KB/embeddings."""
-        super().__init__("Tutor de Habilidades de Interacción") #
+        super().__init__("TutorInteraccion")
         self._initialize_knowledge_base()
 
 
@@ -327,7 +332,7 @@ class TutorCompetencias(Experto):
     """Experto en 'upskilling', cursos y aprendizaje de nuevas tecnologías."""
     def __init__(self):
         """Inicializa TutorCompetencias y carga KB/embeddings."""
-        super().__init__("Tutor de Competencias Técnicas") #
+        super().__init__("TutorCompetencias") 
         self._initialize_knowledge_base()
 
 
@@ -335,7 +340,7 @@ class TutorBienestar(Experto):
     """Experto en confianza, manejo del estrés y motivación."""
     def __init__(self):
         """Inicializa TutorBienestar y carga KB/embeddings."""
-        super().__init__("Tutor de Bienestar y Activación") #
+        super().__init__("TutorBienestar") 
         self._initialize_knowledge_base()
 
 
@@ -343,7 +348,7 @@ class TutorApoyos(Experto):
     """Experto en adaptaciones, derechos y 'ajustes razonables'."""
     def __init__(self):
         """Inicializa TutorApoyos y carga KB/embeddings."""
-        super().__init__("Tutor de Apoyos y Adaptaciones") #
+        super().__init__("TutorApoyos") 
         self._initialize_knowledge_base()
 
 
@@ -351,12 +356,12 @@ class TutorPrimerEmpleo(Experto):
     """Experto en guiar a jóvenes en su primera experiencia laboral."""
     def __init__(self):
         """Inicializa TutorPrimerEmpleo y carga KB/embeddings."""
-        super().__init__("Tutor de Primer Empleo") #
+        super().__init__("TutorPrimerEmpleo") 
         self._initialize_knowledge_base()
 
 
 # -----------------------------------------------------------------
-# --- 4. SISTEMA DE ORQUESTACIÓN MoE (SEMÁNTICO + GATING TAREA 1.3) ---
+# --- 4. SISTEMA DE ORQUESTACIÓN MoE ---
 # -----------------------------------------------------------------
 
 # Mapeo central de Arquetipos a sus Tutores Expertos
