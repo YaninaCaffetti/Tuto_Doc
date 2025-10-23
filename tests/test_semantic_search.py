@@ -23,18 +23,18 @@ import os
 import pandas as pd
 import numpy as np
 import json
-import warnings
+import warnings # Importar warnings si no estaba ya
 
-# --- Configuración del Path ---
-# Añadir el path 'src' para poder importar los módulos del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src_path = os.path.join(project_root, 'src')
-if src_path not in sys.path:
-    sys.path.append(src_path)
+
+if project_root not in sys.path:
+    print(f"(test_semantic_search.py) Adding project root to sys.path: {project_root}") # Mensaje de depuración
+    sys.path.append(project_root)
+
 
 try:
-    # Importar los componentes necesarios del sistema tutor
-    from cognitive_tutor import get_semantic_model, EXPERT_MAP, CUD_EXPERT # Import from cognitive_tutor.py
+    # Ahora esta importación debería funcionar Y permitir la importación anidada
+    from src.cognitive_tutor import get_semantic_model, EXPERT_MAP, CUD_EXPERT #
     from sentence_transformers import util
     import torch
 except ImportError as e:
@@ -47,11 +47,8 @@ except KeyError as e:
     print("Verifica las definiciones de EXPERT_MAP y CUD_EXPERT.")
     sys.exit(1)
 
-
 # --- 1. SET DE VALIDACIÓN DE PARÁFRASIS ---
-# Define las consultas de prueba y la intención esperada para cada una.
-# Incluye paráfrasis (True Positives) y consultas trampa (True Negatives).
-# ESTA LISTA DEBE SER AMPLIADA PARA UNA VALIDACIÓN RIGUROSA DE TESIS.
+
 validation_set = [
     # --- Pruebas para TutorCarrera ---
     {
