@@ -6,8 +6,8 @@ Define la estructura de datos enriquecida para cada intención, incluyendo:
 - pregunta_clave: La intención semántica principal (usada para el embedding).
 - respuesta: La recomendación específica del tutor.
 - contexto_emocional_esperado: La emoción que típicamente se asocia con esta
-  consulta, usada para el "gating afectivo" (Tarea 1.3).
-- tags: Etiquetas para clustering semántico futuro (Tarea 1.1 Doctoral).
+  consulta, usada para el "gating afectivo".
+- tags: Etiquetas para clustering semántico.
 """
 
 EXPERT_KB = {
@@ -394,9 +394,9 @@ EXPERT_KB = {
             "tags": ["ansiedad", "mindfulness", "regulacion"]
           },
           {
-            "pregunta_clave": "Estoy alegr. Sé que mejoré mucho",
+            "pregunta_clave": "Estoy bien. Sé que mejoré mucho",
             "respuesta": "Reconocer tu propio progreso es fundamental. La sorpresa positiva refuerza la autoconfianza y el compromiso con tu bienestar.",
-            "contexto_emocional_esperado": "sorpresa",
+            "contexto_emocional_esperado": "alegria",
             "tags": ["autoconocimiento", "progreso", "refuerzo_positivo"]
           }
     ],
@@ -414,545 +414,314 @@ EXPERT_KB = {
             "contexto_emocional_esperado": "miedo",
             "tags": ["tramites", "orientacion", "beneficios"]
           },
-        {
+          {
             "pregunta_clave": "Siento que no me escuchan cuando pido ayuda",
             "respuesta": "Es importante que tus necesidades sean reconocidas. Documentá tus pedidos y solicitá acompañamiento institucional. Puedo orientarte sobre cómo formalizarlos.",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["derechos", "empoderamiento", "autonomia"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Dónde puedo conseguir acompañamiento para buscar empleo?",
-            "respuesta": "Existen programas de inserción laboral con apoyos personalizados. La Agencia Nacional de Discapacidad y la Red de Oficinas de Empleo pueden orientarte. Recordá que la Ley Nacional 22.431 y su Decreto Reglamentario 312/2010 establecen un cupo del 4 % de empleo público para personas con discapacidad, "
-            "y promueven la inclusión laboral en todos los sectores.",
+            "respuesta": ("Existen programas de inserción laboral con apoyos personalizados. La Agencia Nacional de Discapacidad y la Red de Oficinas de Empleo pueden orientarte. Recordá que la Ley Nacional 22.431 y su Decreto Reglamentario 312/2010 establecen un cupo del 4 % de empleo público para personas con discapacidad, "
+            "y promueven la inclusión laboral en todos los sectores."),
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["empleo", "inclusion_laboral","ley_22431", "cupo_laboral", "andis","acompanamiento"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Qué significa tener apoyos para la toma de decisiones?",
             "respuesta": "Significa que podés contar con personas o herramientas que te ayuden a comprender opciones y elegir lo que consideres mejor, sin que otros decidan por vos.",
             "contexto_emocional_esperado": "confianza",
             "tags": ["autonomia", "derechos", "inclusion","andis"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "Tengo miedo de perder mi pensión si empiezo a trabajar",
-            "respuesta": "Podés mantener tu pensión dentro de ciertos límites de ingresos. Hay programas de compatibilización laboral. Podemos revisar juntos los requisitos.""Por ejemplo, si accedés a un empleo formal, podés seguir cobrando la pensión."
+            "respuesta": ("Podés mantener tu pensión dentro de ciertos límites de ingresos. Hay programas de compatibilización laboral. Podemos revisar juntos los requisitos.""Por ejemplo, si accedés a un empleo formal, podés seguir cobrando la pensión."
             "Si el salario bruto no supera el 50% del Salario Mínimo Vital y Móvil (SMVM). "
             "Además, existen programas de compatibilización laboral que te permiten trabajar "
             "Sin perder el beneficio, gestionados por la Agencia Nacional de Discapacidad (ANDIS). "
-            "Lo importante es informar el nuevo ingreso para mantener tu situación regularizada.",
+            "Lo importante es informar el nuevo ingreso para mantener tu situación regularizada."),
             "contexto_emocional_esperado": "miedo",
             "tags": ["pension", "empleo", "seguridad_social", "andis", "compatibilizacion"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Qué beneficios tengo con el Certificado Único de Discapacidad?",
-            "respuesta": "El Certificado Único de Discapacidad (CUD) te permite acceder a varios beneficios sin costo: "
+            "respuesta": ("El Certificado Único de Discapacidad (CUD) te permite acceder a varios beneficios sin costo: "
             "transporte público gratuito en todo el país, cobertura del 100% en medicamentos y tratamientos,"
             "vinculados a tu discapacidad, exención de algunos impuestos automotores y prioridad en programas,de empleo y educación inclusiva. "
             "Por ejemplo, podés viajar con un acompañante de forma gratuita o solicitar becas de formación adaptadas."
-            "Es un documento clave para garantizar tus derechos y promover tu autonomía.",
+            "Es un documento clave para garantizar tus derechos y promover tu autonomía."),
             "contexto_emocional_esperado": "alegria",
             "tags": ["cud", "beneficios", "salud", "transporte", "educacion_inclusiva"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Cómo puedo reclamar si me niegan un apoyo o beneficio?",
             "respuesta": "Tenés derecho a una respuesta escrita y fundada. Si no te responden, podés presentar un reclamo ante el Ministerio Público de la Defensa, de tu lugar de residencia. Es gratuito y confidencial. No dudes en hacerlo. ",
             "contexto_emocional_esperado": "ira",
             "tags": ["reclamos", "defensoria", "derechos"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Qué apoyos puedo tener para acceder a un empleo?",
             "respuesta": "Podés solicitar ajustes razonables como horarios flexibles, acompañamiento laboral o tecnología asistiva. Son obligaciones legales del empleador.",
             "contexto_emocional_esperado": "confianza",
             "tags": ["empleo", "ajustes_razonables", "inclusion"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "Me cuesta entender la información de los trámites",
-            "respuesta": "Es tu derecho recibir información clara, completa y en formatos accesibles. "
+            "respuesta": ("Es tu derecho recibir información clara, completa y en formatos accesibles. "
             "La Ley Nacional 26.653 sobre Accesibilidad de la Información en las Páginas Web y la Ley 22.431 establecen que los organismos públicos deben garantizar la comprensión de la información y ofrecer apoyos visuales o adaptaciones cuando sean necesarias. "
-            "Podés pedir que te expliquen los pasos del trámite de manera sencilla o solicitar asistencia personalizada."
+            "Podés pedir que te expliquen los pasos del trámite de manera sencilla o solicitar asistencia personalizada."),
             "contexto_emocional_esperado": "tristeza",
             "tags": ["accesibilidad", "tramites", "claridad"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Qué derechos tengo si estudio en una universidad pública?",
             "respuesta": "Las universidades deben garantizar accesibilidad, intérpretes y materiales adaptados. Podés solicitar estos apoyos en el área de inclusión de tu facultad.",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["educacion_inclusiva", "universidad", "inclusion"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "Me enoja que las oficinas públicas no sean accesibles",
             "respuesta": "Tenés derecho a exigir accesibilidad física y digital. Podés presentar una nota en mesa de entrada o un reclamo en línea ante la Agencia Nacional de Discapacidad.",
             "contexto_emocional_esperado": "ira",
             "tags": ["accesibilidad", "inclusion", "reclamos"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "¿Puedo viajar gratis con acompañante?",
             "respuesta": "Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario. Podés gestionarlo en terminales o portales oficiales.",
             "contexto_emocional_esperado": "alegria",
             "tags": ["transporte", "beneficios", "accesibilidad"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "Me sorprende que existan tantos programas de apoyo",
             "respuesta": "Sí, y cada año se amplían. Conocerlos te permite aprovechar recursos disponibles y compartir la información con otras personas que lo necesiten.",
             "contexto_emocional_esperado": "sorpresa",
             "tags": ["programas_sociales", "informacion", "empoderamiento"]
-        },
-        {
+          },
+          {
             "pregunta_clave": "Quiero conocer más sobre mis derechos y apoyos",
             "respuesta": "Podés consultar el portal oficial de discapacidad o acercarte a las áreas de inclusión de tu provincia. Informarte es tu mejor herramienta de autonomía.",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["derechos", "informacion", "autonomia"]
-        }
-    ],
+          }
+      ],
 
-    "TutorApoyos": [
-    {
-        "pregunta_clave": "¿Qué apoyos puedo solicitar para continuar mis estudios?",
-        "respuesta": (
-            "Podés pedir intérpretes, acompañantes pedagógicos, materiales accesibles o adaptaciones curriculares. "
-            "Cada universidad cuenta con un área de inclusión o bienestar estudiantil que gestiona estos apoyos. "
-            "Estos derechos están garantizados por la Ley Nacional 26.206 de Educación y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378)."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["educacion", "inclusion", "accesibilidad"]
-    },
-    {
-        "pregunta_clave": "No sé a quién acudir para tramitar mis beneficios",
-        "respuesta": (
-            "Podés acercarte a la oficina municipal de discapacidad o a la Agencia Nacional de Discapacidad (ANDIS). "
-            "Allí te orientarán paso a paso y de forma gratuita sobre pensiones, transporte o programas de apoyo. "
-            "También podés comunicarte con el Programa ADAJUS del Ministerio de Justicia para recibir asistencia en trámites legales."
-        ),
-        "contexto_emocional_esperado": "miedo",
-        "tags": ["tramites", "orientacion", "beneficios", "adajus"]
-    },
-    {
-        "pregunta_clave": "Siento que no me escuchan cuando pido ayuda",
-        "respuesta": (
-            "Es importante que tus necesidades sean reconocidas. Podés documentar tus pedidos y solicitar acompañamiento institucional. "
-            "La Convención sobre los Derechos de las Personas con Discapacidad garantiza tu derecho a participar activamente en las decisiones que te afectan."
-        ),
-        "contexto_emocional_esperado": "tristeza",
-        "tags": ["derechos", "empoderamiento", "autonomia"]
-    },
-    {
-        "pregunta_clave": "¿Dónde puedo conseguir acompañamiento para buscar empleo?",
-        "respuesta": (
-            "Existen programas de inserción laboral con apoyos personalizados. "
-            "La Agencia Nacional de Discapacidad y la Red de Oficinas de Empleo pueden orientarte. "
-            "La Ley Nacional 22.431 y el Decreto 312/2010 establecen un cupo del 4% en el empleo público para personas con discapacidad "
-            "y promueven la inclusión laboral en todos los sectores."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["empleo", "inclusion_laboral", "acompanamiento", "ley_22431", "cupo_laboral"]
-    },
-    {
-        "pregunta_clave": "¿Qué significa tener apoyos para la toma de decisiones?",
-        "respuesta": (
-            "Significa contar con personas, intérpretes o herramientas que te ayuden a comprender opciones y elegir lo que consideres mejor, sin que otros decidan por vos. "
-            "Este principio está reconocido por la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378)."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["autonomia", "derechos", "inclusion"]
-    },
-    {
-        "pregunta_clave": "Tengo miedo de perder mi pensión si empiezo a trabajar",
-        "respuesta": (
-            "Podés mantener tu pensión siempre que tus ingresos no superen ciertos límites. "
-            "Por ejemplo, si accedés a un empleo formal, podés seguir cobrando la pensión "
-            "si el salario bruto no supera el 50% del Salario Mínimo Vital y Móvil (SMVM). "
-            "Además, existen programas de compatibilización laboral gestionados por la Agencia Nacional de Discapacidad (ANDIS). "
-            "Lo importante es informar el nuevo ingreso para mantener tu situación regularizada."
-        ),
-        "contexto_emocional_esperado": "miedo",
-        "tags": ["pension", "empleo", "seguridad_social", "andis", "compatibilizacion"]
-    },
-    {
-        "pregunta_clave": "¿Qué beneficios tengo con el Certificado Único de Discapacidad?",
-        "respuesta": (
-            "El Certificado Único de Discapacidad (CUD) te permite acceder a varios beneficios sin costo: "
-            "transporte público gratuito en todo el país, cobertura del 100% en medicamentos y tratamientos vinculados a tu discapacidad, "
-            "exención de algunos impuestos automotores y prioridad en programas de empleo y educación inclusiva. "
-            "Por ejemplo, podés viajar con un acompañante de forma gratuita o solicitar becas de formación adaptadas. "
-            "Es un documento clave para garantizar tus derechos y promover tu autonomía."
-        ),
-        "contexto_emocional_esperado": "alegria",
-        "tags": ["cud", "beneficios", "salud", "transporte", "educacion_inclusiva"]
-    },
-    {
-        "pregunta_clave": "¿Cómo puedo reclamar si me niegan un apoyo o beneficio?",
-        "respuesta": (
-            "Tenés derecho a recibir una respuesta escrita y fundada. "
-            "Si no te la entregan, podés presentar un reclamo formal ante la Defensoría del Pueblo o el Ministerio de Justicia y Derechos Humanos. "
-            "También podés pedir asesoramiento gratuito en el Programa ADAJUS para iniciar la gestión correspondiente."
-        ),
-        "contexto_emocional_esperado": "ira",
-        "tags": ["reclamos", "defensoria", "derechos", "adajus"]
-    },
-    {
-        "pregunta_clave": "¿Qué apoyos puedo tener para acceder a un empleo?",
-        "respuesta": (
-            "Podés solicitar ajustes razonables como horarios flexibles, acompañamiento laboral o tecnología asistiva. "
-            "Estos derechos están garantizados por la Ley 22.431 y por la Convención sobre los Derechos de las Personas con Discapacidad. "
-            "El empleador está obligado a implementarlos sin costo para vos."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["empleo", "ajustes_razonables", "inclusion"]
-    },
-    {
-        "pregunta_clave": "Me cuesta entender la información de los trámites",
-        "respuesta": (
-            "Es tu derecho recibir información clara, completa y en formatos accesibles. "
-            "La Ley 26.653 sobre Accesibilidad de la Información, la Ley 27.275 de Acceso a la Información Pública "
-            "y la Ley 22.431 establecen que los organismos públicos deben garantizar comprensión y brindar apoyos visuales o adaptaciones cuando sea necesario."
-        ),
-        "contexto_emocional_esperado": "tristeza",
-        "tags": ["accesibilidad", "informacion_publica", "tramites", "claridad", "derechos"]
-    },
-    {
-        "pregunta_clave": "¿Qué derechos tengo si estudio en una universidad pública?",
-        "respuesta": (
-            "Las universidades deben garantizar accesibilidad, intérpretes y materiales adaptados para estudiantes con discapacidad. "
-            "Podés solicitar estos apoyos en el área de inclusión universitaria o de bienestar estudiantil, según lo establece la Ley 26.206 de Educación Nacional."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["educacion_inclusiva", "universidad", "inclusion"]
-    },
-    {
-        "pregunta_clave": "Me enoja que las oficinas públicas no sean accesibles",
-        "respuesta": (
-            "Tenés derecho a exigir accesibilidad física y digital. "
-            "La Ley 24.314 y la Ley 26.653 obligan al Estado a garantizar condiciones accesibles en edificios y portales web. "
-            "Podés presentar un reclamo en la Defensoría del Pueblo o el Ministerio de Obras Públicas."
-        ),
-        "contexto_emocional_esperado": "ira",
-        "tags": ["accesibilidad", "inclusion", "reclamos"]
-    },
-    {
-        "pregunta_clave": "¿Puedo viajar gratis con acompañante?",
-        "respuesta": (
-            "Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario. "
-            "Solo necesitás presentar tu certificado y DNI en la terminal o empresa correspondiente, según la Ley 25.635 y resoluciones de la CNRT."
-        ),
-        "contexto_emocional_esperado": "alegria",
-        "tags": ["transporte", "beneficios", "accesibilidad"]
-    },
-    {
-        "pregunta_clave": "Me sorprende que existan tantos programas de apoyo",
-        "respuesta": (
-            "Sí, y cada año se amplían. Conocerlos te permite aprovechar recursos disponibles y compartir información con otras personas. "
-            "ANDIS, el Ministerio de Trabajo y el Ministerio de Desarrollo Social actualizan periódicamente los programas de inclusión y capacitación."
-        ),
-        "contexto_emocional_esperado": "sorpresa",
-        "tags": ["programas_sociales", "informacion", "empoderamiento"]
-    },
-    {
-        "pregunta_clave": "Quiero conocer más sobre mis derechos y apoyos",
-        "respuesta": (
-            "Podés consultar el portal oficial de discapacidad en www.argentina.gob.ar/andis "
-            "o acercarte a las áreas de inclusión de tu provincia. "
-            "Informarte es tu mejor herramienta de autonomía y empoderamiento ciudadano."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["derechos", "informacion", "autonomia"]
-    }
-]
 "TutorPrimerEmpleo": [
-    {
-        "pregunta_clave": "No tengo experiencia laboral, ¿cómo puedo empezar?",
-        "respuesta": (
-            "Podés participar del Programa Jóvenes con Más y Mejor Trabajo del Ministerio de Trabajo, "
-            "que te permite capacitarte y realizar prácticas en empresas. "
-            "También podés sumar experiencias en voluntariados o proyectos comunitarios, "
-            "que se valoran en tu primer CV."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["primer_empleo", "capacitacion", "ministerio_trabajo"]
-    },
-    {
-        "pregunta_clave": "¿Existe algún programa de apoyo para mi primera búsqueda laboral?",
-        "respuesta": (
-            "Sí. El Programa de Inserción Laboral (PIL) ofrece incentivos económicos a empresas "
-            "que contraten a personas sin experiencia o con discapacidad. "
-            "Está regulado por la Resolución 708/2010 del Ministerio de Trabajo y la Ley 22.431, "
-            "que promueven la inclusión laboral en condiciones de igualdad."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["inclusion_laboral", "pila", "primer_empleo"]
-    },
-    {
-        "pregunta_clave": "¿Dónde puedo hacer cursos gratuitos para conseguir trabajo?",
-        "respuesta": (
-            "Podés inscribirte en los cursos del Portal Empleo del Ministerio de Trabajo "
-            "(www.portalempleo.gob.ar) o en el Programa Fomentar Empleo, que ofrece formación profesional gratuita. "
-            "También hay capacitaciones accesibles en el INET y en la Agencia Nacional de Discapacidad (ANDIS)."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["formacion", "capacitacion", "portal_empleo"]
-    },
-    {
-        "pregunta_clave": "¿Qué derechos tengo si hago una práctica laboral?",
-        "respuesta": (
-            "Las prácticas deben ser formativas y respetar tus derechos básicos: cobertura médica, seguridad e higiene, "
-            "y un acompañamiento pedagógico. Están reguladas por la Resolución 905/2010 del Ministerio de Trabajo."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["practicas", "derechos", "ministerio_trabajo"]
-    },
-    {
-        "pregunta_clave": "¿Puedo tener un empleo y seguir estudiando?",
-        "respuesta": (
-            "Sí. La Ley de Contrato de Trabajo (N.º 20.744) garantiza horarios compatibles para estudiantes "
-            "y la posibilidad de solicitar licencias para rendir exámenes. "
-            "Podés coordinarlo con tu empleador o a través de programas de inserción laboral joven."
-        ),
-        "contexto_emocional_esperado": "alegria",
-        "tags": ["educacion", "trabajo_estudio", "derechos"]
-    },
-    {
-        "pregunta_clave": "Tengo miedo de que no me contraten por mi discapacidad",
-        "respuesta": (
-            "Tenés derecho a igualdad de oportunidades laborales. La Ley 22.431 y el Decreto 312/2010 "
-            "establecen el 4% de cupo en el sector público y promueven la inclusión en el sector privado. "
-            "Podés registrarte en la Red de Servicios de Empleo de ANDIS para acceder a búsquedas inclusivas."
-        ),
-        "contexto_emocional_esperado": "miedo",
-        "tags": ["discapacidad", "inclusion_laboral", "ley_22431"]
-    },
-    {
-        "pregunta_clave": "¿Cómo puedo armar mi primer CV?",
-        "respuesta": (
-            "Usá un formato claro: datos personales, formación, cursos y habilidades. "
+          {
+            "pregunta_clave": "No tengo experiencia laboral, ¿cómo puedo empezar?",
+            "respuesta": ("Podés participar del Programa Jóvenes con Más y Mejor Trabajo del Ministerio de Trabajo, que te permite capacitarte y realizar prácticas en empresas. "
+            "También podés sumar experiencias en voluntariados o proyectos comunitarios, que se valoran en tu primer CV."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["primer_empleo", "capacitacion", "ministerio_trabajo"]
+          },
+          {
+            "pregunta_clave": "¿Existe algún programa de apoyo para mi primera búsqueda laboral?",
+            "respuesta": ("Sí. El Programa de Inserción Laboral (PIL) ofrece incentivos económicos a empresas que contraten a personas sin experiencia o con discapacidad. "
+            "Está regulado por la Resolución 708/2010 del Ministerio de Trabajo y la Ley 22.431, que promueven la inclusión laboral en condiciones de igualdad."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["inclusion_laboral", "pila", "primer_empleo"]
+          },
+          {
+            "pregunta_clave": "¿Dónde puedo hacer cursos gratuitos para conseguir trabajo?",
+            "respuesta": ("Podés inscribirte en los cursos del Portal Empleo del Ministerio de Trabajo (www.portalempleo.gob.ar) o en el Programa Fomentar Empleo, que ofrece formación profesional gratuita. "
+            "También hay capacitaciones accesibles en el INET y en la Agencia Nacional de Discapacidad (ANDIS)."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["formacion", "capacitacion", "portal_empleo"]
+          },
+          {
+            "pregunta_clave": "¿Qué derechos tengo si hago una práctica laboral?",
+            "respuesta": "Las prácticas deben ser formativas y respetar tus derechos básicos: cobertura médica, seguridad e higiene, y un acompañamiento pedagógico. Están reguladas por la Resolución 905/2010 del Ministerio de Trabajo."
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["practicas", "derechos", "ministerio_trabajo"]
+          },
+          {
+            "pregunta_clave": "¿Puedo tener un empleo y seguir estudiando?",
+            "respuesta": ("Sí. La Ley de Contrato de Trabajo (N.º 20.744) garantiza horarios compatibles para estudiantes y la posibilidad de solicitar licencias para rendir exámenes. "
+            "Podés coordinarlo con tu empleador o a través de programas de inserción laboral joven."),
+            "contexto_emocional_esperado": "alegria",
+            "tags": ["educacion", "trabajo_estudio", "derechos"]
+          },
+          {
+            "pregunta_clave": "Tengo miedo de que no me contraten por mi discapacidad",
+            "respuesta": ("Tenés derecho a igualdad de oportunidades laborales. La Ley 22.431 y el Decreto 312/2010 establecen el 4% de cupo en el sector público y promueven la inclusión en el sector privado. "
+            "Podés registrarte en la Red de Servicios de Empleo de ANDIS para acceder a búsquedas inclusivas."),
+            "contexto_emocional_esperado": "miedo",
+            "tags": ["discapacidad", "inclusion_laboral", "ley_22431"]
+          },
+          {
+            "pregunta_clave": "¿Cómo puedo armar mi primer CV?",
+            "respuesta": ("Usá un formato claro: datos personales, formación, cursos y habilidades. "
             "Podés incluir experiencias informales, voluntariados o proyectos personales. "
-            "El Portal Empleo ofrece plantillas gratuitas y guías paso a paso."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["cv", "empleabilidad", "primer_empleo"]
-    },
-    {
-        "pregunta_clave": "¿Qué hago si me piden trabajar sin registrarme?",
-        "respuesta": (
-            "El trabajo no registrado es ilegal. Tenés derecho a exigir tu alta en AFIP y tus aportes. "
-            "Podés denunciar de forma confidencial en la línea 0800-666-4100 del Ministerio de Trabajo "
-            "o a través del sitio www.argentina.gob.ar/trabajo."
-        ),
-        "contexto_emocional_esperado": "ira",
-        "tags": ["trabajo_informal", "derechos_laborales", "denuncia"]
-    },
-    {
-        "pregunta_clave": "¿Qué beneficios hay para las empresas que contratan por primera vez?",
-        "respuesta": (
-            "El Programa de Inserción Laboral (Resolución 708/2010) otorga reducciones de contribuciones "
-            "y apoyos económicos a empleadores que contraten jóvenes o personas con discapacidad. "
-            "Esto impulsa tu contratación en condiciones formales."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["empleadores", "beneficios", "incentivos"]
-    },
-    {
-        "pregunta_clave": "¿Dónde puedo recibir orientación para entrevistas?",
-        "respuesta": (
-            "Podés practicar entrevistas en las Oficinas de Empleo municipales o en los talleres del Programa Fomentar Empleo. "
-            "También hay simuladores en línea en el Portal Empleo para practicar respuestas y lenguaje corporal."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["entrevista", "habilidades_blandas", "formacion"]
-    },
-    {
-        "pregunta_clave": "¿Cómo puedo acceder a becas de formación o programas de entrenamiento?",
-        "respuesta": (
-            "Podés inscribirte en las becas Progresar Trabajo (Resolución 905/2021) o en cursos del INET. "
-            "Están orientadas a la formación técnica y oficios, priorizando la inclusión de jóvenes y personas con discapacidad."
-        ),
-        "contexto_emocional_esperado": "alegria",
-        "tags": ["progresar", "becas", "formacion_profesional"]
-    },
-    {
-        "pregunta_clave": "¿Qué puedo hacer si me rechazan en muchos trabajos?",
-        "respuesta": (
-            "Es normal sentir frustración. Aprovechá el acompañamiento de los orientadores laborales del Ministerio de Trabajo "
-            "o de ANDIS para revisar tu perfil y mejorar la búsqueda. Cada intento te acerca a tu objetivo."
-        ),
-        "contexto_emocional_esperado": "tristeza",
-        "tags": ["orientacion_laboral", "motivacion", "resiliencia"]
-    },
-    {
-        "pregunta_clave": "¿Qué hago si me discriminan en una entrevista?",
-        "respuesta": (
-            "La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. "
-            "Podés presentar una denuncia ante el Ministerio de Justicia y Derechos Humanos, "
-            "o pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica."
-        ),
-        "contexto_emocional_esperado": "ira",
-        "tags": ["discriminacion", "inclusion", "ministerio_justicia", "adajus"]
-    },
-    {
-        "pregunta_clave": "¿Dónde puedo consultar mis derechos laborales?",
-        "respuesta": (
-            "Podés ingresar al sitio oficial del Ministerio de Trabajo (www.argentina.gob.ar/trabajo) "
-            "y revisar la Guía de Derechos Laborales. También podés pedir asesoramiento gratuito en las Oficinas de Empleo."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["derechos_laborales", "ministerio_trabajo", "asesoramiento"]
-    },
-    {
-        "pregunta_clave": "Me sorprende que haya programas gratuitos de formación",
-        "respuesta": (
-            "Sí, el Estado impulsa la formación gratuita a través del Programa Fomentar Empleo y el Portal Empleo. "
-            "Estos cursos te preparan para tu primer trabajo y están adaptados a distintas capacidades y niveles educativos."
-        ),
-        "contexto_emocional_esperado": "sorpresa",
-        "tags": ["formacion", "educacion", "inclusion"]
-    }
-]
+            "El Portal Empleo ofrece plantillas gratuitas y guías paso a paso."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["cv", "empleabilidad", "primer_empleo"]
+          },
+          {
+            "pregunta_clave": "¿Qué hago si me piden trabajar sin registrarme?",
+            "respuesta": ("El trabajo no registrado es ilegal. Tenés derecho a exigir tu alta en AFIP y tus aportes. "
+            "Podés denunciar de forma confidencial en la línea 0800-666-4100 del Ministerio de Trabajo o a través del sitio www.argentina.gob.ar/trabajo."),
+            "contexto_emocional_esperado": "ira",
+            "tags": ["trabajo_informal", "derechos_laborales", "denuncia"]
+          },
+          {
+            "pregunta_clave": "¿Qué beneficios hay para las empresas que contratan por primera vez?",
+            "respuesta": ("El Programa de Inserción Laboral (Resolución 708/2010) otorga reducciones de contribuciones y apoyos económicos a empleadores que contraten jóvenes o personas con discapacidad. "
+            "Esto impulsa tu contratación en condiciones formales."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["empleadores", "beneficios", "incentivos"]
+          },
+          {
+            "pregunta_clave": "¿Dónde puedo recibir orientación para entrevistas?",
+            "respuesta": ("Podés practicar entrevistas en las Oficinas de Empleo municipales o en los talleres del Programa Fomentar Empleo. "
+            "También hay simuladores en línea en el Portal Empleo para practicar respuestas y lenguaje corporal."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["entrevista", "habilidades_blandas", "formacion"]
+          },
+          {
+            "pregunta_clave": "¿Cómo puedo acceder a becas de formación o programas de entrenamiento?",
+            "respuesta": ("Podés inscribirte en las becas Progresar Trabajo (Resolución 905/2021) o en cursos del INET. "
+            "Están orientadas a la formación técnica y oficios, priorizando la inclusión de jóvenes y personas con discapacidad."),
+            "contexto_emocional_esperado": "alegria",
+            "tags": ["progresar", "becas", "formacion_profesional"]
+          },
+          {
+            "pregunta_clave": "¿Qué puedo hacer si me rechazan en muchos trabajos?",
+            "respuesta": "Es normal sentir frustración. Aprovechá el acompañamiento de los orientadores laborales del Ministerio de Trabajo o de ANDIS para revisar tu perfil y mejorar la búsqueda. Cada intento te acerca a tu objetivo."
+            "contexto_emocional_esperado": "tristeza",
+            "tags": ["orientacion_laboral", "motivacion", "resiliencia"]
+          },
+          {
+            "pregunta_clave": "¿Qué hago si me discriminan en una entrevista?",
+            "respuesta": ("La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. Podés presentar una denuncia ante el Ministerio Público de la Defensa."
+            "O pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica."),
+            "contexto_emocional_esperado": "ira",
+            "tags": ["discriminacion", "inclusion", "ministerio_justicia", "adajus"]
+          },
+          {
+            "pregunta_clave": "¿Dónde puedo consultar mis derechos laborales?",
+            "respuesta": "Podés ingresar al sitio oficial del Ministerio de Trabajo (www.argentina.gob.ar/trabajo) y revisar la Guía de Derechos Laborales. También podés pedir asesoramiento gratuito en las Oficinas de Empleo."
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["derechos_laborales", "ministerio_trabajo", "asesoramiento"]
+          },
+          {
+            "pregunta_clave": "Me sorprende que haya programas gratuitos de formación",
+            "respuesta": ("Sí, el Estado impulsa la formación gratuita a través del Programa Fomentar Empleo y el Portal Empleo. "
+            "Estos cursos te preparan para tu primer trabajo y están adaptados a distintas capacidades y niveles educativos."),
+            "contexto_emocional_esperado": "sorpresa",
+            "tags": ["formacion", "educacion", "inclusion"]
+          }
+],
 
 "GestorCUD": [
-    {
-        "pregunta_clave": "¿Qué es el Certificado Único de Discapacidad?",
-        "respuesta": (
-            "El Certificado Único de Discapacidad (CUD) es un documento oficial que acredita tu discapacidad "
-            "y te permite acceder a derechos y beneficios en salud, transporte, educación y trabajo. "
-            "Está regulado por la Ley 22.431 y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378)."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["cud", "definicion", "derechos"]
-    },
-    {
-        "pregunta_clave": "¿Dónde se tramita el CUD?",
-        "respuesta": (
-            "El trámite del CUD es gratuito y se realiza en las juntas evaluadoras de tu provincia o municipio. "
+          {
+            "pregunta_clave": "¿Qué es el Certificado Único de Discapacidad?",
+            "respuesta": ("El Certificado Único de Discapacidad (CUD) es un documento oficial que acredita tu discapacidad y te permite acceder a derechos y beneficios en salud, transporte, educación y trabajo. "
+            "Está regulado por la Ley 22.431 y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378)."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["cud", "definicion", "derechos"]
+          },
+          {
+            "pregunta_clave": "¿Dónde se tramita el CUD?",
+            "respuesta": ("El trámite del CUD es gratuito y se realiza en las juntas evaluadoras de tu provincia o municipio. "
             "Podés consultar las direcciones actualizadas en www.argentina.gob.ar/andis/cud. "
-            "Si necesitás apoyo para trasladarte, podés solicitar asistencia o turno prioritario."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["tramite", "andis", "accesibilidad"]
-    },
-    {
-        "pregunta_clave": "¿Qué documentación necesito para iniciar el trámite del CUD?",
-        "respuesta": (
-            "Tenés que presentar tu DNI, un resumen médico actualizado y estudios que certifiquen la condición. "
+            "Si necesitás apoyo para trasladarte, podés solicitar asistencia o turno prioritario."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["tramite", "andis", "accesibilidad"]
+          },
+          {
+            "pregunta_clave": "¿Qué documentación necesito para iniciar el trámite del CUD?",
+            "respuesta": ("Tenés que presentar tu DNI, un resumen médico actualizado y estudios que certifiquen la condición. "
             "Si sos menor de edad o estás a cargo de otra persona, también se solicita DNI del representante legal. "
-            "Los formularios se descargan desde el sitio oficial de ANDIS."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["documentacion", "tramites", "andis"]
-    },
-    {
-        "pregunta_clave": "Tengo miedo de que el trámite sea complicado",
-        "respuesta": (
-            "Es normal sentir eso. El proceso puede parecer largo, pero hay acompañamiento. "
-            "Las juntas evaluadoras te orientan paso a paso, y podés pedir que te expliquen todo en lenguaje claro o con apoyos visuales, "
-            "según lo establece la Ley 26.653 de Accesibilidad a la Información."
-        ),
-        "contexto_emocional_esperado": "miedo",
-        "tags": ["acompanamiento", "accesibilidad", "tramites"]
-    },
-    {
-        "pregunta_clave": "¿El trámite del CUD tiene costo?",
-        "respuesta": (
-            "No. El trámite del CUD es totalmente gratuito en todo el país. "
-            "Si alguien te solicita un pago o arancel, hacé la denuncia ante la Agencia Nacional de Discapacidad (ANDIS) "
-            "o la Defensoría del Pueblo."
-        ),
-        "contexto_emocional_esperado": "ira",
-        "tags": ["tramite", "denuncia", "andis"]
-    },
-    {
-        "pregunta_clave": "¿Qué beneficios obtengo al tener el CUD?",
-        "respuesta": (
-            "Con el CUD accedés a transporte gratuito, cobertura del 100% en medicamentos y tratamientos vinculados a tu discapacidad, "
+            "Los formularios se descargan desde el sitio oficial de ANDIS."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["documentacion", "tramites", "andis"]
+          },
+          {
+            "pregunta_clave": "Tengo miedo de que el trámite sea complicado",
+            "respuesta": ("Es normal sentir eso. El proceso puede parecer largo, pero hay acompañamiento. "
+            "Las juntas evaluadoras te orientan paso a paso, y podés pedir que te expliquen todo en lenguaje claro o con apoyos visuales, según lo establece la Ley 26.653 de Accesibilidad a la Información."),
+            "contexto_emocional_esperado": "miedo",
+            "tags": ["acompanamiento", "accesibilidad", "tramites"]
+          },
+          {
+            "pregunta_clave": "¿El trámite del CUD tiene costo?",
+            "respuesta": ("No. El trámite del CUD es totalmente gratuito en todo el país. "
+            "Si alguien te solicita un pago o arancel, hacé la denuncia ante la Agencia Nacional de Discapacidad (ANDIS)."),
+            "contexto_emocional_esperado": "ira",
+            "tags": ["tramite", "denuncia", "andis"]
+          },
+          {
+            "pregunta_clave": "¿Qué beneficios obtengo al tener el CUD?",
+            "respuesta": ("Con el CUD accedés a transporte gratuito, cobertura del 100% en medicamentos y tratamientos vinculados a tu discapacidad, "
             "exención de impuestos automotores, prioridad en programas de empleo inclusivo y becas educativas adaptadas. "
-            "También podés tramitar el pase libre en transporte público (Ley 25.635)."
-        ),
-        "contexto_emocional_esperado": "alegria",
-        "tags": ["beneficios", "transporte", "salud", "educacion"]
-    },
-    {
-        "pregunta_clave": "¿Cuánto tiempo demora el trámite?",
-        "respuesta": (
-            "Depende de la provincia, pero suele demorar entre 30 y 90 días desde la presentación completa de la documentación. "
-            "Podés consultar el estado del trámite en la junta evaluadora o en ANDIS."
-        ),
-        "contexto_emocional_esperado": "anticipacion",
-        "tags": ["plazos", "tramites", "andis"]
-    },
-    {
-        "pregunta_clave": "¿Cuándo tengo que renovar el CUD?",
-        "respuesta": (
-            "El CUD tiene una validez variable según la condición de la persona. "
+            "También podés tramitar el pase libre en transporte público (Ley 25.635)."),
+            "contexto_emocional_esperado": "alegria",
+            "tags": ["beneficios", "transporte", "salud", "educacion"]
+          },
+          {
+            "pregunta_clave": "¿Cuánto tiempo demora el trámite?",
+            "respuesta": ("Depende de la provincia adonde residís, pero suele demorar entre 30 y 90 días desde la presentación completa de la documentación. "
+            "Podés consultar el estado del trámite en la junta evaluadora o en ANDIS."),
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["plazos", "tramites", "andis"]
+          },
+          {
+            "pregunta_clave": "¿Cuándo tengo que renovar el CUD?",
+            "respuesta": ("El CUD tiene una validez variable según la condición de la persona. "
             "Generalmente se renueva cada 5 años, aunque en algunos casos puede tener vigencia permanente. "
-            "Podés verificar la fecha de vencimiento en el certificado o consultar en tu junta evaluadora."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["renovacion", "plazos", "certificados"]
-    },
-    {
-        "pregunta_clave": "¿Puedo tramitar el CUD si no tengo obra social?",
-        "respuesta": (
-            "Sí. El CUD es un derecho universal y no depende de tener obra social. "
-            "Te permite acceder a prestaciones médicas y programas de salud pública sin costo adicional."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["salud_publica", "derechos", "acceso"]
-    },
-    {
-        "pregunta_clave": "Me rechazaron el CUD, ¿qué puedo hacer?",
-        "respuesta": (
-            "Podés pedir una revisión del dictamen dentro de los 10 días hábiles posteriores a la notificación. "
+            "Podés verificar la fecha de vencimiento en el certificado o consultar en tu junta evaluadora."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["renovacion", "plazos", "certificados"]
+          },
+          {
+            "pregunta_clave": "¿Puedo tramitar el CUD si no tengo obra social?",
+            "respuesta": ("Sí. El CUD es un derecho universal y no depende de tener obra social. "
+            "Te permite acceder a prestaciones médicas y programas de salud pública sin costo adicional."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["salud_publica", "derechos", "acceso"]
+          },
+          {
+            "pregunta_clave": "Me rechazaron el CUD, ¿qué puedo hacer?",
+            "respuesta": ("Podés pedir una revisión del dictamen dentro de los 10 días hábiles posteriores a la notificación. "
             "La ANDIS dispone de un formulario para apelaciones. "
-            "También podés solicitar acompañamiento en el Programa ADAJUS del Ministerio de Justicia."
-        ),
-        "contexto_emocional_esperado": "ira",
-        "tags": ["reclamo", "andis", "derechos", "adajus"]
-    },
-    {
-        "pregunta_clave": "¿Puedo tramitar el CUD si vivo en una zona rural?",
-        "respuesta": (
-            "Sí. En muchas provincias hay operativos móviles de ANDIS que visitan localidades rurales para realizar evaluaciones. "
-            "También podés solicitar turnos priorizados si tenés dificultades de movilidad."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["zona_rural", "movilidad", "andis"]
-    },
-    {
-        "pregunta_clave": "¿Qué hago si perdí mi CUD?",
-        "respuesta": (
-            "Podés pedir un duplicado en la misma junta evaluadora donde lo tramitaste. "
+            "También podés solicitar acompañamiento en el Programa ADAJUS del Ministerio de Justicia."),
+            "contexto_emocional_esperado": "ira",
+            "tags": ["reclamo", "andis", "derechos", "adajus"]
+          },
+          {
+            "pregunta_clave": "¿Puedo tramitar el CUD si vivo en una zona rural?",
+            "respuesta": ("Sí. En muchas provincias hay operativos móviles de ANDIS que visitan localidades rurales para realizar evaluaciones. "
+            "También podés solicitar turnos priorizados si tenés dificultades de movilidad."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["zona_rural", "movilidad", "andis"]
+          },
+          {
+            "pregunta_clave": "¿Qué hago si perdí mi CUD?",
+            "respuesta": ("Podés pedir un duplicado en la misma junta evaluadora donde lo tramitaste. "
             "Solo necesitás tu DNI y una constancia policial de extravío. "
-            "El duplicado conserva la misma validez que el original."
-        ),
-        "contexto_emocional_esperado": "tristeza",
-        "tags": ["duplicado", "tramite", "certificado"]
-    },
-    {
-        "pregunta_clave": "¿Puedo usar mi CUD en todo el país?",
-        "respuesta": (
-            "Sí. El CUD tiene validez nacional. "
-            "Esto significa que podés usarlo en cualquier provincia o municipio para acceder a los mismos beneficios, "
-            "sin necesidad de tramitarlo nuevamente."
-        ),
-        "contexto_emocional_esperado": "alegria",
-        "tags": ["cud", "validez_nacional", "beneficios"]
-    },
-    {
-        "pregunta_clave": "¿Qué pasa si cambian mis condiciones de salud?",
-        "respuesta": (
-            "Si tu condición cambia, podés solicitar una nueva evaluación médica en tu junta evaluadora. "
-            "El CUD puede actualizarse para reflejar tu situación actual y garantizar que sigas recibiendo los apoyos adecuados."
-        ),
-        "contexto_emocional_esperado": "confianza",
-        "tags": ["evaluacion", "actualizacion", "salud"]
-    },
-    {
-        "pregunta_clave": "Me sorprende que el CUD tenga tantos beneficios",
-        "respuesta": (
-            "Sí, es una herramienta fundamental para el ejercicio de tus derechos. "
+            "El duplicado conserva la misma validez que el original."),
+            "contexto_emocional_esperado": "tristeza",
+            "tags": ["duplicado", "tramite", "certificado"]
+          },
+          {
+            "pregunta_clave": "¿Puedo usar mi CUD en todo el país?",
+            "respuesta": ("Sí. El CUD tiene validez nacional. "
+            "Esto significa que podés usarlo en cualquier provincia o municipio para acceder a los mismos beneficios, sin necesidad de tramitarlo nuevamente."),
+            "contexto_emocional_esperado": "alegria",
+            "tags": ["cud", "validez_nacional", "beneficios"]
+          },
+          {
+            "pregunta_clave": "¿Qué pasa si cambian mis condiciones de salud?",
+            "respuesta": ("Si tu condición cambia, podés solicitar una nueva evaluación médica en tu junta evaluadora. "
+            "El CUD puede actualizarse para reflejar tu situación actual y garantizar que sigas recibiendo los apoyos adecuados."),
+            "contexto_emocional_esperado": "confianza",
+            "tags": ["evaluacion", "actualizacion", "salud"]
+          },
+          {
+            "pregunta_clave": "Me sorprende que el CUD tenga tantos beneficios",
+            "respuesta": ("Sí, es una herramienta fundamental para el ejercicio de tus derechos. "
             "Además de beneficios sociales y de salud, te facilita la inclusión educativa y laboral. "
-            "Podés informarte más en el sitio oficial de ANDIS (www.argentina.gob.ar/andis/cud)."
-        ),
-        "contexto_emocional_esperado": "sorpresa",
-        "tags": ["derechos", "beneficios", "andis"]
-    }
-]
-
-    
+            "Podés informarte más en el sitio oficial de ANDIS (www.argentina.gob.ar/andis/cud)."),
+            "contexto_emocional_esperado": "sorpresa",
+            "tags": ["derechos", "beneficios", "andis"]
+          }
+  ],
