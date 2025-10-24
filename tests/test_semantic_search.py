@@ -62,84 +62,82 @@ validation_set = [
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Mi currículum está desactualizado, ¿qué le pongo?",
-        "expected_intent_key": "Optimización y mejora de un CV existente" # ACTUALIZADO
+        "expected_intent_key": "Optimización y mejora de un CV existente"
     },
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "No sé cuánto debería ganar en mi próximo trabajo.",
-        "expected_intent_key": "Estrategias y técnicas de negociación salarial" # ACTUALIZADO
+        "expected_intent_key": "Estrategias y técnicas de negociación salarial" 
     },
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Me siento estancado y no me valoran, creo que quiero renunciar.",
-        "expected_intent_key": "Evaluación personal para decidir un cambio de empleo" # ACTUALIZADO
+        "expected_intent_key": "Evaluación personal para decidir un cambio de empleo" 
     },
 
     # --- Pruebas para TutorInteraccion ---
     {
         "tutor_name": "TutorInteraccion",
         "prompt_usuario": "Siento que la gente no me entiende cuando hablo.",
-        "expected_intent_key": "Mejora de la claridad didáctica al explicar conceptos" # ACTUALIZADO
+        "expected_intent_key": "Mejora de la claridad didáctica al explicar conceptos" 
     },
     {
         "tutor_name": "TutorInteraccion",
         "prompt_usuario": "Mi jefe me gritó y no supe qué decir.",
-        "expected_intent_key": "Recepción asertiva de críticas laborales (justas o injustas)" # ACTUALIZADO
+        "expected_intent_key": "Recepción asertiva de críticas laborales (justas o injustas)" 
     },
 
     # --- Pruebas para TutorCompetencias ---
     {
         "tutor_name": "TutorCompetencias",
         "prompt_usuario": "Me bloqueo cuando intento aprender algo nuevo.",
-        "expected_intent_key": "Gestión del miedo al error durante el aprendizaje" # ACTUALIZADO
+        "expected_intent_key": "Gestión del miedo al error durante el aprendizaje" 
     },
     {
         "tutor_name": "TutorCompetencias",
         "prompt_usuario": "Me distraigo mucho con el celular cuando quiero leer.",
-        "expected_intent_key": "Técnicas de concentración para el estudio (Pomodoro)" # ACTUALIZADO
+        "expected_intent_key": "Técnicas de concentración para el estudio (Pomodoro)" 
     },
 
     # --- Pruebas para TutorBienestar ---
     {
         "tutor_name": "TutorBienestar",
         "prompt_usuario": "Estoy agotado todo el día.",
-        "expected_intent_key": "Manejo de la fatiga, apatía y agotamiento emocional (burnout)" # ACTUALIZADO
+        "expected_intent_key": "Manejo de la fatiga, apatía y agotamiento emocional (burnout)" 
     },
     {
         "tutor_name": "TutorBienestar",
         "prompt_usuario": "No paro de pensar en todo lo que tengo que hacer y me paralizo.",
-        "expected_intent_key": "Estrategias de gestión de la ansiedad y el estrés por sobrecarga" # ACTUALIZADO
+        "expected_intent_key": "Estrategias de gestión de la ansiedad y el estrés por sobrecarga" 
     },
 
     # --- Pruebas para TutorApoyos ---
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "Si consigo un trabajo, ¿me sacan la pensión?",
-        "expected_intent_key": "Compatibilidad entre pensión por discapacidad y empleo formal" # ACTUALIZADO
+        "expected_intent_key": "Compatibilidad entre pensión por discapacidad y empleo formal" 
     },
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "El CUD me sirve para viajar gratis?",
-        # Nota: Esta es una intención difícil. "Listado general..." habla de transporte.
-        # "Reglamentación específica..." también. Mantenemos el más general.
-        "expected_intent_key": "Reglamentación específica del transporte gratuito para acompañante con CUD. Listado general de beneficios y derechos otorgados por el CUD" 
+        "expected_intent_key": "Reglamentación específica del transporte gratuito para acompañante con CUD." 
     },
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "Fui a la municipalidad y no tienen rampa.",
-        "expected_intent_key": "Gestión de reclamos por falta de accesibilidad física (Ley 24.314)" # ACTUALIZADO
+        "expected_intent_key": "Gestión de reclamos por falta de accesibilidad física (Ley 24.314)" 
     },
 
     # --- Pruebas para TutorPrimerEmpleo ---
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Quiero trabajar pero nunca trabajé, ¿qué hago?",
-        "expected_intent_key": "Estrategias de inserción laboral sin experiencia previa (Programa Jóvenes)" # ACTUALIZADO
+        "expected_intent_key": "Estrategias de inserción laboral sin experiencia previa (Programa Jóvenes)" 
     },
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Me dijeron que me van a pagar en negro.",
-        "expected_intent_key": "Acciones y denuncias contra el trabajo no registrado" # ACTUALIZADO
+        "expected_intent_key": "Acciones y denuncias contra el trabajo no registrado" 
     },
     {
         "tutor_name": "TutorPrimerEmpleo",
@@ -169,9 +167,7 @@ validation_set = [
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Tengo una charla la semana que viene y estoy nervioso.",
-        # Intención pertenece a TutorInteraccion ("Gestión del miedo a hablar en público...").
-        # TutorCarrera debería devolver 'default' (score < 0.50).
-        "expected_intent_key": "default" # REVISADO (OK)
+        "expected_intent_key": "default" 
     },
 ]
 
@@ -197,8 +193,6 @@ def run_validation():
 
     results = [] # Lista para almacenar los resultados detallados
 
-    # --- 🔧 Mapa de alias (MOVIDO AL INICIO) ---
-    # Mapa de alias entre nombres de tutores y arquetipos (compatibilidad para testeo)
     alias_map = {
         "TutorCarrera": "Prof_Subutil",
         "TutorInteraccion": "Com_Desafiado",
@@ -216,14 +210,12 @@ def run_validation():
         print("Error Crítico: Modelo semántico no disponible para inicializar embeddings.")
         return
     
-    # *** INICIO DE LA CORRECCIÓN ***
     # Usar el alias_map (definido arriba) para el log
     for expert_name, expert_instance in all_experts.items():
         # Mapeo inverso para log
         tutor_display_name = {v: k for k, v in alias_map.items()}.get(expert_name, expert_name)
         print(f"  - Inicializando {tutor_display_name}...")
-        expert_instance._initialize_knowledge_base() # Llamada explícita
-    # *** FIN DE LA CORRECCIÓN ***
+        expert_instance._initialize_knowledge_base() 
     
     print("› Embeddings (re)inicializados.")
 
@@ -264,13 +256,8 @@ def run_validation():
         try:
             # 1. Codificar el prompt
             prompt_embedding_raw = model.encode(prompt, convert_to_tensor=True)
-            
-            # 2. *** ARREGLO CRÍTICO: Normalizar el embedding del prompt ***
-            # Esto debe coincidir con la lógica en cognitive_tutor.py
             prompt_embedding = F.normalize(prompt_embedding_raw, p=2, dim=0)
 
-            # 3. Calcular similitud (dot product de vectores normalizados)
-            # Mover ambos tensores al mismo dispositivo (ej. 'cuda:0' o 'cpu')
             device = prompt_embedding.device
             kb_embeds_device = tutor.kb_embeddings.to(device)
             
