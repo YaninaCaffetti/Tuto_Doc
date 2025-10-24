@@ -1,6 +1,6 @@
 # tests/test_semantic_search.py
 """
-Script de Validación 
+Script de Validación
 
 Mide la calidad de la búsqueda semántica realizada por los tutores expertos
 del MoESystem contra un conjunto de validación de paráfrasis y consultas trampa.
@@ -38,139 +38,130 @@ if project_root not in sys.path:
 
 try:
     # Ahora esta importación debería funcionar Y permitir la importación anidada
-    from src.cognitive_tutor import get_semantic_model, EXPERT_MAP, CUD_EXPERT # [cite: cognitive_tutor.py]
+    from src.cognitive_tutor import get_semantic_model, EXPERT_MAP, CUD_EXPERT #
     from sentence_transformers import util
     import torch
+    import torch.nn.functional as F # *** NECESARIO PARA NORMALIZAR ***
 except ImportError as e:
     print(f"Error Crítico: No se pudieron importar los módulos necesarios.")
-    print(f"Asegúrate de que 'src/cognitive_tutor.py' [cite: cognitive_tutor.py] y 'src/expert_kb.py' [cite: src/expert_kb.py] existan y sean correctos.")
+    print(f"Asegúrate de que 'src/cognitive_tutor.py' y 'src/expert_kb.py' existan y sean correctos.")
     print(f"Detalle del error: {e}")
     sys.exit(1)
 except KeyError as e:
     print(f"Error Crítico: No se encontró '{e}' esperado en 'cognitive_tutor.py'.")
-    print("Verifica las definiciones de EXPERT_MAP y CUD_EXPERT [cite: cognitive_tutor.py].")
+    print("Verifica las definiciones de EXPERT_MAP y CUD_EXPERT.")
     sys.exit(1)
 
 # --- 1. SET DE VALIDACIÓN DE PARÁFRASIS ---
 # Define las consultas de prueba y la intención esperada para cada una.
 # Incluye paráfrasis (True Positives) y consultas trampa (True Negatives).
-# ESTA LISTA DEBE SER AMPLIADA PARA UNA VALIDACIÓN RIGUROSA DE TESIS.
+# *** ESTA LISTA HA SIDO ACTUALIZADA A LAS NUEVAS CLAVES FUNCIONALES ***
 
 validation_set = [
     # --- Pruebas para TutorCarrera ---
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Mi currículum está desactualizado, ¿qué le pongo?",
-        "expected_intent_key": "¿Cómo puedo mejorar mi CV?" # Sin cambios
+        "expected_intent_key": "Optimización y mejora de un CV existente" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "No sé cuánto debería ganar en mi próximo trabajo.",
-        "expected_intent_key": "Estrategias para la negociación salarial inicial o de aumento"
-    
+        "expected_intent_key": "Estrategias y técnicas de negociación salarial" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Me siento estancado y no me valoran, creo que quiero renunciar.",
-    
-        "expected_intent_key": "Evaluación personal: Indicadores para decidir cambiar de empleo"
-     
+        "expected_intent_key": "Evaluación personal para decidir un cambio de empleo" # ACTUALIZADO
     },
 
     # --- Pruebas para TutorInteraccion ---
     {
         "tutor_name": "TutorInteraccion",
         "prompt_usuario": "Siento que la gente no me entiende cuando hablo.",
-        "expected_intent_key": "¿Qué hago si no me entienden cuando explico algo?" 
+        "expected_intent_key": "Mejora de la claridad didáctica al explicar conceptos" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorInteraccion",
         "prompt_usuario": "Mi jefe me gritó y no supe qué decir.",
-  
-        "expected_intent_key": "Recepción de críticas laborales percibidas como injustas: Respuesta asertiva"
-      
+        "expected_intent_key": "Recepción asertiva de críticas laborales (justas o injustas)" # ACTUALIZADO
     },
 
     # --- Pruebas para TutorCompetencias ---
     {
         "tutor_name": "TutorCompetencias",
         "prompt_usuario": "Me bloqueo cuando intento aprender algo nuevo.",
-        "expected_intent_key": "¿Cómo superar el miedo a equivocarme cuando aprendo algo nuevo?" # Sin cambios
+        "expected_intent_key": "Gestión del miedo al error durante el aprendizaje" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorCompetencias",
         "prompt_usuario": "Me distraigo mucho con el celular cuando quiero leer.",
-        "expected_intent_key": "Me cuesta concentrarme cuando estudio" # Sin cambios
+        "expected_intent_key": "Técnicas de concentración para el estudio (Pomodoro)" # ACTUALIZADO
     },
 
     # --- Pruebas para TutorBienestar ---
     {
         "tutor_name": "TutorBienestar",
         "prompt_usuario": "Estoy agotado todo el día.",
-        "expected_intent_key": "Me siento muy cansado últimamente" # Sin cambios
+        "expected_intent_key": "Manejo de la fatiga, apatía y agotamiento emocional (burnout)" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorBienestar",
         "prompt_usuario": "No paro de pensar en todo lo que tengo que hacer y me paralizo.",
-        # --- CORRECCIÓN EXPECTED KEY ---
-        "expected_intent_key": "Manejo del estrés por sobrecarga: Miedo a no cumplir expectativas"
-        # --- FIN CORRECCIÓN ---
+        "expected_intent_key": "Estrategias de gestión de la ansiedad y el estrés por sobrecarga" # ACTUALIZADO
     },
 
     # --- Pruebas para TutorApoyos ---
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "Si consigo un trabajo, ¿me sacan la pensión?",
-        "expected_intent_key": "Tengo miedo de perder mi pensión si empiezo a trabajar" # Sin cambios
+        "expected_intent_key": "Compatibilidad entre pensión por discapacidad y empleo formal" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "El CUD me sirve para viajar gratis?",
-        
-        "expected_intent_key": "Listado general de beneficios y derechos otorgados por el CUD"
-     
+        # Nota: Esta es una intención difícil. "Listado general..." habla de transporte.
+        # "Reglamentación específica..." también. Mantenemos el más general.
+        "expected_intent_key": "Listado general de beneficios y derechos otorgados por el CUD" # REVISADO (OK)
     },
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "Fui a la municipalidad y no tienen rampa.",
-        "expected_intent_key": "Me enoja que las oficinas públicas no sean accesibles"
+        "expected_intent_key": "Gestión de reclamos por falta de accesibilidad física (Ley 24.314)" # ACTUALIZADO
     },
 
     # --- Pruebas para TutorPrimerEmpleo ---
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Quiero trabajar pero nunca trabajé, ¿qué hago?",
-        "expected_intent_key": "No tengo experiencia laboral, ¿cómo puedo empezar?" 
+        "expected_intent_key": "Estrategias de inserción laboral sin experiencia previa (Programa Jóvenes)" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Me dijeron que me van a pagar en negro.",
-        "expected_intent_key": "¿Qué hago si me piden trabajar sin registrarme?" 
+        "expected_intent_key": "Acciones y denuncias contra el trabajo no registrado" # ACTUALIZADO
     },
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Me preguntaron por mi discapacidad en una entrevista y me sentí mal.",
-    
-        "expected_intent_key": "Pasos legales a seguir si sufrís discriminación por discapacidad en una entrevista"
-  
+        "expected_intent_key": "Procedimiento legal por discriminación en entrevistas (Ley 23.592, ADAJUS)" # ACTUALIZADO
     },
 
     # --- Pruebas para GestorCUD ---
     {
         "tutor_name": "GestorCUD",
-        "prompt_usuario": "¿Qué es el CUD?",    
-        "expected_intent_key": "Explicación fundamental: Qué es y para qué sirve el CUD"
-
+        "prompt_usuario": "¿Qué es el CUD?",
+        "expected_intent_key": "Explicación fundamental: Qué es y para qué sirve el CUD" # REVISADO (OK)
     },
     {
         "tutor_name": "GestorCUD",
         "prompt_usuario": "¿Se paga para sacar el CUD?",
-        "expected_intent_key": "¿El trámite del CUD tiene costo?" # Sin cambios
+        "expected_intent_key": "Confirmación de gratuidad y denuncia de cobros indebidos" # ACTUALIZADO
     },
     {
         "tutor_name": "GestorCUD",
         "prompt_usuario": "Me bocharon el CUD, ¿qué hago ahora?",
-        "expected_intent_key": "Me rechazaron el CUD, ¿qué puedo hacer?" # Sin cambios
+        "expected_intent_key": "Procedimiento de apelación o revisión ante rechazo del CUD" # ACTUALIZADO
     },
 
 
@@ -178,9 +169,9 @@ validation_set = [
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Tengo una charla la semana que viene y estoy nervioso.",
-        # Intención pertenece a TutorInteraccion ("Me da miedo presentar en público").
-        # TutorCarrera debería devolver 'default'.
-        "expected_intent_key": "default" # Sin cambios
+        # Intención pertenece a TutorInteraccion ("Gestión del miedo a hablar en público...").
+        # TutorCarrera debería devolver 'default' (score < 0.50).
+        "expected_intent_key": "default" # REVISADO (OK)
     },
 ]
 
@@ -195,14 +186,14 @@ def run_validation():
     print("--- 🔬 Iniciando Validación del Oído Semántico")
 
     # Cargar el modelo semántico una sola vez
-    model = get_semantic_model() # [cite: cognitive_tutor.py]
+    model = get_semantic_model() #
     if not model:
         print("Error Crítico: No se pudo cargar el modelo semántico. Abortando validación.")
         return
 
     # Unir todos los expertos (arquetipos + CUD) en un diccionario
-    all_experts = EXPERT_MAP.copy() # [cite: cognitive_tutor.py]
-    all_experts["GestorCUD"] = CUD_EXPERT # [cite: cognitive_tutor.py]
+    all_experts = EXPERT_MAP.copy() #
+    all_experts["GestorCUD"] = CUD_EXPERT #
 
     results = [] # Lista para almacenar los resultados detallados
 
@@ -210,11 +201,13 @@ def run_validation():
     print(f"› Forzando inicialización de embeddings para {len(all_experts)} expertos...")
     model_check = get_semantic_model() # Asegurar que el modelo esté cargado
     if not model_check:
-         print("Error Crítico: Modelo semántico no disponible para inicializar embeddings.")
-         return
+        print("Error Crítico: Modelo semántico no disponible para inicializar embeddings.")
+        return
     for expert_name, expert_instance in all_experts.items():
-         print(f"  - Inicializando {expert_name}...")
-         expert_instance._initialize_knowledge_base() # Llamada explícita [cite: cognitive_tutor.py]
+        # Mapeo inverso para log
+        tutor_display_name = {v: k for k, v in alias_map.items()}.get(expert_name, expert_name)
+        print(f"  - Inicializando {tutor_display_name}...")
+        expert_instance._initialize_knowledge_base() # Llamada explícita
     print("› Embeddings (re)inicializados.")
 
     # Iterar sobre cada caso de prueba en el set de validación
@@ -241,18 +234,18 @@ def run_validation():
 
         # --- Validaciones Previas ---
         if not tutor:
-            warnings.warn(f"Saltando prueba: Tutor '{tutor_name}' no encontrado en all_experts.")
+            warnings.warn(f"Saltando prueba: Tutor '{tutor_name}' (Mapeado a '{mapped_name}') no encontrado en all_experts.")
             continue
         if tutor.kb_embeddings is None or not tutor.kb_keys:
             if expected_key == "default":
-                 found_key = "default"
-                 best_match_score = 0.0
-                 is_correct = True
+                found_key = "default"
+                best_match_score = 0.0
+                is_correct = True
             else:
-                 warnings.warn(f"Saltando prueba para {tutor_name}: KB vacía o embeddings no calculados. Prompt: '{prompt}'")
-                 found_key = "error_no_kb"
-                 best_match_score = 0.0
-                 is_correct = False
+                warnings.warn(f"Saltando prueba para {tutor_name}: KB vacía o embeddings no calculados. Prompt: '{prompt}'")
+                found_key = "error_no_kb"
+                best_match_score = 0.0
+                is_correct = False
 
             results.append({
                 "tutor": tutor_name, "prompt": prompt, "expected_key": expected_key,
@@ -263,17 +256,28 @@ def run_validation():
 
         # --- Realizar la Búsqueda Semántica ---
         try:
-            prompt_embedding = model.encode(prompt, convert_to_tensor=True)
-            cos_scores = util.cos_sim(prompt_embedding, tutor.kb_embeddings)[0]
+            # 1. Codificar el prompt
+            prompt_embedding_raw = model.encode(prompt, convert_to_tensor=True)
+            
+            # 2. *** ARREGLO CRÍTICO: Normalizar el embedding del prompt ***
+            # Esto debe coincidir con la lógica en cognitive_tutor.py
+            prompt_embedding = F.normalize(prompt_embedding_raw, p=2, dim=0)
+
+            # 3. Calcular similitud (dot product de vectores normalizados)
+            # Mover ambos tensores al mismo dispositivo (ej. 'cuda:0' o 'cpu')
+            device = prompt_embedding.device
+            kb_embeds_device = tutor.kb_embeddings.to(device)
+            
+            cos_scores = util.cos_sim(prompt_embedding, kb_embeds_device)[0]
             best_match_idx = torch.argmax(cos_scores).item()
             best_match_score = cos_scores[best_match_idx].item()
 
             found_key = "default"
-            if best_match_score > tutor.similarity_threshold: # [cite: cognitive_tutor.py]
+            if best_match_score > tutor.similarity_threshold: #
                 if 0 <= best_match_idx < len(tutor.kb_keys):
-                     found_key = tutor.kb_keys[best_match_idx] # [cite: cognitive_tutor.py]
+                    found_key = tutor.kb_keys[best_match_idx] #
                 else:
-                     warnings.warn(f"Índice fuera de rango ({best_match_idx}) para {tutor_name}. Usando default.")
+                    warnings.warn(f"Índice fuera de rango ({best_match_idx}) para {tutor_name}. Usando default.")
 
             is_correct = (found_key == expected_key)
 
