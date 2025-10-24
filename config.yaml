@@ -44,6 +44,7 @@ constants:
     - Alegria
     - Confianza
     - Anticipacion
+    - Sorpresa
 
 data_paths:
 
@@ -64,7 +65,7 @@ model_params:
   emotion_classifier:
     model_name: dccuchile/bert-base-spanish-wwm-uncased
     data_augmentation:
-      use_back_translation: false # Desactivado porque enriquecimos el corpus
+      use_back_translation: false # Desactivado, activese al necesitar aumento de corpus
     early_stopping_patience: 2
     training_params:
       num_train_epochs: 3
