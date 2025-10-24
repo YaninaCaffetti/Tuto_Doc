@@ -316,6 +316,12 @@ EXPERT_KB = {
             "tags": ["autocuidado", "fatiga", "descanso"]
         },
         {
+            "pregunta_clave": "Estoy solo en esto.",
+            "respuesta": "No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.",
+            "contexto_emocional_esperado": "miedo",
+            "tags": ["gestion_del_estres", "priorizacion", "autocompasion"]
+        },
+        {
             "pregunta_clave": "Sensación de sobrecarga y miedo a no poder cumplir con todo", 
             "respuesta": "No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.",
             "contexto_emocional_esperado": "miedo",
@@ -332,6 +338,12 @@ EXPERT_KB = {
             "respuesta": "Puede ser un signo de agotamiento emocional. Permitite descansar y hacer algo que solías disfrutar, aunque sea por unos minutos.",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["animo", "bienestar_emocional", "recuperacion"]
+        },
+        {
+            "pregunta_clave": "Problemas de concentración específicos ligados a la ansiedad",
+            "respuesta": "Cuando la mente se satura, simplificar ayuda. Ordená el entorno y empezá con tareas pequeñas. Celebrá cada avance, por mínimo que sea.",
+            "contexto_emocional_esperado": "miedo",
+            "tags": ["estres", "gestion_cognitiva", "autoeficacia", "concentracion", "ansiedad"] 
         },
         {
             "pregunta_clave": "Dificultad para concentrarse acompañada de ansiedad o miedo",
@@ -417,6 +429,13 @@ Allí te orientarán paso a paso y de forma gratuita sobre pensiones, transporte
 También podés comunicarte con el Programa ADAJUS del Ministerio de Justicia para recibir asistencia en trámites legales.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["tramites", "orientacion", "beneficios", "adajus", "andis"]
+        },
+        {
+            "pregunta_clave": "Detalles sobre el beneficio de acompañante para transporte gratuito con CUD",
+            "respuesta": """Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario.
+Solo necesitás presentar tu certificado y DNI en la terminal o empresa correspondiente, según la Ley 25.635 y resoluciones de la CNRT.""",
+            "contexto_emocional_esperado": "alegria",
+            "tags": ["transporte", "beneficios", "accesibilidad", "ley_25635", "acompanante"]
         },
         {
             "pregunta_clave": "Siento que no me escuchan cuando pido ayuda",
@@ -532,6 +551,13 @@ También podés sumar experiencias en voluntariados o proyectos comunitarios, qu
             "tags": ["primer_empleo", "capacitacion", "ministerio_trabajo"]
         },
         {
+            "pregunta_clave": "Procedimiento legal y denuncia por discriminación laboral durante entrevista",
+            "respuesta": """La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. Podés presentar una denuncia ante el Ministerio Público de la Defensa.
+O pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica.""",
+            "contexto_emocional_esperado": "ira",
+            "tags": ["discriminacion", "inclusion", "ministerio_justicia", "adajus", "ley_23592"]
+        },
+        {
             "pregunta_clave": "¿Existe algún programa de apoyo para mi primera búsqueda laboral?",
             "respuesta": """Sí. El Programa de Inserción Laboral (PIL) ofrece incentivos económicos a empresas que contraten a personas sin experiencia o con discapacidad.
 Está regulado por la Resolución 708/2010 del Ministerio de Trabajo y la Ley 22.431, que promueven la inclusión laboral en condiciones de igualdad.""",
@@ -633,21 +659,23 @@ Estos cursos te preparan para tu primer trabajo y están adaptados a distintas c
     ],
 
     "GestorCUD": [
-        {
-            "pregunta_clave": "Explicación fundamental: Qué es y para qué sirve el CUD", # Más específico
+   
+      {
+            "pregunta_clave": "Explicación fundamental: Qué es y para qué sirve el CUD",
             "respuesta": """El Certificado Único de Discapacidad (CUD) es un documento oficial que acredita tu discapacidad y te permite acceder a derechos y beneficios en salud, transporte, educación y trabajo.
 Está regulado por la Ley 22.431 y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378).""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["cud", "definicion", "derechos", "ley_22431", "ley_26378"]
         },
         {
-            "pregunta_clave": "Guía paso a paso: Dónde y cómo obtener el CUD", # Más específico
+            "pregunta_clave": "Guía paso a paso: Dónde y cómo obtener el CUD",
             "respuesta": """El trámite del CUD es gratuito y se realiza en las juntas evaluadoras de tu provincia o municipio.
 Podés consultar las direcciones actualizadas en www.argentina.gob.ar/andis/cud.
 Si necesitás apoyo para trasladarte, podés solicitar asistencia o turno prioritario.""",
             "contexto_emocional_esperado": "confianza",
-            "tags": ["tramite", "andis", "accesibilidad", "procedimiento"] # Añadido tag
+            "tags": ["tramite", "andis", "accesibilidad", "procedimiento"]
         },
+  
         {
             "pregunta_clave": "¿Qué documentación necesito para iniciar el trámite del CUD?",
             "respuesta": """Tenés que presentar tu DNI, un resumen médico actualizado y estudios que certifiquen la condición.
@@ -706,7 +734,7 @@ Te permite acceder a prestaciones médicas y programas de salud pública sin cos
 La ANDIS dispone de un formulario para apelaciones.
 También podés solicitar acompañamiento en el Programa ADAJUS del Ministerio de Justicia.""",
             "contexto_emocional_esperado": "ira",
-            "tags": ["reclamo", "andis", "derechos", "adajus", "apelacion"] # Añadido tag
+            "tags": ["reclamo", "andis", "derechos", "adajus", "apelacion"] 
         },
         {
             "pregunta_clave": "¿Puedo tramitar el CUD si vivo en una zona rural?",
@@ -721,7 +749,7 @@ También podés solicitar turnos priorizados si tenés dificultades de movilidad
 Solo necesitás tu DNI y una constancia policial de extravío.
 El duplicado conserva la misma validez que el original.""",
             "contexto_emocional_esperado": "tristeza",
-            "tags": ["duplicado", "tramite", "certificado", "extravio"] # Añadido tag
+            "tags": ["duplicado", "tramite", "certificado", "extravio"] 
         },
         {
             "pregunta_clave": "¿Puedo usar mi CUD en todo el país?",
@@ -749,7 +777,6 @@ Podés informarte más en el sitio oficial de ANDIS (www.argentina.gob.ar/andis/
 }
 
 if __name__ == "__main__":
-    # Pequeño script de validación al ejecutar directamente
     print(f"--- Validación de src/expert_kb.py ---")
     print(f"Tutores cargados: {len(EXPERT_KB)} -> {list(EXPERT_KB.keys())}")
     total_intenciones = sum(len(v) for v in EXPERT_KB.values())
