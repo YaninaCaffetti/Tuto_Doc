@@ -35,7 +35,7 @@ except ImportError:
 # --- 2. GESTOR DEL MODELO SEMÁNTICO (SINGLETON) ---
 
 _SEMANTIC_MODEL = None
-_MODEL_NAME = 'paraphrase-multilingual-MiniLM-L12-v2' # Modelo de embeddings multilingüe
+_MODEL_NAME = 'hiiamsid/sentence_similarity_spanish_es' # Modelo de embeddings multilingüe
 
 def get_semantic_model() -> SentenceTransformer | None:
     """
@@ -53,7 +53,7 @@ def get_semantic_model() -> SentenceTransformer | None:
         return None
 
     if _SEMANTIC_MODEL is None:
-        print("› Cargando modelo semántico (esto ocurre solo una vez)...")
+        print(f"› Cargando modelo semántico optimizado para español: {_MODEL_NAME} (esto ocurre solo una vez)...")
         try:
             _SEMANTIC_MODEL = SentenceTransformer(_MODEL_NAME)
             print("› ✅ Modelo semántico cargado exitosamente.")
