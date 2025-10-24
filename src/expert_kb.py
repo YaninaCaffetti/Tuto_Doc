@@ -634,7 +634,7 @@ Estos cursos te preparan para tu primer trabajo y están adaptados a distintas c
 
     "GestorCUD": [
         {
-            "pregunta_clave": "¿Qué es el Certificado Único de Discapacidad?",
+            "pregunta_clave": "¿Qué es el Certificado Único de Discapacidad (CUD)?",
             "respuesta": """El Certificado Único de Discapacidad (CUD) es un documento oficial que acredita tu discapacidad y te permite acceder a derechos y beneficios en salud, transporte, educación y trabajo.
 Está regulado por la Ley 22.431 y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378).""",
             "contexto_emocional_esperado": "anticipacion",
