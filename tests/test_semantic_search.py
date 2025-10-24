@@ -142,7 +142,7 @@ validation_set = [
     {
         "tutor_name": "GestorCUD",
         "prompt_usuario": "¿Qué es el CUD?",
-        "expected_intent_key": "¿Qué es el Certificado Único de Discapacidad?"
+        "expected_intent_key": "Explicación fundamental: Qué es y para qué sirve el CUD."
     },
     {
         "tutor_name": "GestorCUD",
