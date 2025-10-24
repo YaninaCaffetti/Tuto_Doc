@@ -364,7 +364,7 @@ class TutorCarrera(Experto):
 
         super().__init__("TutorCarrera") # Usar nombre corto
 
-        self.similarity_threshold = 0.50 # Umbral más alto para este tutor
+        self.similarity_threshold = 0.55 # Umbral más alto para este tutor
         self._initialize_knowledge_base()
 
     def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
