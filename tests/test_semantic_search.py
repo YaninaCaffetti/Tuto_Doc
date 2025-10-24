@@ -122,7 +122,7 @@ validation_set = [
         "prompt_usuario": "El CUD me sirve para viajar gratis?",
         # Nota: Esta es una intención difícil. "Listado general..." habla de transporte.
         # "Reglamentación específica..." también. Mantenemos el más general.
-        "expected_intent_key": "Listado general de beneficios y derechos otorgados por el CUD" # REVISADO (OK)
+        "expected_intent_key": "Reglamentación específica del transporte gratuito para acompañante con CUD. Listado general de beneficios y derechos otorgados por el CUD" 
     },
     {
         "tutor_name": "TutorApoyos",
@@ -144,24 +144,24 @@ validation_set = [
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Me preguntaron por mi discapacidad en una entrevista y me sentí mal.",
-        "expected_intent_key": "Procedimiento legal por discriminación en entrevistas (Ley 23.592, ADAJUS)" # ACTUALIZADO
+        "expected_intent_key": "Procedimiento legal por discriminación en entrevistas (Ley 23.592, ADAJUS)" 
     },
 
     # --- Pruebas para GestorCUD ---
     {
         "tutor_name": "GestorCUD",
         "prompt_usuario": "¿Qué es el CUD?",
-        "expected_intent_key": "Explicación fundamental: Qué es y para qué sirve el CUD" # REVISADO (OK)
+        "expected_intent_key": "Explicación fundamental: Qué es y para qué sirve el CUD" 
     },
     {
         "tutor_name": "GestorCUD",
         "prompt_usuario": "¿Se paga para sacar el CUD?",
-        "expected_intent_key": "Confirmación de gratuidad y denuncia de cobros indebidos" # ACTUALIZADO
+        "expected_intent_key": "Confirmación de gratuidad y denuncia de cobros indebidos" 
     },
     {
         "tutor_name": "GestorCUD",
         "prompt_usuario": "Me bocharon el CUD, ¿qué hago ahora?",
-        "expected_intent_key": "Procedimiento de apelación o revisión ante rechazo del CUD" # ACTUALIZADO
+        "expected_intent_key": "Procedimiento de apelación o revisión ante rechazo del CUD" 
     },
 
 
