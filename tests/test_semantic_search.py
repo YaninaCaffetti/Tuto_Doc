@@ -120,7 +120,7 @@ validation_set = [
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "El CUD me sirve para viajar gratis?",
-        "expected_intent_key": "Reglamentación específica del transporte gratuito para acompañante con CUD." 
+        "expected_intent_key": "Reglamentación específica del transporte gratuito para acompañante con CUD" 
     },
     {
         "tutor_name": "TutorApoyos",
