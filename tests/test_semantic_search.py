@@ -66,30 +66,29 @@ validation_set = [
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "No sé cuánto debería ganar en mi próximo trabajo.",
-        # --- CORRECCIÓN EXPECTED KEY ---
         "expected_intent_key": "Estrategias para la negociación salarial inicial o de aumento"
-        # --- FIN CORRECCIÓN ---
+    
     },
     {
         "tutor_name": "TutorCarrera",
         "prompt_usuario": "Me siento estancado y no me valoran, creo que quiero renunciar.",
-        # --- CORRECCIÓN EXPECTED KEY ---
+    
         "expected_intent_key": "Evaluación personal: Indicadores para decidir cambiar de empleo"
-        # --- FIN CORRECCIÓN ---
+     
     },
 
     # --- Pruebas para TutorInteraccion ---
     {
         "tutor_name": "TutorInteraccion",
         "prompt_usuario": "Siento que la gente no me entiende cuando hablo.",
-        "expected_intent_key": "¿Qué hago si no me entienden cuando explico algo?" # Sin cambios
+        "expected_intent_key": "¿Qué hago si no me entienden cuando explico algo?" 
     },
     {
         "tutor_name": "TutorInteraccion",
         "prompt_usuario": "Mi jefe me gritó y no supe qué decir.",
-        # --- CORRECCIÓN EXPECTED KEY ---
+  
         "expected_intent_key": "Recepción de críticas laborales percibidas como injustas: Respuesta asertiva"
-        # --- FIN CORRECCIÓN ---
+      
     },
 
     # --- Pruebas para TutorCompetencias ---
@@ -127,26 +126,26 @@ validation_set = [
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "El CUD me sirve para viajar gratis?",
-        # --- CORRECCIÓN EXPECTED KEY ---
+        
         "expected_intent_key": "Listado general de beneficios y derechos otorgados por el CUD"
-        # --- FIN CORRECCIÓN ---
+     
     },
     {
         "tutor_name": "TutorApoyos",
         "prompt_usuario": "Fui a la municipalidad y no tienen rampa.",
-        "expected_intent_key": "Me enoja que las oficinas públicas no sean accesibles" # Sin cambios
+        "expected_intent_key": "Me enoja que las oficinas públicas no sean accesibles"
     },
 
     # --- Pruebas para TutorPrimerEmpleo ---
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Quiero trabajar pero nunca trabajé, ¿qué hago?",
-        "expected_intent_key": "No tengo experiencia laboral, ¿cómo puedo empezar?" # Sin cambios
+        "expected_intent_key": "No tengo experiencia laboral, ¿cómo puedo empezar?" 
     },
     {
         "tutor_name": "TutorPrimerEmpleo",
         "prompt_usuario": "Me dijeron que me van a pagar en negro.",
-        "expected_intent_key": "¿Qué hago si me piden trabajar sin registrarme?" # Sin cambios
+        "expected_intent_key": "¿Qué hago si me piden trabajar sin registrarme?" 
     },
     {
         "tutor_name": "TutorPrimerEmpleo",
@@ -193,7 +192,7 @@ def run_validation():
     semántica para cada prompt contra el tutor especificado, calcula las
     métricas de Precisión, Cobertura y Estabilidad, y guarda los resultados.
     """
-    print("--- 🔬 Iniciando Validación del Oído Semántico (Tarea 1.2) ---")
+    print("--- 🔬 Iniciando Validación del Oído Semántico")
 
     # Cargar el modelo semántico una sola vez
     model = get_semantic_model() # [cite: cognitive_tutor.py]
@@ -239,16 +238,6 @@ def run_validation():
         # Usar el alias si existe; si no, mantener el nombre original
         mapped_name = alias_map.get(tutor_name, tutor_name)
         tutor = all_experts.get(mapped_name)
-
-    
-
-    print(f"› Ejecutando {len(validation_set)} pruebas de validación...")
-    for item in validation_set:
-        tutor_name = item["tutor_name"]
-        prompt = item["prompt_usuario"]
-        expected_key = item["expected_intent_key"]
-
-        tutor = all_experts.get(tutor_name)
 
         # --- Validaciones Previas ---
         if not tutor:
