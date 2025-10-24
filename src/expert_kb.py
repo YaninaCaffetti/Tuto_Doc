@@ -111,7 +111,7 @@ EXPERT_KB = {
     ],
 
     "TutorInteraccion": [
-        {
+         {
             "pregunta_clave": "¿Cómo puedo comunicarme mejor?",
             "respuesta": "Una técnica clave es la 'escucha activa': reformula lo que dice la otra persona para asegurar que has entendido. Genera mucha confianza.",
             "contexto_emocional_esperado": "anticipacion",
@@ -216,7 +216,7 @@ EXPERT_KB = {
     ],
 
     "TutorCompetencias": [
-         {
+        {
             "pregunta_clave": "¿Qué competencias debería fortalecer para mejorar mis oportunidades laborales?",
             "respuesta": "Las más valoradas hoy son la comunicación efectiva, la adaptabilidad y la resolución de problemas. Identificá cuál de ellas podés empezar a practicar esta semana.",
             "contexto_emocional_esperado": "anticipacion",
@@ -309,100 +309,100 @@ EXPERT_KB = {
     ],
 
     "TutorBienestar": [
-         {
+        {
             "pregunta_clave": "Me siento muy cansado últimamente",
             "respuesta": "Escuchá a tu cuerpo. Dormir bien, hidratarte y hacer pausas activas puede mejorar tu energía. Pequeños descansos diarios generan gran diferencia.",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["autocuidado", "fatiga", "descanso"]
         },
-         {
-            "pregunta_clave": "Tengo miedo de no poder con todo",
+        {
+            "pregunta_clave": "Sensación de sobrecarga y miedo a no poder cumplir con todo", 
             "respuesta": "No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.",
             "contexto_emocional_esperado": "miedo",
             "tags": ["gestion_del_estres", "priorizacion", "autocompasion"]
         },
-         {
+        {
             "pregunta_clave": "Estoy frustrado con mi situación actual",
             "respuesta": "Es válido sentir enojo o frustración. Canalizalos hacia acciones pequeñas y concretas. Moverte en lugar de quedarte paralizado ya es un logro.",
             "contexto_emocional_esperado": "ira",
             "tags": ["resiliencia", "accion", "gestion_emocional"]
         },
-         {
+        {
             "pregunta_clave": "No tengo ganas de nada últimamente",
             "respuesta": "Puede ser un signo de agotamiento emocional. Permitite descansar y hacer algo que solías disfrutar, aunque sea por unos minutos.",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["animo", "bienestar_emocional", "recuperacion"]
         },
-         {
-            "pregunta_clave": "Me cuesta concentrarme y todo asusta",
+        {
+            "pregunta_clave": "Dificultad para concentrarse acompañada de ansiedad o miedo",
             "respuesta": "Cuando la mente se satura, simplificar ayuda. Ordená el entorno y empezá con tareas pequeñas. Celebrá cada avance, por mínimo que sea.",
             "contexto_emocional_esperado": "miedo",
             "tags": ["estres", "gestion_cognitiva", "autoeficacia"]
         },
-         {
+        {
             "pregunta_clave": "Siento que todo me sale mal",
             "respuesta": "Es duro sentirse así, pero los errores no definen tu valor. Anotá tres cosas que hiciste bien hoy, aunque sean pequeñas. Eso entrena tu foco positivo.",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["autoestima", "resiliencia", "autocompasion"]
         },
-         {
+        {
             "pregunta_clave": "Estoy enojado con todos y todo el tiempo",
             "respuesta": "La ira suele esconder cansancio o miedo. Identificá cuándo aparece y practicá respiración lenta: inhalá 4 segundos, exhalá 6. Calma el cuerpo y la mente.",
             "contexto_emocional_esperado": "ira",
             "tags": ["ira", "gestion_emocional", "autocontrol"]
         },
-         {
+        {
             "pregunta_clave": "Me gustaría sentirme bien",
             "respuesta": "Incorporá rutinas breves de bienestar: cinco minutos de respiración consciente, caminar o escuchar música, contemplá la naturaleza, rezá o meditá según te salga. Lo simple, repetido, genera calma duradera.",
             "contexto_emocional_esperado": "confianza",
             "tags": ["autocuidado", "habitos_saludables", "calma"]
         },
-         {
+        {
             "pregunta_clave": "Quiero volver a ser felíz",
             "respuesta": "Recuperar la motivación lleva tiempo. Empezá por algo que te interese genuinamente, aunque sea pequeño. La acción precede al ánimo.",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["motivacion", "energia", "crecimiento_personal"]
         },
-         {
+        {
             "pregunta_clave": "Me cuesta desconectarme del trabajo",
             "respuesta": "Poné límites claros: horarios de descanso y momentos sin pantalla. El bienestar no es falta de trabajo, sino equilibrio entre acción y pausa.",
             "contexto_emocional_esperado": "confianza",
             "tags": ["equilibrio", "gestion_del_tiempo", "limites"]
         },
-         {
+        {
             "pregunta_clave": "Estoy ansioso y no sé porqué",
             "respuesta": "La ansiedad suele anticipar más de lo que ocurre. Probá registrar tus pensamientos y reemplazarlos por afirmaciones más realistas.",
             "contexto_emocional_esperado": "miedo",
             "tags": ["ansiedad", "gestion_emocional", "autoconciencia"]
         },
-         {
+        {
             "pregunta_clave": "Hoy me siento un poco mejor",
             "respuesta": "Qué bueno reconocerlo. Celebrar pequeños avances fortalece la confianza. Guardá ese recuerdo para usarlo en días más difíciles.",
             "contexto_emocional_esperado": "alegria",
             "tags": ["autoestima", "progreso", "refuerzo_positivo"]
         },
-         {
+        {
             "pregunta_clave": "Estoy empezando a disfrutar de mi trabajo",
             "respuesta": "Excelente señal. Mantener lo que te hace bien consolida la mejora. Sumá variedad, pero sin exigencias: el bienestar también es equilibrio.",
             "contexto_emocional_esperado": "alegria",
             "tags": ["bienestar", "rutinas_saludables", "motivacion"]
         },
-         {
+        {
             "pregunta_clave": "Quiero aprender a manejar mejor mi ansiedad",
             "respuesta": "La respiración diafragmática y los ejercicios de atención plena reducen la ansiedad. Practicá 10 minutos diarios para notar el cambio.",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["ansiedad", "mindfulness", "regulacion"]
         },
-         {
+        {
             "pregunta_clave": "Estoy bien. Sé que mejoré mucho",
             "respuesta": "Reconocer tu propio progreso es fundamental. La sorpresa positiva refuerza la autoconfianza y el compromiso con tu bienestar.",
-            "contexto_emocional_esperado": "alegria", # Cambiado de 'sorpresa' a 'alegria' para mayor coherencia
+            "contexto_emocional_esperado": "alegria",
             "tags": ["autoconocimiento", "progreso", "refuerzo_positivo"]
         }
     ],
 
     "TutorApoyos": [
-         {
+        {
             "pregunta_clave": "¿Qué apoyos puedo solicitar para continuar mis estudios?",
             "respuesta": """Podés pedir intérpretes, acompañantes pedagógicos, materiales accesibles o adaptaciones curriculares.
 Cada universidad cuenta con un área de inclusión o bienestar estudiantil que gestiona estos apoyos.
@@ -410,7 +410,7 @@ Estos derechos están garantizados por la Ley Nacional 26.206 de Educación y la
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["educacion", "inclusion", "accesibilidad", "ley_26206", "ley_26378"]
         },
-         {
+        {
             "pregunta_clave": "No sé a quién acudir para tramitar mis beneficios",
             "respuesta": """Podés acercarte a la oficina municipal de discapacidad o a la Agencia Nacional de Discapacidad (ANDIS).
 Allí te orientarán paso a paso y de forma gratuita sobre pensiones, transporte o programas de apoyo.
@@ -500,11 +500,11 @@ Podés presentar un reclamo en la Defensoría del Pueblo o el Ministerio de Obra
             "tags": ["accesibilidad", "inclusion", "reclamos", "ley_24314", "ley_26653"]
         },
         {
-            "pregunta_clave": "¿Puedo viajar gratis con acompañante?",
+            "pregunta_clave": "Consulta específica sobre viaje gratuito con acompañante usando CUD",
             "respuesta": """Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario.
 Solo necesitás presentar tu certificado y DNI en la terminal o empresa correspondiente, según la Ley 25.635 y resoluciones de la CNRT.""",
             "contexto_emocional_esperado": "alegria",
-            "tags": ["transporte", "beneficios", "accesibilidad", "ley_25635"]
+            "tags": ["transporte", "beneficios", "accesibilidad", "ley_25635", "acompanante"] 
         },
         {
             "pregunta_clave": "Me sorprende que existan tantos programas de apoyo",
@@ -610,7 +610,7 @@ Cada intento te acerca a tu objetivo.""",
             "tags": ["orientacion_laboral", "motivacion", "resiliencia", "ministerio_trabajo", "andis"]
         },
         {
-            "pregunta_clave": "¿Qué hago si me discriminan en una entrevista?",
+            "pregunta_clave": "Acciones a tomar ante discriminación por discapacidad en una entrevista", 
             "respuesta": """La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. Podés presentar una denuncia ante el Ministerio Público de la Defensa.
 O pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica.""",
             "contexto_emocional_esperado": "ira",
@@ -634,19 +634,19 @@ Estos cursos te preparan para tu primer trabajo y están adaptados a distintas c
 
     "GestorCUD": [
         {
-            "pregunta_clave": "¿Qué es el Certificado Único de Discapacidad (CUD)?",
+            "pregunta_clave": "Explicación fundamental: Qué es y para qué sirve el CUD", # Más específico
             "respuesta": """El Certificado Único de Discapacidad (CUD) es un documento oficial que acredita tu discapacidad y te permite acceder a derechos y beneficios en salud, transporte, educación y trabajo.
 Está regulado por la Ley 22.431 y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378).""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["cud", "definicion", "derechos", "ley_22431", "ley_26378"]
         },
         {
-            "pregunta_clave": "¿Dónde se tramita el CUD?",
+            "pregunta_clave": "Guía paso a paso: Dónde y cómo obtener el CUD", # Más específico
             "respuesta": """El trámite del CUD es gratuito y se realiza en las juntas evaluadoras de tu provincia o municipio.
 Podés consultar las direcciones actualizadas en www.argentina.gob.ar/andis/cud.
 Si necesitás apoyo para trasladarte, podés solicitar asistencia o turno prioritario.""",
             "contexto_emocional_esperado": "confianza",
-            "tags": ["tramite", "andis", "accesibilidad"]
+            "tags": ["tramite", "andis", "accesibilidad", "procedimiento"] # Añadido tag
         },
         {
             "pregunta_clave": "¿Qué documentación necesito para iniciar el trámite del CUD?",
@@ -668,7 +668,7 @@ Las juntas evaluadoras te orientan paso a paso, y podés pedir que te expliquen 
             "respuesta": """No. El trámite del CUD es totalmente gratuito en todo el país.
 Si alguien te solicita un pago o arancel, hacé la denuncia ante la Agencia Nacional de Discapacidad (ANDIS).""",
             "contexto_emocional_esperado": "ira",
-            "tags": ["tramite", "denuncia", "andis"]
+            "tags": ["tramite", "denuncia", "andis", "gratuidad"] # Añadido tag
         },
         {
             "pregunta_clave": "¿Qué beneficios obtengo al tener el CUD?",
@@ -706,7 +706,7 @@ Te permite acceder a prestaciones médicas y programas de salud pública sin cos
 La ANDIS dispone de un formulario para apelaciones.
 También podés solicitar acompañamiento en el Programa ADAJUS del Ministerio de Justicia.""",
             "contexto_emocional_esperado": "ira",
-            "tags": ["reclamo", "andis", "derechos", "adajus"]
+            "tags": ["reclamo", "andis", "derechos", "adajus", "apelacion"] # Añadido tag
         },
         {
             "pregunta_clave": "¿Puedo tramitar el CUD si vivo en una zona rural?",
@@ -721,7 +721,7 @@ También podés solicitar turnos priorizados si tenés dificultades de movilidad
 Solo necesitás tu DNI y una constancia policial de extravío.
 El duplicado conserva la misma validez que el original.""",
             "contexto_emocional_esperado": "tristeza",
-            "tags": ["duplicado", "tramite", "certificado"]
+            "tags": ["duplicado", "tramite", "certificado", "extravio"] # Añadido tag
         },
         {
             "pregunta_clave": "¿Puedo usar mi CUD en todo el país?",
@@ -743,7 +743,7 @@ El CUD puede actualizarse para reflejar tu situación actual y garantizar que si
 Además de beneficios sociales y de salud, te facilita la inclusión educativa y laboral.
 Podés informarte más en el sitio oficial de ANDIS (www.argentina.gob.ar/andis/cud).""",
             "contexto_emocional_esperado": "sorpresa",
-            "tags": ["derechos", "beneficios", "andis"]
+            "tags": ["derechos", "beneficios", "andis", "informacion"] # Añadido tag
         }
     ],
 }
@@ -763,13 +763,19 @@ if __name__ == "__main__":
             emo = intention.get("contexto_emocional_esperado", "").capitalize()
             if emo not in valid_emotions:
                 errors.append(f"Error en {tutor}[{i}]: Emoción '{intention.get('contexto_emocional_esperado')}' inválida. Clave: '{intention.get('pregunta_clave')}'")
+            # Chequeo opcional de formato de tags
+            tags = intention.get("tags", [])
+            if not isinstance(tags, list):
+                 errors.append(f"Error en {tutor}[{i}]: Campo 'tags' no es una lista. Clave: '{intention.get('pregunta_clave')}'")
+            elif not all(isinstance(t, str) for t in tags):
+                 errors.append(f"Error en {tutor}[{i}]: No todos los elementos en 'tags' son strings. Clave: '{intention.get('pregunta_clave')}'")
+
 
     if not errors:
-        print("✅ Validación de emociones esperadas: OK (Todas pertenecen a las 7 base + Neutral)")
+        print("✅ Validación de emociones esperadas y formato de tags: OK")
     else:
         print("\n❌ ERRORES DE VALIDACIÓN ENCONTRADOS:")
         for error in errors:
             print(error)
 
     print("-" * 40)
-
