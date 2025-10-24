@@ -325,6 +325,7 @@ class TutorInteraccion(Experto):
     def __init__(self):
         """Inicializa TutorInteraccion y carga KB/embeddings."""
         super().__init__("TutorInteraccion")
+        self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
 
@@ -332,7 +333,8 @@ class TutorCompetencias(Experto):
     """Experto en 'upskilling', cursos y aprendizaje de nuevas tecnologías."""
     def __init__(self):
         """Inicializa TutorCompetencias y carga KB/embeddings."""
-        super().__init__("TutorCompetencias") 
+        super().__init__("TutorCompetencias")
+        self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
 
@@ -340,7 +342,8 @@ class TutorBienestar(Experto):
     """Experto en confianza, manejo del estrés y motivación."""
     def __init__(self):
         """Inicializa TutorBienestar y carga KB/embeddings."""
-        super().__init__("TutorBienestar") 
+        super().__init__("TutorBienestar")
+        self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
 
@@ -349,6 +352,7 @@ class TutorApoyos(Experto):
     def __init__(self):
         """Inicializa TutorApoyos y carga KB/embeddings."""
         super().__init__("TutorApoyos") 
+        self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
 
@@ -357,6 +361,7 @@ class TutorPrimerEmpleo(Experto):
     def __init__(self):
         """Inicializa TutorPrimerEmpleo y carga KB/embeddings."""
         super().__init__("TutorPrimerEmpleo") 
+        self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
 
