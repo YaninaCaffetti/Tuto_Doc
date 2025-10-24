@@ -241,9 +241,9 @@ class GestorCUD(Experto):
     """
     def __init__(self):
         """Inicializa el GestorCUD cargando su KB específica."""
-        # --- CORRECCIÓN ---
+
         super().__init__("GestorCUD") # Usar nombre corto
-        # --- FIN CORRECCIÓN ---
+
         self._initialize_knowledge_base() # Pre-calcula embeddings
 
     def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
@@ -286,9 +286,9 @@ class TutorCarrera(Experto):
     """Experto en estrategia profesional, CV, entrevistas y negociación."""
     def __init__(self):
         """Inicializa TutorCarrera, define su umbral y carga KB/embeddings."""
-        # --- CORRECCIÓN ---
+ 
         super().__init__("TutorCarrera") # Usar nombre corto
-        # --- FIN CORRECCIÓN ---
+
         self.similarity_threshold = 0.6 # Umbral más alto para este tutor
         self._initialize_knowledge_base()
 
