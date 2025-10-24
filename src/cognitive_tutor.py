@@ -3,7 +3,7 @@
 Define la arquitectura del Tutor Cognitivo (Versión Avanzada).
 
 Implementa una búsqueda semántica basada en embeddings y
-un mecanismo de Gating Afectivo de Intención  para modular
+un mecanismo de Gating Afectivo de Intención  para modular
 las recomendaciones según la congruencia emocional detectada.
 """
 
@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 try:
     from sentence_transformers import SentenceTransformer, util
     import torch
+    import torch.nn.functional as F  # Importar para normalización
     SEMANTIC_SEARCH_ENABLED = True
 except ImportError:
     warnings.warn(
@@ -30,7 +31,20 @@ except ImportError:
     # Definir Clases Dummy si falta la librería
     class SentenceTransformer: pass
     class util: pass
-    class torch: pass
+    class torch:
+        # Definir dummies anidadas para que el type hinting no falle
+        class Tensor: pass
+        @staticmethod
+        def mean(*args, **kwargs): pass
+        @staticmethod
+        def stack(*args, **kwargs): pass
+        @staticmethod
+        def argmax(*args, **kwargs): pass
+    
+    class F: # Dummy para functional
+        @staticmethod
+        def normalize(*args, **kwargs): pass
+
 
 # --- 2. GESTOR DEL MODELO SEMÁNTICO (SINGLETON) ---
 
@@ -80,9 +94,10 @@ class Experto:
         nombre (str): Nombre identificador del experto (ej. "TutorCarrera").
         knowledge_base (List[Dict[str, Any]]): Lista de diccionarios, donde
             cada diccionario representa una intención con claves como
-            'pregunta_clave', 'respuesta', 'contexto_emocional_esperado', 'tags'.
+            'pregunta_clave', 'variantes', 'respuesta', etc.
         kb_keys (List[str]): Lista extraída de las 'pregunta_clave' para la búsqueda.
-        kb_embeddings (torch.Tensor | None): Embeddings pre-calculados de las kb_keys.
+        kb_embeddings (torch.Tensor | None): Embeddings de *centroides* normalizados
+            pre-calculados para cada intención (pregunta_clave + variantes).
         similarity_threshold (float): Umbral de similitud coseno para considerar
             una coincidencia semántica válida.
     """
@@ -121,33 +136,76 @@ class Experto:
 
     def _initialize_knowledge_base(self):
         """
-        Pre-calcula los embeddings de las 'pregunta_clave' de la KB.
+        Pre-calcula los embeddings de *centroide* para cada intención en la KB.
 
-        Debe llamarse explícitamente después de instanciar al experto.
-        Si el modelo semántico no está disponible, los embeddings serán None.
+        Para cada intención:
+        1. Toma la 'pregunta_clave' y todas sus 'variantes'.
+        2. Codifica todos estos textos.
+        3. Calcula su vector promedio (centroide).
+        4. Normaliza el centroide.
+        5. Almacena el centroide en `self.kb_embeddings`.
+
+        `self.kb_keys` se puebla solo con las 'pregunta_clave' para
+        mantener la compatibilidad del mapeo de índices.
         """
         model = get_semantic_model()
         if not model:
             self.kb_embeddings = None # Asegurar estado consistente
             return
 
-        # Extraer todas las 'pregunta_clave' de la lista de diccionarios
-        self.kb_keys = [item.get("pregunta_clave", "") for item in self.knowledge_base] #
-        self.kb_keys = [key for key in self.kb_keys if key and key != "default"] # Filtrar vacías y 'default'
+        new_kb_keys = []
+        all_centroids = []
 
-        if self.kb_keys:
-            try:
-                # Pre-calcular los embeddings para todas las claves
-                self.kb_embeddings = model.encode(self.kb_keys, convert_to_tensor=True)
-                # print(f"› Embeddings calculados para {self.nombre} (KB size: {len(self.kb_keys)})") # Debug opcional
-            except Exception as e:
-                 warnings.warn(
-                     f"Error al codificar KB para {self.nombre}: {e}. "
-                     "Búsqueda semántica puede fallar."
-                 )
-                 self.kb_embeddings = None
-        else:
-             self.kb_embeddings = None # KB vacía o sin claves válidas
+        if not self.knowledge_base:
+            self.kb_keys = []
+            self.kb_embeddings = None
+            return
+
+        try:
+            for item in self.knowledge_base:
+                key = item.get("pregunta_clave")
+                if not key or key == "default":
+                    continue
+
+                # 1. Construir corpus de textos (clave + variantes)
+                variantes = item.get("variantes", [])
+                corpus_texts = [key] + variantes
+                # Filtrar strings vacíos o None
+                corpus_texts = [str(t) for t in corpus_texts if t and isinstance(t, str)]
+
+                if not corpus_texts:
+                    warnings.warn(f"Intención '{key}' en {self.nombre} no tiene textos válidos. Omitiendo.")
+                    continue
+                
+                # 2. Codificar todos los textos del corpus
+                corpus_embeddings = model.encode(corpus_texts, convert_to_tensor=True)
+                
+                # 3. Calcular el centroide (vector promedio)
+                centroid = torch.mean(corpus_embeddings, dim=0)
+                
+                # 4. Normalizar el centroide (L2 norm) - TAREA 2
+                centroid_normalized = F.normalize(centroid, p=2, dim=0)
+                
+                # 5. Guardar el centroide y la clave
+                all_centroids.append(centroid_normalized)
+                new_kb_keys.append(key)
+
+            # Asignar a los atributos de la clase
+            self.kb_keys = new_kb_keys # TAREA 3: Exponer claves
+            if all_centroids:
+                # TAREA 1: Guardar embeddings de centroides
+                self.kb_embeddings = torch.stack(all_centroids)
+                # print(f"› Centroides normalizados calculados para {self.nombre} (KB size: {len(self.kb_keys)})") # Debug
+            else:
+                self.kb_embeddings = None
+
+        except Exception as e:
+            warnings.warn(
+                f"Error al codificar KB (centroides) para {self.nombre}: {e}. "
+                "Búsqueda semántica puede fallar."
+            )
+            self.kb_embeddings = None
+            self.kb_keys = [] # Limpiar por consistencia
 
     def _get_intention_by_key(self, key: str) -> Dict[str, Any]:
         """
@@ -168,21 +226,24 @@ class Experto:
             "pregunta_clave": "default",
             "respuesta": f"Continuemos analizando tu situación general relacionada con {self.nombre.lower()}.",
             "contexto_emocional_esperado": "neutral",
-            "tags": []
+            "tags": [],
+            "variantes": [] # Asegurar que la clave exista
         }
 
     def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
         """
         Genera la recomendación buscando la intención más relevante al prompt.
 
-        Prioriza la búsqueda semántica si está habilitada y los embeddings existen.
-        Si falla o está deshabilitada, recurre a una búsqueda simple por
-        palabra clave en las 'pregunta_clave'.
+        Compara el embedding *normalizado* del prompt contra los embeddings
+        de *centroide normalizados* de la KB.
+        
+        Prioriza la búsqueda semántica. Si falla, recurre a una búsqueda 
+        simple por palabra clave.
 
         Args:
             prompt: La consulta textual del usuario.
             **kwargs: Argumentos adicionales (no usados en la base, pero sí
-                      en subclases como TutorCarrera).
+                    en subclases como TutorCarrera).
 
         Returns:
             Una tupla conteniendo:
@@ -194,8 +255,15 @@ class Experto:
         # --- Intento de Búsqueda Semántica ---
         if model and self.kb_embeddings is not None and len(self.kb_keys) > 0:
             try:
-                prompt_embedding = model.encode(prompt, convert_to_tensor=True)
+                # 1. Codificar el prompt
+                prompt_embedding_raw = model.encode(prompt, convert_to_tensor=True)
+                
+                # 2. Normalizar el embedding del prompt (TAREA 2)
+                prompt_embedding = F.normalize(prompt_embedding_raw, p=2, dim=0)
+
+                # 3. Calcular similitud (dot product de vectores normalizados)
                 cos_scores = util.cos_sim(prompt_embedding, self.kb_embeddings)[0]
+                
                 best_match_idx = torch.argmax(cos_scores).item()
                 best_match_score = cos_scores[best_match_idx].item()
 
@@ -214,14 +282,14 @@ class Experto:
         # Buscar coincidencias exactas o parciales (más robusto)
         found_item = None
         for item in self.knowledge_base:
-             key = item.get("pregunta_clave", "") #
-             if key.lower() in prompt_lower:
-                 found_item = item
-                 break # Usar la primera coincidencia por palabra clave
+            key = item.get("pregunta_clave", "") #
+            if key.lower() in prompt_lower:
+                found_item = item
+                break # Usar la primera coincidencia por palabra clave
 
         if found_item:
-             response_str = f"[{self.nombre}]: {found_item['respuesta']}" #
-             return response_str, found_item
+            response_str = f"[{self.nombre}]: {found_item['respuesta']}" #
+            return response_str, found_item
 
         # --- Último Recurso: Respuesta Default ---
         default_intention = self._get_intention_by_key("default")
@@ -244,7 +312,7 @@ class GestorCUD(Experto):
 
         super().__init__("GestorCUD") # Usar nombre corto
 
-        self._initialize_knowledge_base() # Pre-calcula embeddings
+        self._initialize_knowledge_base() # Pre-calcula embeddings (centroides normalizados)
 
     def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
         """
@@ -286,7 +354,7 @@ class TutorCarrera(Experto):
     """Experto en estrategia profesional, CV, entrevistas y negociación."""
     def __init__(self):
         """Inicializa TutorCarrera, define su umbral y carga KB/embeddings."""
- 
+
         super().__init__("TutorCarrera") # Usar nombre corto
 
         self.similarity_threshold = 0.50 # Umbral más alto para este tutor
@@ -310,12 +378,12 @@ class TutorCarrera(Experto):
         original_profile = kwargs.get('original_profile')
         # Añadir consejo CUD solo si el usuario TIENE CUD
         if original_profile is not None and original_profile.get('TIENE_CUD') == 'Si_Tiene_CUD':
-             # Y si la intención principal NO era sobre CUD para evitar redundancia
-             if "cud" not in matched_intention.get("tags", []): #
+            # Y si la intención principal NO era sobre CUD para evitar redundancia
+            if "cud" not in matched_intention.get("tags", []): #
                 base_response += (
                     "\n  [Consejo Legal Adicional]: Dado que posees el CUD, recuerda que postular a "
                     "concursos del Estado es una estrategia efectiva (cupo 4%, Ley 22.431)." #
-                 )
+                )
 
         return base_response, matched_intention
 
@@ -351,7 +419,7 @@ class TutorApoyos(Experto):
     """Experto en adaptaciones, derechos y 'ajustes razonables'."""
     def __init__(self):
         """Inicializa TutorApoyos y carga KB/embeddings."""
-        super().__init__("TutorApoyos") 
+        super().__init__("TutorApoyos")
         self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
@@ -360,7 +428,7 @@ class TutorPrimerEmpleo(Experto):
     """Experto en guiar a jóvenes en su primera experiencia laboral."""
     def __init__(self):
         """Inicializa TutorPrimerEmpleo y carga KB/embeddings."""
-        super().__init__("TutorPrimerEmpleo") 
+        super().__init__("TutorPrimerEmpleo")
         self.similarity_threshold = 0.40
         self._initialize_knowledge_base()
 
@@ -402,7 +470,7 @@ class MoESystem:
         affective_congruence_log (List[Dict[str, str]]): Log histórico de eventos de gating.
     """
     def __init__(self, cognitive_model: Any, feature_columns: List[str],
-                 affective_rules: Dict, thresholds: Dict):
+                affective_rules: Dict, thresholds: Dict):
         """
         Inicializa el sistema MoE y pre-calcula embeddings de todos los expertos.
 
@@ -425,7 +493,7 @@ class MoESystem:
         print("› Inicializando modelo semántico y embeddings de expertos...")
         get_semantic_model() # Carga el modelo si no está cargado
         for expert in list(self.expert_map.values()) + [self.cud_expert]:
-            expert._initialize_knowledge_base()
+            expert._initialize_knowledge_base() # Ahora calcula centroides normalizados
         print("› Embeddings de expertos listos.")
 
 
@@ -459,7 +527,7 @@ class MoESystem:
         return modulated_weights
 
     def _apply_conversational_modulation(self, weights: Dict, context: Dict,
-                                         negative_emotions: List[str]) -> Dict:
+                                        negative_emotions: List[str]) -> Dict:
         """
         Ajusta los pesos basados en el historial reciente de la conversación.
 
@@ -521,16 +589,16 @@ class MoESystem:
             return "Neutral"
 
         try:
-             # Encontrar la clave (emoción) con el valor (probabilidad) máximo
-             top_emotion_raw = max(emotion_probs, key=emotion_probs.get)
-             # Limpiar y capitalizar (ej. " ira " -> "Ira")
-             normalized = str(top_emotion_raw).strip().capitalize()
-             # Lista de emociones válidas (las de las reglas + Neutral)
-             valid_emotions = list(self.affective_rules.keys()) + ["Neutral"]
-             # Si la emoción detectada es una de las conocidas, devolverla, si no 'Neutral'
-             return normalized if normalized in valid_emotions else "Neutral"
+            # Encontrar la clave (emoción) con el valor (probabilidad) máximo
+            top_emotion_raw = max(emotion_probs, key=emotion_probs.get)
+            # Limpiar y capitalizar (ej. " ira " -> "Ira")
+            normalized = str(top_emotion_raw).strip().capitalize()
+            # Lista de emociones válidas (las de las reglas + Neutral)
+            valid_emotions = list(self.affective_rules.keys()) + ["Neutral"]
+            # Si la emoción detectada es una de las conocidas, devolverla, si no 'Neutral'
+            return normalized if normalized in valid_emotions else "Neutral"
         except ValueError: # Caso de diccionario vacío
-             return "Neutral"
+            return "Neutral"
 
 
     def _log_gating_event(self, tutor_name: str, intention: Dict, detected_emotion: str) -> Dict[str, str]:
@@ -609,12 +677,12 @@ class MoESystem:
         # Asegurar que el DataFrame tenga exactamente las columnas esperadas y en orden
         profile_for_prediction = profile_df.reindex(columns=self.feature_columns, fill_value=0.0)
         try:
-             # Utiliza el modelo cognitivo (ej. RandomForest) para predecir
-             predicted_archetype = self.cognitive_model.predict(profile_for_prediction)[0]
+            # Utiliza el modelo cognitivo (ej. RandomForest) para predecir
+            predicted_archetype = self.cognitive_model.predict(profile_for_prediction)[0]
         except Exception as e:
-             logging.error(f"Error prediciendo arquetipo: {e}. Usando default.")
-             # Fallback a un arquetipo por defecto si falla la predicción
-             predicted_archetype = list(self.expert_map.keys())[0]
+            logging.error(f"Error prediciendo arquetipo: {e}. Usando default.")
+            # Fallback a un arquetipo por defecto si falla la predicción
+            predicted_archetype = list(self.expert_map.keys())[0]
 
 
         # --- 2. Pesos Base ---
@@ -696,18 +764,18 @@ class MoESystem:
 
         # --- Mensaje Default si no hubo recomendaciones de arquetipo ---
         if recommendations_added == 0:
-             # Solo añadir mensaje default si TAMPOCO hubo recomendación proactiva CUD
-             if len(final_recs) <= 1: # (Solo contiene el título "[Plan...]")
-                 # Usar el default del tutor predicho como fallback
-                 default_expert_name = predicted_archetype if predicted_archetype in self.expert_map else list(self.expert_map.keys())[0]
-                 default_expert = self.expert_map[default_expert_name]
-                 # Llamar con prompt "default" para obtener su respuesta default específica
-                 _, default_intention = default_expert.generate_recommendation(prompt="default", original_profile=user_profile)
-                 default_response = default_intention.get("respuesta", "Analicemos tu situación con más detalle.")
-                 final_recs.append(f"  - [Sistema]: {default_response}")
-                 # Loguear gating para esta respuesta default
-                 gating_default = self._log_gating_event(default_expert.nombre + " (Default)", default_intention, top_detected_emotion)
-                 analysis_log_data["gating_log"]["default_expert"] = gating_default
+            # Solo añadir mensaje default si TAMPOCO hubo recomendación proactiva CUD
+            if len(final_recs) <= 1: # (Solo contiene el título "[Plan...]")
+                # Usar el default del tutor predicho como fallback
+                default_expert_name = predicted_archetype if predicted_archetype in self.expert_map else list(self.expert_map.keys())[0]
+                default_expert = self.expert_map[default_expert_name]
+                # Llamar con prompt "default" para obtener su respuesta default específica
+                _, default_intention = default_expert.generate_recommendation(prompt="default", original_profile=user_profile)
+                default_response = default_intention.get("respuesta", "Analicemos tu situación con más detalle.")
+                final_recs.append(f"  - [Sistema]: {default_response}")
+                # Loguear gating para esta respuesta default
+                gating_default = self._log_gating_event(default_expert.nombre + " (Default)", default_intention, top_detected_emotion)
+                analysis_log_data["gating_log"]["default_expert"] = gating_default
 
 
         # Unir todas las recomendaciones en un solo string
