@@ -197,13 +197,26 @@ def run_validation():
     print("› Embeddings listos.")
 
     # Iterar sobre cada caso de prueba en el set de validación
+    # --- 🔧 Mapa de alias entre nombres de tutores y arquetipos (compatibilidad para testeo) ---
+    alias_map = {
+        "TutorCarrera": "Prof_Subutil",
+        "TutorInteraccion": "Com_Desafiado",
+        "TutorCompetencias": "Nav_Informal",
+        "TutorBienestar": "Potencial_Latente",
+        "TutorApoyos": "Cand_Nec_Sig",
+        "TutorPrimerEmpleo": "Joven_Transicion",
+        "GestorCUD": "GestorCUD"
+    }
+
     print(f"› Ejecutando {len(validation_set)} pruebas de validación...")
     for item in validation_set:
         tutor_name = item["tutor_name"]
         prompt = item["prompt_usuario"]
         expected_key = item["expected_intent_key"]
 
-        tutor = all_experts.get(tutor_name)
+        # Usar alias si existe
+        mapped_name = alias_map.get(tutor_name, tutor_name)
+        tutor = all_experts.get(mapped_name)
 
         # --- Validaciones Previas ---
         if not tutor:
