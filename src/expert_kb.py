@@ -2,12 +2,43 @@
 """
 Base de Conocimiento Centralizada para los Tutores Expertos.
 
-Define la estructura de datos enriquecida para cada intención, incluyendo:
-- pregunta_clave: La intención semántica principal (etiqueta funcional).
-- variantes: Lista de prompts de usuario que mapean a esta intención.
-- respuesta: La recomendación específica del tutor.
-- contexto_emocional_esperado: Emoción asociada con la consulta.
-- tags: Etiquetas para clustering semántico.
+Este módulo define la estructura de datos `EXPERT_KB`, un diccionario
+que mapea nombres de tutores expertos a listas de intenciones. Cada
+intención es un diccionario que representa una consulta o necesidad
+específica del usuario dentro del dominio de ese tutor.
+
+La estructura de cada intención es la siguiente:
+
+- pregunta_clave (str):
+    Una etiqueta funcional única que identifica la intención semántica
+    principal. No se utiliza directamente en el cálculo del embedding
+    del centroide, pero sirve como identificador clave.
+
+- variantes (List[str]):
+    Una lista de 3 o más ejemplos de cómo un usuario podría expresar
+    esta intención en lenguaje natural. Estos textos son los únicos
+    utilizados para calcular el embedding del centroide de la intención,
+    buscando representar el "significado puro" del objetivo del usuario.
+
+- respuesta (str):
+    La recomendación o información específica que el tutor experto
+    proporciona cuando se detecta esta intención.
+
+- contexto_emocional_esperado (str):
+    La emoción (en minúsculas, ej. 'miedo', 'alegria') que típicamente
+    se asocia con esta consulta. Utilizada por el mecanismo de
+    Gating Afectivo para evaluar la congruencia emocional. Debe ser una
+    de las emociones válidas definidas en el validador.
+
+- tags (List[str]):
+    Una lista de etiquetas o palabras clave relevantes para esta
+    intención. Pueden usarse para análisis, clustering semántico,
+    o lógicas de filtrado adicionales.
+
+El script incluye un bloque `if __name__ == "__main__":` que realiza
+validaciones básicas de la estructura y contenido de `EXPERT_KB` al
+ejecutar el archivo directamente, asegurando la consistencia de los
+datos (existencia de claves, formato de listas, validez de emociones).
 """
 
 EXPERT_KB = {
@@ -19,7 +50,9 @@ EXPERT_KB = {
                 "Quiero pulir mi currículum",
                 "¿Podés revisar mi hoja de vida?",
                 "¿Qué le falta a mi CV actual?",
-                "Tengo un CV pero no me llaman"
+                "Tengo un CV pero no me llaman",
+                "Mi currículum está desactualizado", 
+                "Mi CV está viejo, ¿qué le pongo?" 
             ],
             "respuesta": """Para tu CV, enfócate en logros cuantificables. Por ejemplo, 'optimicé el proceso X, reduciendo el tiempo en un 15%'.""",
             "contexto_emocional_esperado": "anticipacion",
@@ -72,7 +105,9 @@ EXPERT_KB = {
                 "Quiero pedir un aumento",
                 "¿Cuánto debería pedir de sueldo?",
                 "Me ofrecieron un trabajo, ¿cómo negocio el salario?",
-                "Tips para negociar mi sueldo"
+                "Tips para negociar mi sueldo",
+                "No sé cuánto debería ganar", 
+                "Quiero saber mi rango salarial" 
             ],
             "respuesta": """Al negociar el salario, investiga el rango de mercado. Nunca des la primera cifra, pregunta por el presupuesto que manejan para el rol.""",
             "contexto_emocional_esperado": "confianza",
@@ -85,7 +120,7 @@ EXPERT_KB = {
                 "Envío muchos currículums y nadie me contacta",
                 "Estoy frustrado, no consigo entrevistas",
                 "¿Por qué no me llaman de los trabajos?",
-                "Siento que mi CV no funciona"
+                "Mi CV no genera entrevistas" 
             ],
             "respuesta": """Revisá si tu perfil está alineado a las ofertas y personalizá tus postulaciones. Pedí feedback a alguien de confianza o usá simuladores de búsqueda laboral.""",
             "contexto_emocional_esperado": "ira",
@@ -186,7 +221,8 @@ EXPERT_KB = {
                 "¿Debería renunciar a mi trabajo?",
                 "No sé si irme de mi empleo actual",
                 "¿Cuándo es momento de cambiar de trabajo?",
-                "Siento estancamiento laboral"
+                "Siento estancamiento laboral",
+                "Estoy pensando en dejar mi puesto" # DESCONTAMINACIÓN (FALLO 2)
             ],
             "respuesta": """Si sentís estancamiento, estrés crónico o falta de aprendizaje, es momento de evaluar opciones. Planificá la transición antes de tomar la decisión final.""",
             "contexto_emocional_esperado": "confianza",
@@ -226,7 +262,8 @@ EXPERT_KB = {
                 "¿Cómo manejar un conflicto con un colega?",
                 "Me peleé con un compañero de trabajo",
                 "Tengo un problema con alguien del equipo, ¿qué hago?",
-                "¿Cómo gestionar una discusión laboral?"
+                "¿Cómo gestionar una discusión laboral?",
+                "Choqué con un par"
             ],
             "respuesta": """Para manejar un conflicto, enfócate en el problema, no en la persona. Usa frases como 'Cuando ocurre X, siento Y'.""",
             "contexto_emocional_esperado": "ira",
@@ -325,7 +362,9 @@ EXPERT_KB = {
                 "Recepción de críticas laborales percibidas como injustas: Respuesta asertiva",
                 "Recibí una crítica injusta",
                 "Mi jefe me criticó y no estoy de acuerdo",
-                "¿Cómo responder a feedback negativo?"
+                "¿Cómo responder a feedback negativo?",
+                "Mi jefe me gritó y no supe qué decir", 
+                "Me retaron en el trabajo" 
             ],
             "respuesta": """Respirá antes de responder, siempre. Agradecé el comentario y pedí ejemplos específicos. Si no hay argumentos, podés cerrar con cortesía y mantener tu postura.""",
             "contexto_emocional_esperado": "ira",
@@ -424,7 +463,8 @@ EXPERT_KB = {
                 "Me cuesta concentrarme cuando estudio",
                 "No me puedo enfocar",
                 "¿Qué es la técnica Pomodoro?",
-                "¿Cómo evito distracciones al estudiar?"
+                "¿Cómo evito distracciones al estudiar?",
+                "Me distraigo mucho con el celular cuando quiero leer" 
             ],
             "respuesta": "Probá estudiar en bloques de 25 minutos con pausas de 5 (técnica Pomodoro). Reducí distracciones visuales y digitales durante ese tiempo.",
             "contexto_emocional_esperado": "ira",
@@ -448,7 +488,8 @@ EXPERT_KB = {
                 "¿Qué hago si siento que aprendo más lento que los demás?",
                 "Todos aprenden más rápido que yo",
                 "Me comparo con mis compañeros y me siento mal",
-                "Respetar mi propio ritmo de aprendizaje"
+                "Respetar mi propio ritmo de aprendizaje",
+                "Siento que soy más lento que el resto" 
             ],
             "respuesta": "Cada persona tiene su ritmo. Enfocate en medir tu propio progreso. Comparate con vos misma hace tres meses, no con otros.",
             "contexto_emocional_esperado": "tristeza",
@@ -520,7 +561,9 @@ EXPERT_KB = {
                 "¿Cómo superar el miedo a equivocarme cuando aprendo algo nuevo?",
                 "Me da pánico cometer errores",
                 "Tengo miedo de fallar",
-                "El error como parte del aprendizaje"
+                "El error como parte del aprendizaje",
+                "Me bloqueo cuando intento aprender algo nuevo", 
+                "Siento ansiedad al empezar a estudiar" 
             ],
             "respuesta": "El error es parte del aprendizaje. Registrá tus fallos y lo que aprendiste de cada uno. La mejora se construye con práctica reflexiva.",
             "contexto_emocional_esperado": "miedo",
@@ -559,7 +602,8 @@ EXPERT_KB = {
                 "No tengo ganas de nada últimamente",
                 "Estoy quemado (burnout)",
                 "Siento mucho cansancio mental",
-                "¿Cómo recupero la energía?"
+                "¿Cómo recupero la energía?",
+                "Estoy agotado todo el día"
             ],
             "respuesta": """Escuchá a tu cuerpo. Dormir bien, hidratarte y hacer pausas activas puede mejorar tu energía. Pequeños descansos diarios generan gran diferencia.""",
             "contexto_emocional_esperado": "tristeza",
@@ -573,7 +617,9 @@ EXPERT_KB = {
                 "Estoy ansioso y no sé porqué",
                 "Quiero aprender a manejar mejor mi ansiedad",
                 "Tengo mucho estrés",
-                "Me cuesta concentrarme por la ansiedad"
+                "Me cuesta concentrarme por la ansiedad",
+                "Me paralizo por todo lo que tengo que hacer",
+                "Estoy abrumado y no puedo arrancar" 
             ],
             "respuesta": """No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.""",
             "contexto_emocional_esperado": "miedo",
@@ -632,9 +678,10 @@ EXPERT_KB = {
             "pregunta_clave": "Establecimiento de límites entre trabajo y vida personal",
             "variantes": [
                 "Me cuesta desconectarme del trabajo",
-                "Pienso todo el día en el trabajo",
                 "No puedo dejar de trabajar",
-                "Equilibrio vida-trabajo"
+                "Equilibrio vida-trabajo",
+                "No paro de revisar mails fuera de hora", 
+                "Necesito poner un límite con mi jefe" 
             ],
             "respuesta": """Poné límites claros: horarios de descanso y momentos sin pantalla. El bienestar no es falta de trabajo, sino equilibrio entre acción y pausa.""",
             "contexto_emocional_esperado": "confianza",
@@ -730,7 +777,8 @@ Este principio está reconocido por la Convención sobre los Derechos de las Per
                 "Tengo miedo de perder mi pensión si empiezo a trabajar",
                 "¿Puedo trabajar y cobrar la pensión al mismo tiempo?",
                 "¿Qué pasa con mi pensión si consigo trabajo?",
-                "Compatibilidad pensión no contributiva y trabajo"
+                "Compatibilidad pensión no contributiva y trabajo",
+                "Si consigo un trabajo, ¿me sacan la pensión?"
             ],
             "respuesta": """Podés mantener tu pensión siempre que tus ingresos no superen ciertos límites.
 Por ejemplo, si accedés a un empleo formal, podés seguir cobrando la pensión si el salario bruto no supera el 50% del Salario Mínimo Vital y Móvil (SMVM).
@@ -745,7 +793,8 @@ Lo importante es informar el nuevo ingreso para mantener tu situación regulariz
                 "¿Qué beneficios tengo con el CUD?",
                 "¿Para qué sirve el certificado de discapacidad?",
                 "Derechos del CUD",
-                "Resumen de beneficios del Certificado Único de Discapacidad"
+                "Resumen de beneficios del Certificado Único de Discapacidad",
+                "Para qué más sirve el CUD además del transporte" 
             ],
             "respuesta": """El Certificado Único de Discapacidad (CUD) te permite acceder a varios beneficios sin costo:
 transporte público gratuito en todo el país, cobertura del 100% en medicamentos y tratamientos vinculados a tu discapacidad,
@@ -803,7 +852,8 @@ y la Ley 22.431 establecen que los organismos públicos deben garantizar compren
                 "Me enoja que las oficinas públicas no sean accesibles",
                 "No hay rampa en la oficina",
                 "¿Dónde denuncio la falta de accesibilidad?",
-                "El sitio web del gobierno no es accesible"
+                "El sitio web del gobierno no es accesible",
+                "Fui a la municipalidad y no tienen rampa"
             ],
             "respuesta": """Tenés derecho a exigir accesibilidad física y digital.
 La Ley 24.314 y la Ley 26.653 obligan al Estado a garantizar condiciones accesibles en edificios y portales web.
@@ -817,7 +867,8 @@ Podés presentar un reclamo en la Defensoría del Pueblo o el Ministerio de Obra
                 "¿Mi acompañante también viaja gratis con mi CUD?",
                 "¿Cómo saco el pasaje para mi acompañante?",
                 "El CUD dice 'con acompañante', ¿paga pasaje?",
-                "Ley 25.635 transporte"
+                "Ley 25.635 transporte",
+                "¿El CUD me sirve para viajar gratis?" 
             ],
             "respuesta": """Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario.
 Solo necesitás presentar tu certificado y DNI en la terminal o empresa correspondiente, según la Ley 25.635 y resoluciones de la CNRT.""",
@@ -859,7 +910,8 @@ Informarte es tu mejor herramienta de autonomía y empoderamiento ciudadano.""",
                 "No tengo experiencia laboral, ¿cómo puedo empezar?",
                 "¿Cómo consigo mi primer trabajo?",
                 "¿Qué pongo en el CV si no tengo experiencia?",
-                "Programa Jóvenes con Más y Mejor Trabajo"
+                "Programa Jóvenes con Más y Mejor Trabajo",
+                "Quiero trabajar pero nunca trabajé, ¿qué hago?"
             ],
             "respuesta": """Podés participar del Programa Jóvenes con Más y Mejor Trabajo del Ministerio de Trabajo, que te permite capacitarte y realizar prácticas en empresas.
 También podés sumar experiencias en voluntariados o proyectos comunitarios, que se valoran en tu primer CV.""",
@@ -951,7 +1003,8 @@ El Portal Empleo ofrece plantillas gratuitas y guías paso a paso.""",
                 "¿Qué hago si me piden trabajar sin registrarme?",
                 "Me quieren pagar en negro",
                 "¿Cómo denuncio trabajo informal?",
-                "Derechos del trabajo registrado"
+                "Derechos del trabajo registrado",
+                "Me dijeron que me van a pagar en negro"
             ],
             "respuesta": """El trabajo no registrado es ilegal. Tenés derecho a exigir tu alta en AFIP y tus aportes.
 Podés denunciar de forma confidencial en la línea 0800-666-4100 del Ministerio de Trabajo o a través del sitio www.argentina.gob.ar/trabajo.""",
@@ -1016,7 +1069,8 @@ Cada intento te acerca a tu objetivo.""",
                 "Pasos legales a seguir si sufrís discriminación por discapacidad en una entrevista",
                 "Me discriminaron en una entrevista por mi discapacidad",
                 "¿Dónde denuncio discriminación laboral?",
-                "Ley 23.592 discriminación"
+                "Ley 23.592 discriminación",
+                "Me preguntaron por mi discapacidad en una entrevista y me sentí mal"
             ],
             "respuesta": """La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. Podés presentar una denuncia ante el Ministerio Público de la Defensa.
 O pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica.""",
@@ -1112,7 +1166,8 @@ Las juntas evaluadoras te orientan paso a paso, y podés pedir que te expliquen 
                 "¿El trámite del CUD tiene costo?",
                 "¿Cuánto sale sacar el CUD?",
                 "Me quieren cobrar por el trámite del CUD",
-                "¿Es gratis el CUD?"
+                "¿Es gratis el CUD?",
+                "¿Se paga para sacar el CUD?"
             ],
             "respuesta": """No. El trámite del CUD es totalmente gratuito en todo el país.
 Si alguien te solicita un pago o arancel, hacé la denuncia ante la Agencia Nacional de Discapacidad (ANDIS).""",
@@ -1179,7 +1234,8 @@ Te permite acceder a prestaciones médicas y programas de salud pública sin cos
                 "Me rechazaron el CUD, ¿qué puedo hacer?",
                 "No me dieron el CUD, ¿cómo apelo?",
                 "¿Qué hacer si me niegan el CUD?",
-                "Reclamo por rechazo de CUD"
+                "Reclamo por rechazo de CUD",
+                "Me bocharon el CUD, ¿qué hago ahora?"
             ],
             "respuesta": """Podés pedir una revisión del dictamen dentro de los 10 días hábiles posteriores a la notificación.
 La ANDIS dispone de un formulario para apelaciones.
@@ -1260,32 +1316,32 @@ Podés informarte más en el sitio oficial de ANDIS (www.argentina.gob.ar/andis/
 if __name__ == "__main__":
     # Script de validación mejorado al ejecutar directamente
     print(f"--- Validación de src/expert_kb.py ---")
-    
+
     tutores_cargados = list(EXPERT_KB.keys())
     print(f"Tutores cargados: {len(tutores_cargados)} -> {tutores_cargados}")
-    
+
     total_intenciones = sum(len(v) for v in EXPERT_KB.values())
     print(f"Total de intenciones definidas: {total_intenciones}")
 
     # Chequeo de emociones válidas
     # Normalizamos a minúsculas para la validación interna, tal como están en el JSON
     valid_emotions = {
-        "alegria", "tristeza", "ira", "miedo", 
+        "alegria", "tristeza", "ira", "miedo",
         "sorpresa", "confianza", "anticipacion", "neutral"
     }
-    
+
     errors = []
-    
+
     for tutor, intentions in EXPERT_KB.items():
         if not intentions:
              errors.append(f"Error en {tutor}: El tutor no tiene intenciones definidas (lista vacía).")
-             
+
         for i, intention in enumerate(intentions):
-            
+
             # --- Validación de campos obligatorios ---
             if "pregunta_clave" not in intention or not intention["pregunta_clave"]:
                 errors.append(f"Error en {tutor}[{i}]: Falta 'pregunta_clave' o está vacía.")
-            
+
             if "respuesta" not in intention or not intention["respuesta"]:
                 errors.append(f"Error en {tutor}[{i}]: Falta 'respuesta' o está vacía. Clave: '{intention.get('pregunta_clave')}'")
 
@@ -1299,7 +1355,7 @@ if __name__ == "__main__":
             # --- Validación de 'contexto_emocional_esperado' ---
             emo_raw = intention.get("contexto_emocional_esperado", "neutral") # Default a neutral si falta
             emo = str(emo_raw).strip().lower() # Normalizar a minúscula
-            
+
             if emo not in valid_emotions:
                 errors.append(f"Error en {tutor}[{i}]: Emoción '{emo_raw}' inválida (Normalizada: '{emo}'). Clave: '{intention.get('pregunta_clave')}'")
 
