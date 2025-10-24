@@ -97,7 +97,7 @@ class Experto:
             'pregunta_clave', 'variantes', 'respuesta', etc.
         kb_keys (List[str]): Lista extraída de las 'pregunta_clave' para la búsqueda.
         kb_embeddings (torch.Tensor | None): Embeddings de *centroides* normalizados
-            pre-calculados para cada intención (pregunta_clave + variantes).
+            pre-calculados para cada intención (solo 'variantes').
         similarity_threshold (float): Umbral de similitud coseno para considerar
             una coincidencia semántica válida.
     """
@@ -139,13 +139,13 @@ class Experto:
         Pre-calcula los embeddings de *centroide* para cada intención en la KB.
 
         Para cada intención:
-        1. Toma la 'pregunta_clave' y todas sus 'variantes'.
+        1. Toma SOLAMENTE las 'variantes' (representan el habla del usuario).
         2. Codifica todos estos textos.
         3. Calcula su vector promedio (centroide).
         4. Normaliza el centroide.
         5. Almacena el centroide en `self.kb_embeddings`.
 
-        `self.kb_keys` se puebla solo con las 'pregunta_clave' para
+        `self.kb_keys` se puebla con las 'pregunta_clave' (etiquetas) para
         mantener la compatibilidad del mapeo de índices.
         """
         model = get_semantic_model()
@@ -167,37 +167,43 @@ class Experto:
                 if not key or key == "default":
                     continue
 
-                # 1. Construir corpus de textos (clave + variantes)
+                # 1. Construir corpus SÓLO con variantes
                 variantes = item.get("variantes", [])
-                corpus_texts = [key] + variantes
-                # Filtrar strings vacíos o None
-                corpus_texts = [str(t) for t in corpus_texts if t and isinstance(t, str)]
+                
+                # REFINAMIENTO: Usar SÓLO las variantes para el centroide.
+                # La 'pregunta_clave' (etiqueta) NO debe promediarse.
+                corpus_texts = [str(t) for t in variantes if t and isinstance(t, str)]
 
                 if not corpus_texts:
-                    warnings.warn(f"Intención '{key}' en {self.nombre} no tiene textos válidos. Omitiendo.")
+                    warnings.warn(f"Intención '{key}' en {self.nombre} no tiene 'variantes' válidas. Omitiendo centroide.")
                     continue
                 
-                # 2. Codificar todos los textos del corpus
+                # 2. Codificar todos los textos del corpus (solo variantes)
                 corpus_embeddings = model.encode(corpus_texts, convert_to_tensor=True)
                 
                 # 3. Calcular el centroide (vector promedio)
-                centroid = torch.mean(corpus_embeddings, dim=0)
-                
-                # 4. Normalizar el centroide (L2 norm) - TAREA 2
+                # Asegurarse de que no sea un tensor vacío si algo falló
+                if corpus_embeddings.shape[0] > 0:
+                    centroid = torch.mean(corpus_embeddings, dim=0)
+                else:
+                    warnings.warn(f"Intención '{key}' en {self.nombre} generó embeddings vacíos. Omitiendo.")
+                    continue
+
+                # 4. Normalizar el centroide (L2 norm)
                 centroid_normalized = F.normalize(centroid, p=2, dim=0)
                 
-                # 5. Guardar el centroide y la clave
+                # 5. Guardar el centroide y la clave (etiqueta)
                 all_centroids.append(centroid_normalized)
-                new_kb_keys.append(key)
+                new_kb_keys.append(key) # La clave se guarda para mapear el índice
 
             # Asignar a los atributos de la clase
-            self.kb_keys = new_kb_keys # TAREA 3: Exponer claves
+            self.kb_keys = new_kb_keys 
             if all_centroids:
-                # TAREA 1: Guardar embeddings de centroides
                 self.kb_embeddings = torch.stack(all_centroids)
-                # print(f"› Centroides normalizados calculados para {self.nombre} (KB size: {len(self.kb_keys)})") # Debug
+                # print(f"› Centroides (solo variantes) normalizados para {self.nombre} (KB size: {len(self.kb_keys)})") # Debug
             else:
                 self.kb_embeddings = None
+                warnings.warn(f"No se generaron centroides para {self.nombre}.")
 
         except Exception as e:
             warnings.warn(
@@ -258,11 +264,12 @@ class Experto:
                 # 1. Codificar el prompt
                 prompt_embedding_raw = model.encode(prompt, convert_to_tensor=True)
                 
-                # 2. Normalizar el embedding del prompt (TAREA 2)
+                # 2. Normalizar el embedding del prompt
                 prompt_embedding = F.normalize(prompt_embedding_raw, p=2, dim=0)
 
                 # 3. Calcular similitud (dot product de vectores normalizados)
-                cos_scores = util.cos_sim(prompt_embedding, self.kb_embeddings)[0]
+                # .to(device) es buena práctica si kb_embeddings está en GPU
+                cos_scores = util.cos_sim(prompt_embedding, self.kb_embeddings.to(prompt_embedding.device))[0]
                 
                 best_match_idx = torch.argmax(cos_scores).item()
                 best_match_score = cos_scores[best_match_idx].item()
@@ -493,7 +500,7 @@ class MoESystem:
         print("› Inicializando modelo semántico y embeddings de expertos...")
         get_semantic_model() # Carga el modelo si no está cargado
         for expert in list(self.expert_map.values()) + [self.cud_expert]:
-            expert._initialize_knowledge_base() # Ahora calcula centroides normalizados
+            expert._initialize_knowledge_base() # Ahora calcula centroides (solo variantes) normalizados
         print("› Embeddings de expertos listos.")
 
 
