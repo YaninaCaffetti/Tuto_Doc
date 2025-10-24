@@ -55,6 +55,7 @@ except KeyError as e:
 # Define las consultas de prueba y la intención esperada para cada una.
 # Incluye paráfrasis (True Positives) y consultas trampa (True Negatives).
 # ESTA LISTA DEBE SER AMPLIADA PARA UNA VALIDACIÓN RIGUROSA DE TESIS.
+
 validation_set = [
     # --- Pruebas para TutorCarrera ---
     {
@@ -218,6 +219,29 @@ def run_validation():
     print("› Embeddings (re)inicializados.")
 
     # Iterar sobre cada caso de prueba en el set de validación
+    # --- 🔧 Mapa de alias entre nombres de tutores y arquetipos (compatibilidad para testeo) ---
+    alias_map = {
+        "TutorCarrera": "Prof_Subutil",
+        "TutorInteraccion": "Com_Desafiado",
+        "TutorCompetencias": "Nav_Informal",
+        "TutorBienestar": "Potencial_Latente",
+        "TutorApoyos": "Cand_Nec_Sig",
+        "TutorPrimerEmpleo": "Joven_Transicion",
+        "GestorCUD": "GestorCUD"
+    }
+
+    print(f"› Ejecutando {len(validation_set)} pruebas de validación...")
+    for item in validation_set:
+        tutor_name = item["tutor_name"]
+        prompt = item["prompt_usuario"]
+        expected_key = item["expected_intent_key"]
+
+        # Usar el alias si existe; si no, mantener el nombre original
+        mapped_name = alias_map.get(tutor_name, tutor_name)
+        tutor = all_experts.get(mapped_name)
+
+    
+
     print(f"› Ejecutando {len(validation_set)} pruebas de validación...")
     for item in validation_set:
         tutor_name = item["tutor_name"]
