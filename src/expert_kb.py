@@ -14,209 +14,218 @@ EXPERT_KB = {
     "TutorCarrera": [
         {
             "pregunta_clave": "¿Cómo puedo mejorar mi CV?",
-            "respuesta": "Para tu CV, enfócate en logros cuantificables. Por ejemplo, 'optimicé el proceso X, reduciendo el tiempo en un 15%'.",
+            "respuesta": """Para tu CV, enfócate en logros cuantificables. Por ejemplo, 'optimicé el proceso X, reduciendo el tiempo en un 15%'.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["cv", "orientacion_laboral", "documentacion"]
         },
         {
             "pregunta_clave": "Dame consejos para una entrevista de trabajo",
-            "respuesta": "Durante una entrevista, prepara respuestas para 'háblame de ti' usando la estructura 'Presente-Pasado-Futuro'. Es muy efectiva.",
+            "respuesta": """Durante una entrevista, prepara respuestas para 'háblame de ti' usando la estructura 'Presente-Pasado-Futuro'. Es muy efectiva.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["entrevista", "habilidades_blandas", "preparacion"]
         },
         {
             "pregunta_clave": "¿Debería usar LinkedIn?",
-            "respuesta": "Sí. Tu perfil de LinkedIn debe tener una foto profesional y un titular que describa el valor que aportas, no solo tu puesto actual.",
+            "respuesta": """Sí. Tu perfil de LinkedIn debe tener una foto profesional y un titular que describa el valor que aportas, no solo tu puesto actual.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["linkedin", "marca_personal", "redes_profesionales"]
         },
+
         {
-            "pregunta_clave": "¿Cómo negociar mi salario?",
-            "respuesta": "Al negociar el salario, investiga el rango de mercado. Nunca des la primera cifra, pregunta por el presupuesto que manejan para el rol.",
+            "pregunta_clave": "Estrategias para la negociación salarial inicial o de aumento",
+            "respuesta": """Al negociar el salario, investiga el rango de mercado. Nunca des la primera cifra, pregunta por el presupuesto que manejan para el rol.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["negociacion", "salario", "comunicacion"]
         },
+
         {
             "pregunta_clave": "¿Cómo negociar lo que voy a cobrar?",
-            "respuesta": "Investigá los rangos salariales del sector y esperá que el empleador proponga primero. Argumentá con base en tus competencias y logros, no en necesidad económica.",
+            "respuesta": """Investigá los rangos salariales del sector y esperá que el empleador proponga primero. Argumentá con base en tus competencias y logros, no en necesidad económica.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["negociacion", "salario","cobro", "comunicacion"]
         },
         {
             "pregunta_clave": "¿Qué hago si no me llaman después de enviar muchos CV?",
-            "respuesta": "Revisá si tu perfil está alineado a las ofertas y personalizá tus postulaciones. Pedí feedback a alguien de confianza o usá simuladores de búsqueda laboral.",
+            "respuesta": """Revisá si tu perfil está alineado a las ofertas y personalizá tus postulaciones. Pedí feedback a alguien de confianza o usá simuladores de búsqueda laboral.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["empleo", "reconversion", "persistencia"]
         },
         {
             "pregunta_clave": "¿Qué pongo en mi CV?",
-            "respuesta": "Resumí en tres líneas quién sos profesionalmente, tus principales competencias y tu motivación. Evitá frases genéricas; sé auténtico y directo.",
+            "respuesta": """Resumí en tres líneas quién sos profesionalmente, tus principales competencias y tu motivación. Evitá frases genéricas; sé auténtico y directo.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["cv", "presentacion", "autoconocimiento"]
         },
         {
             "pregunta_clave": "¿Cómo puedo mejorar lo que digo?",
-            "respuesta": "Practicá en voz alta, grabate y escuchá tu tono. Usá frases cortas, pausas naturales y ejemplos concretos. La claridad comunica más que la velocidad.",
+            "respuesta": """Practicá en voz alta, grabate y escuchá tu tono. Usá frases cortas, pausas naturales y ejemplos concretos. La claridad comunica más que la velocidad.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["comunicacion", "presentacion", "autoeficacia"]
         },
         {
             "pregunta_clave": "¿Cómo identifico mis fortalezas profesionales?",
-            "respuesta": "Pensá en tareas que te resultan naturales o en los elogios que recibís con frecuencia. También podés usar tests de intereses vocacionales como apoyo.",
+            "respuesta": """Pensá en tareas que te resultan naturales o en los elogios que recibís con frecuencia. También podés usar tests de intereses vocacionales como apoyo.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["autoconocimiento", "fortalezas", "orientacion"]
         },
         {
             "pregunta_clave": "¿Qué habilidades buscan las empresas hoy?",
-            "respuesta": "Además de lo técnico, se valoran la adaptabilidad, comunicación y trabajo en equipo. Aprender a aprender es una de las competencias más demandadas.",
+            "respuesta": """Además de lo técnico, se valoran la adaptabilidad, comunicación y trabajo en equipo. Aprender a aprender es una de las competencias más demandadas.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["empleabilidad", "habilidades_blandas", "tendencias"]
         },
         {
             "pregunta_clave": "¿Cómo explico los períodos sin trabajo?",
-            "respuesta": "Mencioná lo que hiciste en ese tiempo: cursos, proyectos personales o tareas de cuidado. Mostrá que seguiste aprendiendo o desarrollando habilidades.",
+            "respuesta": """Mencioná lo que hiciste en ese tiempo: cursos, proyectos personales o tareas de cuidado. Mostrá que seguiste aprendiendo o desarrollando habilidades.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["cv", "explicacion", "transparencia"]
         },
         {
             "pregunta_clave": "¿Cómo elegir entre dos ofertas laborales?",
-            "respuesta": "Compará más allá del salario: cultura organizacional, aprendizaje, estabilidad y valores. Elegí donde puedas crecer sin comprometer tu bienestar.",
+            "respuesta": """Compará más allá del salario: cultura organizacional, aprendizaje, estabilidad y valores. Elegí donde puedas crecer sin comprometer tu bienestar.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["decision", "eleccion", "empleo"]
         },
         {
             "pregunta_clave": "¿Qué decir cuando me preguntan por mis debilidades?",
-            "respuesta": "Elegí una debilidad real pero gestionable y mostrala como oportunidad de mejora. Por ejemplo: 'A veces me cuesta delegar, pero trabajo en confiar más en el equipo'.",
+            "respuesta": """Elegí una debilidad real pero gestionable y mostrala como oportunidad de mejora. Por ejemplo: 'A veces me cuesta delegar, pero trabajo en confiar más en el equipo'.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["entrevista", "autoconocimiento", "mejora_continua"]
         },
         {
             "pregunta_clave": "¿Conviene hacer cursos cortos o una carrera larga?",
-            "respuesta": "Depende de tus metas. Los cursos cortos actualizan rápido tus competencias, mientras que una carrera ofrece bases teóricas sólidas. Podés combinarlos.",
+            "respuesta": """Depende de tus metas. Los cursos cortos actualizan rápido tus competencias, mientras que una carrera ofrece bases teóricas sólidas. Podés combinarlos.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["formacion", "educacion", "proyeccion"]
         },
+
         {
-            "pregunta_clave": "¿Cómo manejar el rechazo laboral?",
-            "respuesta": "El rechazo no define tu valor profesional. Analizá qué podés mejorar y seguí postulando. Cada entrevista te prepara mejor para la siguiente.",
+            "pregunta_clave": "Afrontar el rechazo en búsquedas laborales: Resiliencia y próximos pasos",
+            "respuesta": """El rechazo no define tu valor profesional. Analizá qué podés mejorar y seguí postulando. Cada entrevista te prepara mejor para la siguiente.""",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["resiliencia", "motivacion", "autoestima"]
         },
         {
-            "pregunta_clave": "¿Cómo saber si debo cambiar de trabajo?",
-            "respuesta": "Si sentís estancamiento, estrés crónico o falta de aprendizaje, es momento de evaluar opciones. Planificá la transición antes de tomar la decisión final.",
+            "pregunta_clave": "Evaluación personal: Indicadores para decidir cambiar de empleo",
+            "respuesta": """Si sentís estancamiento, estrés crónico o falta de aprendizaje, es momento de evaluar opciones. Planificá la transición antes de tomar la decisión final.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["transicion", "decision", "planificacion"]
         }
+
     ],
 
     "TutorInteraccion": [
-         {
+        {
             "pregunta_clave": "¿Cómo puedo comunicarme mejor?",
-            "respuesta": "Una técnica clave es la 'escucha activa': reformula lo que dice la otra persona para asegurar que has entendido. Genera mucha confianza.",
+            "respuesta": """Una técnica clave es la 'escucha activa': reformula lo que dice la otra persona para asegurar que has entendido. Genera mucha confianza.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["comunicacion", "habilidades_blandas", "escucha_activa"]
         },
+
         {
-            "pregunta_clave": "Me cuesta hablar en reuniones",
-            "respuesta": "En reuniones, si te cuesta intervenir, prepara una o dos preguntas de antemano. Es una forma fácil de participar.",
+            "pregunta_clave": "Superar la dificultad o inhibición para participar verbalmente en reuniones",
+            "respuesta": """En reuniones, si te cuesta intervenir, prepara una o dos preguntas de antemano. Es una forma fácil de participar.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["comunicacion", "reuniones", "autoeficacia"]
         },
+
         {
             "pregunta_clave": "¿Cómo manejar un conflicto con un colega?",
-            "respuesta": "Para manejar un conflicto, enfócate en el problema, no en la persona. Usa frases como 'Cuando ocurre X, siento Y'.",
+            "respuesta": """Para manejar un conflicto, enfócate en el problema, no en la persona. Usa frases como 'Cuando ocurre X, siento Y'.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["conflicto", "comunicacion", "gestion_emocional"]
         },
         {
             "pregunta_clave": "Me da miedo presentar en público",
-            "respuesta": "Al presentar en público, estructura tu discurso con una introducción clara (el problema), un desarrollo (tu solución) y una conclusión (el llamado a la acción).",
+            "respuesta": """Al presentar en público, estructura tu discurso con una introducción clara (el problema), un desarrollo (tu solución) y una conclusión (el llamado a la acción).""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["presentacion", "habilidades_blandas", "autoeficacia"]
         },
         {
             "pregunta_clave": "¿Cómo puedo dar mi opinión sin que se lo tomen mal?",
-            "respuesta": "Usá la técnica del 'sándwich': empezá con algo positivo, luego comentá el punto a mejorar y cerrá reforzando la confianza en la persona.",
+            "respuesta": """Usá la técnica del 'sándwich': empezá con algo positivo, luego comentá el punto a mejorar y cerrá reforzando la confianza en la persona.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["feedback", "comunicacion", "liderazgo"]
         },
         {
             "pregunta_clave": "Mi equipo no me escucha",
-            "respuesta": "Pedí una reunión breve para aclarar roles y expectativas. A veces el problema no es falta de respeto sino de claridad en la comunicación.",
+            "respuesta": """Pedí una reunión breve para aclarar roles y expectativas. A veces el problema no es falta de respeto sino de claridad en la comunicación.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["equipo", "liderazgo", "colaboracion"]
         },
         {
             "pregunta_clave": "¿Qué hago si alguien me interrumpe todo el tiempo?",
-            "respuesta": "Podés decir con calma: 'Dejame terminar esta idea y te escucho enseguida'. Establecer límites con respeto mejora la dinámica grupal.",
+            "respuesta": """Podés decir con calma: 'Dejame terminar esta idea y te escucho enseguida'. Establecer límites con respeto mejora la dinámica grupal.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["asertividad", "respeto", "gestion_conversacional"]
         },
         {
             "pregunta_clave": "¿Cómo puedo participar más en grupo?",
-            "respuesta": "Empieza con pequeños aportes: resumir ideas, proponer ejemplos o hacer preguntas. Con el tiempo ganarás presencia sin forzarte a hablar demasiado.",
+            "respuesta": """Empieza con pequeños aportes: resumir ideas, proponer ejemplos o hacer preguntas. Con el tiempo ganarás presencia sin forzarte a hablar demasiado.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["trabajo_en_equipo", "participacion", "autoeficacia"]
         },
         {
             "pregunta_clave": "Me cuesta decir que no",
-            "respuesta": "Decir que no no te hace menos colaborativo. Podés usar frases como 'Ahora no puedo, pero puedo ayudarte más tarde'. Asertividad también es respeto propio.",
+            "respuesta": """Decir que no no te hace menos colaborativo. Podés usar frases como 'Ahora no puedo, pero puedo ayudarte más tarde'. Asertividad también es respeto propio.""",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["asertividad", "gestion_tiempo", "limites"]
         },
         {
             "pregunta_clave": "¿Cómo puedo mejorar mi empatía?",
-            "respuesta": "Intentá imaginar la situación desde la perspectiva de la otra persona. Escuchá sin planear tu respuesta mientras te hablan.",
+            "respuesta": """Intentá imaginar la situación desde la perspectiva de la otra persona. Escuchá sin planear tu respuesta mientras te hablan.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["empatia", "comunicacion", "inteligencia_emocional"]
         },
         {
             "pregunta_clave": "¿Qué hacer si hay malentendidos por mensajes escritos?",
-            "respuesta": "Si notás un malentendido por texto o correo, proponé aclararlo por llamada o reunión breve. El tono emocional se entiende mejor en voz.",
+            "respuesta": """Si notás un malentendido por texto o correo, proponé aclararlo por llamada o reunión breve. El tono emocional se entiende mejor en voz.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["comunicacion_digital", "malentendidos", "resolucion"]
         },
+
         {
-            "pregunta_clave": "¿Cómo manejar una crítica injusta?",
-            "respuesta": "Respirá antes de responder, siempre. Agradecé el comentario y pedí ejemplos específicos. Si no hay argumentos, podés cerrar con cortesía y mantener tu postura.",
+            "pregunta_clave": "Recepción de críticas laborales percibidas como injustas: Respuesta asertiva",
+            "respuesta": """Respirá antes de responder, siempre. Agradecé el comentario y pedí ejemplos específicos. Si no hay argumentos, podés cerrar con cortesía y mantener tu postura.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["critica", "gestion_emocional", "autocontrol"]
         },
+
         {
             "pregunta_clave": "¿Cómo expresar desacuerdo sin generar tensión?",
-            "respuesta": "Usá frases como 'Entiendo tu punto, aunque veo otra perspectiva'. Evitá el 'pero', reemplazalo por 'aunque'. Cambia el tono de la conversación.",
+            "respuesta": """Usá frases como 'Entiendo tu punto, aunque veo otra perspectiva'. Evitá el 'pero', reemplazalo por 'aunque'. Cambia el tono de la conversación.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["asertividad", "desacuerdo", "dialogo"]
         },
         {
             "pregunta_clave": "¿Cómo generar confianza en nuevos grupos?",
-            "respuesta": "Cumplí tus compromisos, compartí información útil y mostrales que valorás su tiempo. La confianza se construye con coherencia, no rapidez.",
+            "respuesta": """Cumplí tus compromisos, compartí información útil y mostrales que valorás su tiempo. La confianza se construye con coherencia, no rapidez.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["confianza", "integracion", "trabajo_en_equipo"]
         },
          {
             "pregunta_clave": "¿Cómo puedo participar más en equipo?",
-            "respuesta": "Ofrecé ayuda en pequeñas tareas o proponé ideas para mejorar procesos. Participar también es escuchar y conectar con las necesidades del grupo.",
+            "respuesta": """Ofrecé ayuda en pequeñas tareas o proponé ideas para mejorar procesos. Participar también es escuchar y conectar con las necesidades del grupo.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["trabajo_en_equipo", "colaboracion", "participacion"]
         },
         {
             "pregunta_clave": "¿Qué hago si no me entienden cuando explico algo?",
-            "respuesta": "Intentá usar ejemplos concretos o metáforas. Preguntá '¿te parece claro?' para verificar comprensión y ajustar sobre la marcha.",
+            "respuesta": """Intentá usar ejemplos concretos o metáforas. Preguntá '¿te parece claro?' para verificar comprensión y ajustar sobre la marcha.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["comunicacion", "claridad", "didactica"]
         },
          {
             "pregunta_clave": "¿Cómo mejorar mi lenguaje corporal?",
-            "respuesta": "Mantené una postura abierta, mirá a tu interlocutor y asentí suavemente. El lenguaje corporal transmite seguridad y atención.",
+            "respuesta": """Mantené una postura abierta, mirá a tu interlocutor y asentí suavemente. El lenguaje corporal transmite seguridad y atención.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["comunicacion_no_verbal", "presencia", "confianza"]
         },
     ],
 
     "TutorCompetencias": [
-        {
+
+         {
             "pregunta_clave": "¿Qué competencias debería fortalecer para mejorar mis oportunidades laborales?",
             "respuesta": "Las más valoradas hoy son la comunicación efectiva, la adaptabilidad y la resolución de problemas. Identificá cuál de ellas podés empezar a practicar esta semana.",
             "contexto_emocional_esperado": "anticipacion",
@@ -311,103 +320,95 @@ EXPERT_KB = {
     "TutorBienestar": [
         {
             "pregunta_clave": "Me siento muy cansado últimamente",
-            "respuesta": "Escuchá a tu cuerpo. Dormir bien, hidratarte y hacer pausas activas puede mejorar tu energía. Pequeños descansos diarios generan gran diferencia.",
+            "respuesta": """Escuchá a tu cuerpo. Dormir bien, hidratarte y hacer pausas activas puede mejorar tu energía. Pequeños descansos diarios generan gran diferencia.""",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["autocuidado", "fatiga", "descanso"]
         },
+
         {
-            "pregunta_clave": "Estoy solo en esto.",
-            "respuesta": "No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.",
+            "pregunta_clave": "Manejo del estrés por sobrecarga: Miedo a no cumplir expectativas",
+            "respuesta": """No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["gestion_del_estres", "priorizacion", "autocompasion"]
         },
-        {
-            "pregunta_clave": "Sensación de sobrecarga y miedo a no poder cumplir con todo", 
-            "respuesta": "No estás solo. A veces hacer una lista y priorizar ayuda a sentir control. Empezá por lo que depende de vos, paso a paso.",
-            "contexto_emocional_esperado": "miedo",
-            "tags": ["gestion_del_estres", "priorizacion", "autocompasion"]
-        },
+
         {
             "pregunta_clave": "Estoy frustrado con mi situación actual",
-            "respuesta": "Es válido sentir enojo o frustración. Canalizalos hacia acciones pequeñas y concretas. Moverte en lugar de quedarte paralizado ya es un logro.",
+            "respuesta": """Es válido sentir enojo o frustración. Canalizalos hacia acciones pequeñas y concretas. Moverte en lugar de quedarte paralizado ya es un logro.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["resiliencia", "accion", "gestion_emocional"]
         },
         {
             "pregunta_clave": "No tengo ganas de nada últimamente",
-            "respuesta": "Puede ser un signo de agotamiento emocional. Permitite descansar y hacer algo que solías disfrutar, aunque sea por unos minutos.",
+            "respuesta": """Puede ser un signo de agotamiento emocional. Permitite descansar y hacer algo que solías disfrutar, aunque sea por unos minutos.""",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["animo", "bienestar_emocional", "recuperacion"]
         },
+
         {
             "pregunta_clave": "Problemas de concentración específicos ligados a la ansiedad",
-            "respuesta": "Cuando la mente se satura, simplificar ayuda. Ordená el entorno y empezá con tareas pequeñas. Celebrá cada avance, por mínimo que sea.",
+            "respuesta": """Cuando la mente se satura, simplificar ayuda. Ordená el entorno y empezá con tareas pequeñas. Celebrá cada avance, por mínimo que sea.""",
             "contexto_emocional_esperado": "miedo",
-            "tags": ["estres", "gestion_cognitiva", "autoeficacia", "concentracion", "ansiedad"] 
+            "tags": ["estres", "gestion_cognitiva", "autoeficacia", "concentracion", "ansiedad"]
         },
         {
-            "pregunta_clave": "Dificultad para concentrarse acompañada de ansiedad o miedo",
-            "respuesta": "Cuando la mente se satura, simplificar ayuda. Ordená el entorno y empezá con tareas pequeñas. Celebrá cada avance, por mínimo que sea.",
-            "contexto_emocional_esperado": "miedo",
-            "tags": ["estres", "gestion_cognitiva", "autoeficacia"]
-        },
-        {
-            "pregunta_clave": "Siento que todo me sale mal",
-            "respuesta": "Es duro sentirse así, pero los errores no definen tu valor. Anotá tres cosas que hiciste bien hoy, aunque sean pequeñas. Eso entrena tu foco positivo.",
+            "pregunta_clave": "Afrontar pensamientos negativos recurrentes sobre fallos o errores",
+            "respuesta": """Es duro sentirse así, pero los errores no definen tu valor. Anotá tres cosas que hiciste bien hoy, aunque sean pequeñas. Eso entrena tu foco positivo.""",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["autoestima", "resiliencia", "autocompasion"]
         },
+
         {
             "pregunta_clave": "Estoy enojado con todos y todo el tiempo",
-            "respuesta": "La ira suele esconder cansancio o miedo. Identificá cuándo aparece y practicá respiración lenta: inhalá 4 segundos, exhalá 6. Calma el cuerpo y la mente.",
+            "respuesta": """La ira suele esconder cansancio o miedo. Identificá cuándo aparece y practicá respiración lenta: inhalá 4 segundos, exhalá 6. Calma el cuerpo y la mente.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["ira", "gestion_emocional", "autocontrol"]
         },
         {
             "pregunta_clave": "Me gustaría sentirme bien",
-            "respuesta": "Incorporá rutinas breves de bienestar: cinco minutos de respiración consciente, caminar o escuchar música, contemplá la naturaleza, rezá o meditá según te salga. Lo simple, repetido, genera calma duradera.",
+            "respuesta": """Incorporá rutinas breves de bienestar: cinco minutos de respiración consciente, caminar o escuchar música, contemplá la naturaleza, rezá o meditá según te salga. Lo simple, repetido, genera calma duradera.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["autocuidado", "habitos_saludables", "calma"]
         },
         {
             "pregunta_clave": "Quiero volver a ser felíz",
-            "respuesta": "Recuperar la motivación lleva tiempo. Empezá por algo que te interese genuinamente, aunque sea pequeño. La acción precede al ánimo.",
+            "respuesta": """Recuperar la motivación lleva tiempo. Empezá por algo que te interese genuinamente, aunque sea pequeño. La acción precede al ánimo.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["motivacion", "energia", "crecimiento_personal"]
         },
         {
             "pregunta_clave": "Me cuesta desconectarme del trabajo",
-            "respuesta": "Poné límites claros: horarios de descanso y momentos sin pantalla. El bienestar no es falta de trabajo, sino equilibrio entre acción y pausa.",
+            "respuesta": """Poné límites claros: horarios de descanso y momentos sin pantalla. El bienestar no es falta de trabajo, sino equilibrio entre acción y pausa.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["equilibrio", "gestion_del_tiempo", "limites"]
         },
         {
             "pregunta_clave": "Estoy ansioso y no sé porqué",
-            "respuesta": "La ansiedad suele anticipar más de lo que ocurre. Probá registrar tus pensamientos y reemplazarlos por afirmaciones más realistas.",
+            "respuesta": """La ansiedad suele anticipar más de lo que ocurre. Probá registrar tus pensamientos y reemplazarlos por afirmaciones más realistas.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["ansiedad", "gestion_emocional", "autoconciencia"]
         },
         {
             "pregunta_clave": "Hoy me siento un poco mejor",
-            "respuesta": "Qué bueno reconocerlo. Celebrar pequeños avances fortalece la confianza. Guardá ese recuerdo para usarlo en días más difíciles.",
+            "respuesta": """Qué bueno reconocerlo. Celebrar pequeños avances fortalece la confianza. Guardá ese recuerdo para usarlo en días más difíciles.""",
             "contexto_emocional_esperado": "alegria",
             "tags": ["autoestima", "progreso", "refuerzo_positivo"]
         },
         {
             "pregunta_clave": "Estoy empezando a disfrutar de mi trabajo",
-            "respuesta": "Excelente señal. Mantener lo que te hace bien consolida la mejora. Sumá variedad, pero sin exigencias: el bienestar también es equilibrio.",
+            "respuesta": """Excelente señal. Mantener lo que te hace bien consolida la mejora. Sumá variedad, pero sin exigencias: el bienestar también es equilibrio.""",
             "contexto_emocional_esperado": "alegria",
             "tags": ["bienestar", "rutinas_saludables", "motivacion"]
         },
         {
             "pregunta_clave": "Quiero aprender a manejar mejor mi ansiedad",
-            "respuesta": "La respiración diafragmática y los ejercicios de atención plena reducen la ansiedad. Practicá 10 minutos diarios para notar el cambio.",
+            "respuesta": """La respiración diafragmática y los ejercicios de atención plena reducen la ansiedad. Practicá 10 minutos diarios para notar el cambio.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["ansiedad", "mindfulness", "regulacion"]
         },
         {
             "pregunta_clave": "Estoy bien. Sé que mejoré mucho",
-            "respuesta": "Reconocer tu propio progreso es fundamental. La sorpresa positiva refuerza la autoconfianza y el compromiso con tu bienestar.",
+            "respuesta": """Reconocer tu propio progreso es fundamental. La sorpresa positiva refuerza la autoconfianza y el compromiso con tu bienestar.""",
             "contexto_emocional_esperado": "alegria",
             "tags": ["autoconocimiento", "progreso", "refuerzo_positivo"]
         }
@@ -429,13 +430,6 @@ Allí te orientarán paso a paso y de forma gratuita sobre pensiones, transporte
 También podés comunicarte con el Programa ADAJUS del Ministerio de Justicia para recibir asistencia en trámites legales.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["tramites", "orientacion", "beneficios", "adajus", "andis"]
-        },
-        {
-            "pregunta_clave": "Detalles sobre el beneficio de acompañante para transporte gratuito con CUD",
-            "respuesta": """Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario.
-Solo necesitás presentar tu certificado y DNI en la terminal o empresa correspondiente, según la Ley 25.635 y resoluciones de la CNRT.""",
-            "contexto_emocional_esperado": "alegria",
-            "tags": ["transporte", "beneficios", "accesibilidad", "ley_25635", "acompanante"]
         },
         {
             "pregunta_clave": "Siento que no me escuchan cuando pido ayuda",
@@ -469,8 +463,9 @@ Lo importante es informar el nuevo ingreso para mantener tu situación regulariz
             "contexto_emocional_esperado": "miedo",
             "tags": ["pension", "empleo", "seguridad_social", "andis", "compatibilizacion"]
         },
+
         {
-            "pregunta_clave": "¿Qué beneficios tengo con el Certificado Único de Discapacidad?",
+            "pregunta_clave": "Listado general de beneficios y derechos otorgados por el CUD",
             "respuesta": """El Certificado Único de Discapacidad (CUD) te permite acceder a varios beneficios sin costo:
 transporte público gratuito en todo el país, cobertura del 100% en medicamentos y tratamientos vinculados a tu discapacidad,
 exención de algunos impuestos automotores y prioridad en programas de empleo y educación inclusiva.
@@ -479,6 +474,7 @@ Es un documento clave para garantizar tus derechos y promover tu autonomía.""",
             "contexto_emocional_esperado": "alegria",
             "tags": ["cud", "beneficios", "salud", "transporte", "educacion_inclusiva"]
         },
+
         {
             "pregunta_clave": "¿Cómo puedo reclamar si me niegan un apoyo o beneficio?",
             "respuesta": """Tenés derecho a recibir una respuesta escrita y fundada.
@@ -518,13 +514,15 @@ Podés presentar un reclamo en la Defensoría del Pueblo o el Ministerio de Obra
             "contexto_emocional_esperado": "ira",
             "tags": ["accesibilidad", "inclusion", "reclamos", "ley_24314", "ley_26653"]
         },
+
         {
-            "pregunta_clave": "Consulta específica sobre viaje gratuito con acompañante usando CUD",
+            "pregunta_clave": "Reglamentación específica del transporte gratuito para acompañante con CUD",
             "respuesta": """Sí. El beneficio de transporte gratuito con CUD incluye a un acompañante cuando sea necesario.
 Solo necesitás presentar tu certificado y DNI en la terminal o empresa correspondiente, según la Ley 25.635 y resoluciones de la CNRT.""",
             "contexto_emocional_esperado": "alegria",
-            "tags": ["transporte", "beneficios", "accesibilidad", "ley_25635", "acompanante"] 
+            "tags": ["transporte", "beneficios", "accesibilidad", "ley_25635", "acompanante"]
         },
+
         {
             "pregunta_clave": "Me sorprende que existan tantos programas de apoyo",
             "respuesta": """Sí, y cada año se amplían. Conocerlos te permite aprovechar recursos disponibles y compartir información con otras personas.
@@ -549,13 +547,6 @@ Informarte es tu mejor herramienta de autonomía y empoderamiento ciudadano.""",
 También podés sumar experiencias en voluntariados o proyectos comunitarios, que se valoran en tu primer CV.""",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["primer_empleo", "capacitacion", "ministerio_trabajo"]
-        },
-        {
-            "pregunta_clave": "Procedimiento legal y denuncia por discriminación laboral durante entrevista",
-            "respuesta": """La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. Podés presentar una denuncia ante el Ministerio Público de la Defensa.
-O pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica.""",
-            "contexto_emocional_esperado": "ira",
-            "tags": ["discriminacion", "inclusion", "ministerio_justicia", "adajus", "ley_23592"]
         },
         {
             "pregunta_clave": "¿Existe algún programa de apoyo para mi primera búsqueda laboral?",
@@ -585,13 +576,15 @@ Podés coordinarlo con tu empleador o a través de programas de inserción labor
             "contexto_emocional_esperado": "alegria",
             "tags": ["educacion", "trabajo_estudio", "derechos", "ley_20744"]
         },
+
         {
-            "pregunta_clave": "Tengo miedo de que no me contraten por mi discapacidad",
+            "pregunta_clave": "Afrontar el miedo al rechazo laboral debido a la discapacidad",
             "respuesta": """Tenés derecho a igualdad de oportunidades laborales. La Ley 22.431 y el Decreto 312/2010 establecen el 4% de cupo en el sector público y promueven la inclusión en el sector privado.
 Podés registrarte en la Red de Servicios de Empleo de ANDIS para acceder a búsquedas inclusivas.""",
             "contexto_emocional_esperado": "miedo",
             "tags": ["discapacidad", "inclusion_laboral", "ley_22431", "cupo_laboral", "andis"]
         },
+
         {
             "pregunta_clave": "¿Cómo puedo armar mi primer CV?",
             "respuesta": """Usá un formato claro: datos personales, formación, cursos y habilidades.
@@ -635,13 +628,15 @@ Cada intento te acerca a tu objetivo.""",
             "contexto_emocional_esperado": "tristeza",
             "tags": ["orientacion_laboral", "motivacion", "resiliencia", "ministerio_trabajo", "andis"]
         },
+
         {
-            "pregunta_clave": "Acciones a tomar ante discriminación por discapacidad en una entrevista", 
+            "pregunta_clave": "Pasos legales a seguir si sufrís discriminación por discapacidad en una entrevista",
             "respuesta": """La Ley 23.592 prohíbe la discriminación laboral por motivos de discapacidad. Podés presentar una denuncia ante el Ministerio Público de la Defensa.
 O pedir acompañamiento legal gratuito en el Programa ADAJUS, que garantiza accesibilidad jurídica.""",
             "contexto_emocional_esperado": "ira",
             "tags": ["discriminacion", "inclusion", "ministerio_justicia", "adajus", "ley_23592"]
         },
+
         {
             "pregunta_clave": "¿Dónde puedo consultar mis derechos laborales?",
             "respuesta": """Podés ingresar al sitio oficial del Ministerio de Trabajo (www.argentina.gob.ar/trabajo) y revisar la Guía de Derechos Laborales.
@@ -659,8 +654,7 @@ Estos cursos te preparan para tu primer trabajo y están adaptados a distintas c
     ],
 
     "GestorCUD": [
-   
-      {
+        {
             "pregunta_clave": "Explicación fundamental: Qué es y para qué sirve el CUD",
             "respuesta": """El Certificado Único de Discapacidad (CUD) es un documento oficial que acredita tu discapacidad y te permite acceder a derechos y beneficios en salud, transporte, educación y trabajo.
 Está regulado por la Ley 22.431 y la Convención sobre los Derechos de las Personas con Discapacidad (Ley 26.378).""",
@@ -675,7 +669,6 @@ Si necesitás apoyo para trasladarte, podés solicitar asistencia o turno priori
             "contexto_emocional_esperado": "confianza",
             "tags": ["tramite", "andis", "accesibilidad", "procedimiento"]
         },
-  
         {
             "pregunta_clave": "¿Qué documentación necesito para iniciar el trámite del CUD?",
             "respuesta": """Tenés que presentar tu DNI, un resumen médico actualizado y estudios que certifiquen la condición.
@@ -696,7 +689,7 @@ Las juntas evaluadoras te orientan paso a paso, y podés pedir que te expliquen 
             "respuesta": """No. El trámite del CUD es totalmente gratuito en todo el país.
 Si alguien te solicita un pago o arancel, hacé la denuncia ante la Agencia Nacional de Discapacidad (ANDIS).""",
             "contexto_emocional_esperado": "ira",
-            "tags": ["tramite", "denuncia", "andis", "gratuidad"] # Añadido tag
+            "tags": ["tramite", "denuncia", "andis", "gratuidad"]
         },
         {
             "pregunta_clave": "¿Qué beneficios obtengo al tener el CUD?",
@@ -734,7 +727,7 @@ Te permite acceder a prestaciones médicas y programas de salud pública sin cos
 La ANDIS dispone de un formulario para apelaciones.
 También podés solicitar acompañamiento en el Programa ADAJUS del Ministerio de Justicia.""",
             "contexto_emocional_esperado": "ira",
-            "tags": ["reclamo", "andis", "derechos", "adajus", "apelacion"] 
+            "tags": ["reclamo", "andis", "derechos", "adajus", "apelacion"]
         },
         {
             "pregunta_clave": "¿Puedo tramitar el CUD si vivo en una zona rural?",
@@ -749,7 +742,7 @@ También podés solicitar turnos priorizados si tenés dificultades de movilidad
 Solo necesitás tu DNI y una constancia policial de extravío.
 El duplicado conserva la misma validez que el original.""",
             "contexto_emocional_esperado": "tristeza",
-            "tags": ["duplicado", "tramite", "certificado", "extravio"] 
+            "tags": ["duplicado", "tramite", "certificado", "extravio"]
         },
         {
             "pregunta_clave": "¿Puedo usar mi CUD en todo el país?",
@@ -771,12 +764,13 @@ El CUD puede actualizarse para reflejar tu situación actual y garantizar que si
 Además de beneficios sociales y de salud, te facilita la inclusión educativa y laboral.
 Podés informarte más en el sitio oficial de ANDIS (www.argentina.gob.ar/andis/cud).""",
             "contexto_emocional_esperado": "sorpresa",
-            "tags": ["derechos", "beneficios", "andis", "informacion"] # Añadido tag
+            "tags": ["derechos", "beneficios", "andis", "informacion"]
         }
     ],
 }
 
 if __name__ == "__main__":
+    # Pequeño script de validación al ejecutar directamente
     print(f"--- Validación de src/expert_kb.py ---")
     print(f"Tutores cargados: {len(EXPERT_KB)} -> {list(EXPERT_KB.keys())}")
     total_intenciones = sum(len(v) for v in EXPERT_KB.values())
@@ -787,9 +781,12 @@ if __name__ == "__main__":
     errors = []
     for tutor, intentions in EXPERT_KB.items():
         for i, intention in enumerate(intentions):
-            emo = intention.get("contexto_emocional_esperado", "").capitalize()
+            # Normalizar emoción esperada al validar
+            emo_raw = intention.get("contexto_emocional_esperado", "Neutral") # Default a Neutral si falta
+            emo = str(emo_raw).strip().capitalize() # Limpiar y capitalizar
+
             if emo not in valid_emotions:
-                errors.append(f"Error en {tutor}[{i}]: Emoción '{intention.get('contexto_emocional_esperado')}' inválida. Clave: '{intention.get('pregunta_clave')}'")
+                errors.append(f"Error en {tutor}[{i}]: Emoción '{emo_raw}' inválida (Normalizada: '{emo}'). Clave: '{intention.get('pregunta_clave')}'")
             # Chequeo opcional de formato de tags
             tags = intention.get("tags", [])
             if not isinstance(tags, list):
