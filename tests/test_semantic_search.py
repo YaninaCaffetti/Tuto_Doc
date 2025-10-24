@@ -197,21 +197,8 @@ def run_validation():
 
     results = [] # Lista para almacenar los resultados detallados
 
-    # Pre-calcular embeddings para todos los expertos si aún no lo están
-    print(f"› Forzando inicialización de embeddings para {len(all_experts)} expertos...")
-    model_check = get_semantic_model() # Asegurar que el modelo esté cargado
-    if not model_check:
-        print("Error Crítico: Modelo semántico no disponible para inicializar embeddings.")
-        return
-    for expert_name, expert_instance in all_experts.items():
-        # Mapeo inverso para log
-        tutor_display_name = {v: k for k, v in alias_map.items()}.get(expert_name, expert_name)
-        print(f"  - Inicializando {tutor_display_name}...")
-        expert_instance._initialize_knowledge_base() # Llamada explícita
-    print("› Embeddings (re)inicializados.")
-
-    # Iterar sobre cada caso de prueba en el set de validación
-    # --- 🔧 Mapa de alias entre nombres de tutores y arquetipos (compatibilidad para testeo) ---
+    # --- 🔧 Mapa de alias (MOVIDO AL INICIO) ---
+    # Mapa de alias entre nombres de tutores y arquetipos (compatibilidad para testeo)
     alias_map = {
         "TutorCarrera": "Prof_Subutil",
         "TutorInteraccion": "Com_Desafiado",
@@ -221,6 +208,25 @@ def run_validation():
         "TutorPrimerEmpleo": "Joven_Transicion",
         "GestorCUD": "GestorCUD"
     }
+
+    # Pre-calcular embeddings para todos los expertos si aún no lo están
+    print(f"› Forzando inicialización de embeddings para {len(all_experts)} expertos...")
+    model_check = get_semantic_model() # Asegurar que el modelo esté cargado
+    if not model_check:
+        print("Error Crítico: Modelo semántico no disponible para inicializar embeddings.")
+        return
+    
+    # *** INICIO DE LA CORRECCIÓN ***
+    # Usar el alias_map (definido arriba) para el log
+    for expert_name, expert_instance in all_experts.items():
+        # Mapeo inverso para log
+        tutor_display_name = {v: k for k, v in alias_map.items()}.get(expert_name, expert_name)
+        print(f"  - Inicializando {tutor_display_name}...")
+        expert_instance._initialize_knowledge_base() # Llamada explícita
+    # *** FIN DE LA CORRECCIÓN ***
+    
+    print("› Embeddings (re)inicializados.")
+
 
     print(f"› Ejecutando {len(validation_set)} pruebas de validación...")
     for item in validation_set:
