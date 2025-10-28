@@ -1,4 +1,4 @@
-""
+"""
 Define la arquitectura del Tutor Cognitivo y el Sistema de Mezcla de Expertos (MoE).
 
 Este módulo contiene:
