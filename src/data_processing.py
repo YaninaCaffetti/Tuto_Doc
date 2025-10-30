@@ -33,10 +33,9 @@ except ImportError:
     TARGET_COLUMN = 'ARQUETIPO_PRED'
     logging.warning("No se pudo importar 'src.constants'. Usando valores fallback.")
 
-# --- ¡IMPORTACIONES CLAVE DE LA REFACTORIZACIÓN (ÉPICA 2)! ---
-# Importamos la lógica de features/fuzzificación desde el módulo de inferencia
+
 try:
-    from src.profile_inference import (
+    from .profile_inference import (
         run_feature_engineering,
         _simulate_mbti_scores, # Importar también la simulación MBTI si se usa aquí
         run_fuzzification
@@ -44,9 +43,6 @@ try:
     logging.info("Módulo 'src.profile_inference' cargado exitosamente.")
 except ImportError as e:
     logging.error(f"Error crítico: No se pudo importar 'src.profile_inference'. {e}")
-    # Detener ejecución si el módulo compartido falta
-    exit()
-# --- FIN IMPORTACIONES CLAVE ---
 
 
 # --- Configuración del Logging ---
