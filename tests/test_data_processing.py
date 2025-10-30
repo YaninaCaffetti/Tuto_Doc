@@ -6,13 +6,17 @@ import pytest
 import sys
 import os
 
-# --- Configuración del Path ---
-# Ajusta la ruta si tu estructura de carpetas es diferente
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+# --- Configuración del Path  ---
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# 2. Añadimos esa ruta al 'sys.path' si aún no está
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # --- Módulos a Probar ---
+
 from src.data_processing import run_archetype_engineering
-from constants import ARCHETYPE_PROF_SUBUTIL, ARCHETYPE_JOVEN_TRANSICION, ALL_ARCHETYPES
+from src.constants import ARCHETYPE_PROF_SUBUTIL, ARCHETYPE_JOVEN_TRANSICION, ALL_ARCHETYPES
 
 # --- Fixtures de Datos de Prueba ---
 
