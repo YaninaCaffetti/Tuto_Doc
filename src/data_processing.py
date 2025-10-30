@@ -23,27 +23,15 @@ import os
 import logging
 import yaml
 from collections import Counter
+import traceback
 
 # Importar las constantes centralizadas
-try:
-    from src.constants import ALL_ARCHETYPES, TARGET_COLUMN
-except ImportError:
-    # Fallback para ejecución directa
-    ALL_ARCHETYPES = ['Com_Desafiado', 'Nav_Informal', 'Prof_Subutil', 'Potencial_Latente', 'Cand_Nec_Sig', 'Joven_Transicion']
-    TARGET_COLUMN = 'ARQUETIPO_PRED'
-    logging.warning("No se pudo importar 'src.constants'. Usando valores fallback.")
-
-
-try:
-    from .profile_inference import (
-        run_feature_engineering,
-        _simulate_mbti_scores, # Importar también la simulación MBTI si se usa aquí
-        run_fuzzification
-    )
-    logging.info("Módulo 'src.profile_inference' cargado exitosamente.")
-except ImportError as e:
-    logging.error(f"Error crítico: No se pudo importar 'src.profile_inference'. {e}")
-
+from .constants import ALL_ARCHETYPES, TARGET_COLUMN
+from .profile_inference import (
+    run_feature_engineering,
+    _simulate_mbti_scores,
+    run_fuzzification
+)
 
 # --- Configuración del Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
