@@ -237,7 +237,7 @@ class Experto:
                 prompt_embedding_raw = model.encode(prompt, convert_to_tensor=True)
                 # Asegurar que el embedding no sea nulo o vacío
                 if prompt_embedding_raw is None or prompt_embedding_raw.nelement() == 0:
-                     raise ValueError("Embedding del prompt resultó vacío.")
+                        raise ValueError("Embedding del prompt resultó vacío.")
 
                 prompt_embedding = F.normalize(prompt_embedding_raw, p=2, dim=0)
                 # Mover embeddings a la misma device antes de cos_sim
@@ -417,7 +417,7 @@ class MoESystem:
         all_experts = list(self.expert_map.values()) + [self.cud_expert]
         if all(isinstance(e, Experto) for e in all_experts):
              for expert in all_experts:
-                 expert._initialize_knowledge_base()
+                expert._initialize_knowledge_base()
              print("› Embeddings de expertos listos.")
         else:
             warnings.warn("Error: No todos los elementos en expert_map/cud_expert son instancias de Experto.")
@@ -515,22 +515,24 @@ class MoESystem:
         return {k: 0.0 for k in weights.keys()}
 
 
-    def _get_top_emotion(self, emotion_probs: Dict) -> str:
+    def _get_top_emotion(self, emotion_probs: Dict, official_labels: List[str]) -> str:
         """
-        Extrae la emoción dominante normalizada según config.yaml.
+        Extrae la emoción dominante normalizada según la lista oficial.
+        (Refactorizado: ya no depende de st.session_state).
 
         Args:
             emotion_probs (Dict): Diccionario {emocion: probabilidad}.
+            official_labels (List[str]): Lista de etiquetas de emoción oficiales
+                                         (desde config.yaml).
 
         Returns:
-            str: Nombre normalizado de la emoción dominante (desde config.yaml) o 'Neutral'.
+            str: Nombre normalizado de la emoción dominante o 'Neutral'.
         """
         if not emotion_probs or not isinstance(emotion_probs, dict):
             return "Neutral"
 
         try:
-            # Obtener etiquetas oficiales desde config (cacheado en session_state)
-            official_labels = st.session_state.config.get('constants', {}).get('emotion_labels', [])
+            # Crear mapa de normalización desde las etiquetas recibidas
             label_map = {label.strip().lower(): label for label in official_labels}
 
             top_emotion_raw = max(emotion_probs, key=emotion_probs.get)
@@ -541,39 +543,41 @@ class MoESystem:
 
             # Fallback final si la etiqueta no es válida o es desconocida
             if "Etiqueta_" in top_emotion_normalized or not top_emotion_normalized or top_emotion_normalized not in official_labels + ["Neutral"]:
-                 # Verificar si "Neutral" está explícitamente en las etiquetas oficiales
-                 if "Neutral" in official_labels:
-                     return "Neutral"
-                 else:
-                     # Si "Neutral" no está en config, usar la primera etiqueta oficial como fallback seguro
-                     return official_labels[0] if official_labels else "Desconocida"
+                # Verificar si "Neutral" está explícitamente en las etiquetas oficiales
+                if "Neutral" in official_labels:
+                    return "Neutral"
+                else:
+                    # Si "Neutral" no está en config, usar la primera etiqueta oficial como fallback seguro
+                    return official_labels[0] if official_labels else "Desconocida"
 
             return top_emotion_normalized
 
         except (ValueError, AttributeError, KeyError): # Capturar errores si emotion_probs es inválido
             logging.warning(f"Error procesando emotion_probs: {emotion_probs}. Devolviendo Neutral.")
             # Similar fallback que arriba
-            official_labels = st.session_state.config.get('constants', {}).get('emotion_labels', [])
             if "Neutral" in official_labels: return "Neutral"
             return official_labels[0] if official_labels else "Desconocida"
 
 
-    def _log_gating_event(self, tutor_name: str, intention: Dict, detected_emotion: str) -> Dict[str, str]:
+    def _log_gating_event(self, tutor_name: str, intention: Dict, detected_emotion: str,
+                          official_labels: List[str]) -> Dict[str, str]:
         """
         Calcula congruencia y registra evento de Gating Afectivo.
+        (Refactorizado: ya no depende de st.session_state).
 
         Args:
             tutor_name (str): Nombre del tutor.
             intention (Dict): Intención seleccionada.
             detected_emotion (str): Emoción dominante detectada (normalizada).
+            official_labels (List[str]): Lista de etiquetas de emoción oficiales.
 
         Returns:
             Dict[str, str]: Detalles del evento de gating registrado.
         """
-        # Obtener emoción esperada, normalizar y validar contra config
+        # Obtener emoción esperada, normalizar y validar contra etiquetas oficiales
         emo_esperada_raw = intention.get("contexto_emocional_esperado", "neutral").strip().capitalize()
-        official_labels = st.session_state.config.get('constants', {}).get('emotion_labels', []) + ["Neutral"] # Incluir Neutral
-        emo_esperada = emo_esperada_raw if emo_esperada_raw in official_labels else "Neutral"
+        valid_labels = official_labels + ["Neutral"] # Incluir Neutral
+        emo_esperada = emo_esperada_raw if emo_esperada_raw in valid_labels else "Neutral"
 
         # Determinar tipo de congruencia
         if detected_emotion == "Neutral" or emo_esperada == "Neutral":
@@ -620,6 +624,12 @@ class MoESystem:
                 - predicted_archetype (str): Arquetipo cognitivo predicho.
                 - final_weights (Dict[str, float]): Pesos finales de los expertos.
         """
+        # --- 0. Extraer Constantes de Config (INYECCIÓN DE DEPENDENCIA) ---
+        constants = config.get('constants', {})
+        # Extraer etiquetas una sola vez para pasarlas a funciones hijas
+        official_labels = constants.get('emotion_labels', [])
+        negative_emotions = constants.get('negative_emotions', [])
+
         # --- 1. Predicción Cognitiva ---
         # Asegurar que las features estén en el orden correcto y manejar faltantes
         try:
@@ -646,8 +656,7 @@ class MoESystem:
         affective_weights = self._apply_affective_modulation(base_weights, emotion_probs)
 
         # --- 4. Modulación Contextual ---
-        constants = config.get('constants', {})
-        negative_emotions = constants.get('negative_emotions', [])
+        # (Las constantes ya se extrajeron en el paso 0)
         conversational_weights = self._apply_conversational_modulation(
             affective_weights, conversation_context, negative_emotions
         )
@@ -658,8 +667,9 @@ class MoESystem:
         # --- 6. Construcción del Plan y Gating ---
         sorted_plan = sorted(final_weights.items(), key=lambda item: item[1], reverse=True)
         final_recs = []
-        # Obtener emoción dominante normalizada para Gating
-        top_detected_emotion = self._get_top_emotion(emotion_probs)
+        
+        # Obtener emoción dominante (pasando las etiquetas)
+        top_detected_emotion = self._get_top_emotion(emotion_probs, official_labels)
 
 
         # --- Acción Proactiva CUD ---
@@ -670,7 +680,10 @@ class MoESystem:
                 prompt=user_prompt, original_profile=user_profile, is_proactive_call=True
             )
             final_recs.append(rec_str_cud)
-            gating_cud = self._log_gating_event("GestorCUD (Proactivo)", rec_int_cud, top_detected_emotion)
+            # Loguear Gating (pasando las etiquetas)
+            gating_cud = self._log_gating_event(
+                "GestorCUD (Proactivo)", rec_int_cud, top_detected_emotion, official_labels
+            )
             gating_log_for_ui["cud_expert"] = gating_cud # Guardar para posible uso futuro
 
         # --- Recomendaciones de Arquetipo ---
@@ -692,7 +705,10 @@ class MoESystem:
                     recommendations_added += 1
                     # Loguear Gating Afectivo SOLO para el tutor principal (el 1ro añadido)
                     if recommendations_added == 1:
-                        gating_archetype = self._log_gating_event(expert.nombre, rec_int_arch, top_detected_emotion)
+                        # Loguear Gating (pasando las etiquetas)
+                        gating_archetype = self._log_gating_event(
+                            expert.nombre, rec_int_arch, top_detected_emotion, official_labels
+                        )
                         gating_log_for_ui["archetype_expert"] = gating_archetype
 
         # --- Mensaje Default si no hubo recomendaciones ---
@@ -703,7 +719,10 @@ class MoESystem:
             default_response = default_intention.get("respuesta", "Analicemos tu situación.")
             # Formato consistente
             final_recs.append(f"  - [{default_expert.nombre} (Default)]: {default_response}")
-            gating_default = self._log_gating_event(default_expert.nombre + " (Default)", default_intention, top_detected_emotion)
+            # Loguear Gating (pasando las etiquetas)
+            gating_default = self._log_gating_event(
+                default_expert.nombre + " (Default)", default_intention, top_detected_emotion, official_labels
+            )
             gating_log_for_ui["default_expert"] = gating_default
 
 
