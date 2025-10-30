@@ -159,7 +159,7 @@ EXPERT_KB = {
                 "Estuve un año sin trabajar, ¿qué digo?",
                 "Tengo un bache en mi CV",
                 "Explicar tiempo sin empleo en una entrevista",
-                "Me tomará un tiempo sabático, ¿cómo lo justifico?"
+                "Me tomaré un tiempo sabático, ¿cómo lo justifico?"
             ],
             "respuesta": """Mencioná lo que hiciste en ese tiempo: cursos, proyectos personales o tareas de cuidado. Mostrá que seguiste aprendiendo o desarrollando habilidades.""",
             "contexto_emocional_esperado": "miedo",
@@ -699,6 +699,31 @@ EXPERT_KB = {
             "respuesta": """Qué bueno reconocerlo. Celebrar pequeños avances fortalece la confianza. Guardá ese recuerdo para usarlo en días más difíciles.""",
             "contexto_emocional_esperado": "alegria",
             "tags": ["autoestima", "progreso", "refuerzo_positivo", "autoconocimiento", "bienestar"]
+        },
+        {
+            "pregunta_clave": "Redireccion CUD (Filtro para TutorBienestar)",
+            "variantes": [
+                "Quiero saber los beneficios del CUD",
+                "Háblame del certificado de discapacidad",
+                "Qué derechos me da el CUD",
+                "Información sobre el CUD"
+            ],
+            "respuesta": "Esa es una excelente pregunta. Te derivo con el GestorCUD, que es el experto en ese trámite.",
+            "contexto_emocional_esperado": "anticipacion",
+            "tags": ["cud", "redireccion", "filtro"]
+        },
+        {
+            "pregunta_clave": "Meta-Consulta de Frustracion (No entiendo)",
+            "variantes": [
+                "No te entiendo",
+                "No entiendo lo que me decís",
+                "Qué querés decir",
+                "No te sigo",
+                "Me perdí con tu respuesta"
+            ],
+            "respuesta": "Entiendo, pido disculpas si no fui claro. Como tu tutor de bienestar, mi objetivo es ayudarte a gestionar cómo te sentís. ¿Podemos reenfocarnos en qué te trajo a esta consulta?",
+            "contexto_emocional_esperado": "ira",
+            "tags": ["meta", "frustracion", "clarificacion"]
         }
     ],
     "TutorApoyos": [
@@ -1334,7 +1359,7 @@ if __name__ == "__main__":
 
     for tutor, intentions in EXPERT_KB.items():
         if not intentions:
-             errors.append(f"Error en {tutor}: El tutor no tiene intenciones definidas (lista vacía).")
+                errors.append(f"Error en {tutor}: El tutor no tiene intenciones definidas (lista vacía).")
 
         for i, intention in enumerate(intentions):
 
@@ -1362,9 +1387,9 @@ if __name__ == "__main__":
             # --- Validación de 'tags' ---
             tags = intention.get("tags", [])
             if not isinstance(tags, list):
-                 errors.append(f"Error en {tutor}[{i}]: Campo 'tags' no es una lista. Clave: '{intention.get('pregunta_clave')}'")
+                    errors.append(f"Error en {tutor}[{i}]: Campo 'tags' no es una lista. Clave: '{intention.get('pregunta_clave')}'")
             elif not all(isinstance(t, str) and t for t in tags):
-                 errors.append(f"Error en {tutor}[{i}]: No todos los elementos en 'tags' son strings no vacíos. Clave: '{intention.get('pregunta_clave')}'")
+                    errors.append(f"Error en {tutor}[{i}]: No todos los elementos en 'tags' son strings no vacíos. Clave: '{intention.get('pregunta_clave')}'")
 
     if not errors:
         print("\n✅ VALIDACIÓN COMPLETA (Estructura, Variantes, Emociones y Tags): OK")
