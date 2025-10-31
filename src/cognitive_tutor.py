@@ -213,9 +213,10 @@ class Experto:
             "variantes": [] # Asegurar que la clave exista
         }
 
-    def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
+    def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any], float]:
         """
         Genera la recomendación buscando la intención más relevante al prompt.
+        (MODIFICADO: Devuelve el score de similitud).
 
         Compara el embedding normalizado del prompt contra los centroides
         normalizados de la KB. Prioriza búsqueda semántica, con fallback a keyword y default.
@@ -225,7 +226,10 @@ class Experto:
             **kwargs: Argumentos adicionales (usados en subclases).
 
         Returns:
-            Tuple[str, Dict[str, Any]]: Tupla con (respuesta_formateada, intencion_completa).
+            Tuple[str, Dict[str, Any], float]: Tupla con:
+                - respuesta_formateada (str)
+                - intencion_completa (Dict)
+                - best_match_score (float): El score de similitud coseno más alto.
         """
         model = get_semantic_model()
         matched_intention = None
@@ -254,6 +258,7 @@ class Experto:
             except Exception as e:
                 warnings.warn(f"Error búsqueda semántica {self.nombre}: {e}. Intentando fallback.")
                 # No asignar matched_intention aquí, continuar al fallback
+                best_match_score = -1.0 # Resetear score en caso de error
 
         # --- Fallback: Búsqueda por Palabra Clave (si semántica falló o score bajo) ---
         if matched_intention is None: # Solo si no hubo match semántico válido
@@ -265,6 +270,7 @@ class Experto:
                 # Buscar prompt en clave o variantes
                 if key in prompt_lower or any(var in prompt_lower for var in variantes_lower if len(var) > 3): # Evitar matches cortos
                     matched_intention = item
+                    best_match_score = 0.5 # Asignar score artificial para keyword match
                     # print(f"DEBUG {self.nombre}: Match KEYWORD '{item.get('pregunta_clave')}'") # Debug
                     break
 
@@ -272,24 +278,24 @@ class Experto:
         if matched_intention is None:
             # print(f"DEBUG {self.nombre}: Match DEFAULT (Sem score: {best_match_score:.3f})") # Debug
             matched_intention = self._get_intention_by_key("default")
+            # El score se mantiene (será bajo o -1.0)
 
         response_str = f"[{self.nombre}]: {matched_intention.get('respuesta', 'No encontré una respuesta específica.')}"
-        return response_str, matched_intention
+        return response_str, matched_intention, best_match_score
 
 
 # --- Implementaciones concretas de los Expertos ---
-# (Se mantienen las clases hijas, pero se eliminan los docstrings redundantes
-#  ya que heredan de Experto y la lógica específica está documentada)
 
 class GestorCUD(Experto):
     def __init__(self):
         super().__init__("GestorCUD")
-        # No necesita umbral específico, usa el base
-        # _initialize_knowledge_base() se llama en MoESystem
 
-    def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
-        """Genera recomendación CUD, con lógica proactiva si `is_proactive_call` es True."""
-        base_response, matched_intention = super().generate_recommendation(prompt, **kwargs)
+    def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any], float]:
+        """
+        Genera recomendación CUD, con lógica proactiva.
+        (MODIFICADO: Pasa el `best_match_score` de super()).
+        """
+        base_response, matched_intention, best_match_score = super().generate_recommendation(prompt, **kwargs)
         is_proactive_call = kwargs.get("is_proactive_call", False)
 
         if matched_intention.get("pregunta_clave") == "default" and is_proactive_call:
@@ -303,19 +309,21 @@ class GestorCUD(Experto):
             proactive_intention["respuesta"] = proactive_response
             proactive_intention["pregunta_clave"] = "accion_cud_proactiva"
             proactive_intention["tags"] = ["cud", "legal", "proactivo"]
-            return proactive_response, proactive_intention
+            return proactive_response, proactive_intention, 0.0 # Score 0.0 para proactivo
 
-        return base_response, matched_intention
+        return base_response, matched_intention, best_match_score # Pasa el score
 
 class TutorCarrera(Experto):
     def __init__(self):
         super().__init__("TutorCarrera")
         self.similarity_threshold = 0.55 # Umbral específico
-        # _initialize_knowledge_base() se llama en MoESystem
 
-    def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
-        """Genera recomendación de carrera, añadiendo consejo sobre cupo CUD si aplica."""
-        base_response, matched_intention = super().generate_recommendation(prompt, **kwargs)
+    def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any], float]:
+        """
+        Genera recomendación de carrera, añadiendo consejo sobre cupo CUD.
+        (MODIFICADO: Pasa el `best_match_score` de super()).
+        """
+        base_response, matched_intention, best_match_score = super().generate_recommendation(prompt, **kwargs)
         original_profile = kwargs.get('original_profile')
         if original_profile is not None and original_profile.get('TIENE_CUD') == 'Si_Tiene_CUD':
             if "cud" not in matched_intention.get("tags", []):
@@ -323,37 +331,27 @@ class TutorCarrera(Experto):
                     "\n  [Consejo Legal Adicional]: Dado que posees el CUD, recuerda que postular a "
                     "concursos del Estado es una estrategia efectiva (cupo 4%, Ley 22.431)."
                 )
-        return base_response, matched_intention
+        return base_response, matched_intention, best_match_score # Pasa el score
 
 class TutorInteraccion(Experto):
     def __init__(self):
         super().__init__("TutorInteraccion")
-        # Usa umbral base
-        # _initialize_knowledge_base() se llama en MoESystem
 
 class TutorCompetencias(Experto):
     def __init__(self):
         super().__init__("TutorCompetencias")
-        # Usa umbral base
-        # _initialize_knowledge_base() se llama en MoESystem
 
 class TutorBienestar(Experto):
     def __init__(self):
         super().__init__("TutorBienestar")
-        # Usa umbral base
-        # _initialize_knowledge_base() se llama en MoESystem
 
 class TutorApoyos(Experto):
     def __init__(self):
         super().__init__("TutorApoyos")
-        # Usa umbral base
-        # _initialize_knowledge_base() se llama en MoESystem
 
 class TutorPrimerEmpleo(Experto):
     def __init__(self):
         super().__init__("TutorPrimerEmpleo")
-        # Usa umbral base
-        # _initialize_knowledge_base() se llama en MoESystem
 
 
 # -----------------------------------------------------------------
@@ -426,7 +424,7 @@ class MoESystem:
     def _apply_affective_modulation(self, base_weights: Dict, emotion_probs: Dict) -> Dict:
         """
         Modula los pesos base usando reglas afectivas y probabilidad emocional.
-        Aplica modulación exponencial (factor^probabilidad).
+        (CORREGIDO: BUG 1 - Ahora "despierta" expertos con peso 0.0).
 
         Args:
             base_weights (Dict): Pesos iniciales (ej. {ArquetipoPredicho: 1.0}).
@@ -442,24 +440,35 @@ class MoESystem:
             emotion_norm = str(emotion).strip().capitalize()
             if prob > min_prob and emotion_norm in self.affective_rules:
                 rules_for_emotion = self.affective_rules[emotion_norm]
-                # Asegurarse de que rules_for_emotion sea un diccionario
                 if isinstance(rules_for_emotion, dict):
                     for archetype, factor in rules_for_emotion.items():
                         if archetype in modulated_weights and isinstance(factor, (int, float)) and factor > 0:
-                            # Modulación exponencial: peso *= factor^probabilidad
                             try:
-                                modulated_weights[archetype] *= factor ** prob
+                                # Obtener el peso base (será 1.0 o 0.0)
+                                base_weight = modulated_weights.get(archetype, 0.0)
+                                
+                                if base_weight > 0:
+                                    # --- CASO 1: Modular al experto principal ---
+                                    # Si es el experto base, modularlo (ej. 1.0 -> 1.17)
+                                    modulated_weights[archetype] *= (factor ** prob)
+                                else:
+                                    # --- CASO 2: "Despertar" a un experto secundario ---
+                                    # Si es un experto con peso 0, ¡AÑADIR PESO!
+                                    # Añadimos el "impulso" (factor - 1) ponderado por la probabilidad
+                                    boost = (factor - 1.0) * prob
+                                    modulated_weights[archetype] = base_weight + boost # base_weight es 0, así que esto es solo 'boost'
+
                             except (OverflowError, ValueError):
                                 warnings.warn(f"Cálculo inválido en modulación: {factor} ** {prob}")
                         elif archetype not in modulated_weights:
-                            # Ignorar si el arquetipo no está en los pesos base (raro)
-                            pass
+                            pass # Ignorar si el arquetipo no está en los pesos base
                         else:
                             warnings.warn(f"Factor inválido en regla afectiva: {emotion_norm} -> {archetype}: {factor}")
                 else:
                     warnings.warn(f"Regla afectiva mal formada para '{emotion_norm}': No es un diccionario.")
 
         return modulated_weights
+
 
     def _apply_conversational_modulation(self, weights: Dict, context: Dict,
                                          negative_emotions: List[str]) -> Dict:
@@ -484,9 +493,6 @@ class MoESystem:
                 boost_factor = 1.5 # Factor de potenciación
                 logging.info(f"Racha negativa detectada. Potenciando Tutor Bienestar x{boost_factor}.")
                 modulated_weights['Potencial_Latente'] *= boost_factor
-
-        # (Placeholder para lógica de frustración de Épica 3)
-        # Por ejemplo: if context.get("user_frustration_flag"): ...
 
         return modulated_weights
 
@@ -606,10 +612,10 @@ class MoESystem:
         conversation_context: Dict,
         config: Dict,
         user_prompt: str
-    ) -> Tuple[str, str, Dict[str, float]]: # <-- MODIFICADO TIPO DE RETORNO
+    ) -> Tuple[str, str, Dict[str, float]]:
         """
         Orquesta la generación completa del plan de acción adaptativo.
-        (MODIFICADO para devolver `final_weights`).
+        (CORREGIDO: Implementa Gating Semántico, CUD Proactivo y Modulación Afectiva).
 
         Args:
             user_profile (pd.Series): Características fuzzificadas del usuario.
@@ -621,111 +627,136 @@ class MoESystem:
         Returns:
             Tuple[str, str, Dict[str, float]]: Tupla con:
                 - plan_string (str): Texto completo del plan.
-                - predicted_archetype (str): Arquetipo cognitivo predicho.
+                - predicted_archetype (str): Arquetipo cognitivo (o anulado).
                 - final_weights (Dict[str, float]): Pesos finales de los expertos.
         """
-        # --- 0. Extraer Constantes de Config (INYECCIÓN DE DEPENDENCIA) ---
+        # --- 0. Extracción de Constantes y Setup ---
         constants = config.get('constants', {})
-        # Extraer etiquetas una sola vez para pasarlas a funciones hijas
         official_labels = constants.get('emotion_labels', [])
         negative_emotions = constants.get('negative_emotions', [])
-
-        # --- 1. Predicción Cognitiva ---
-        # Asegurar que las features estén en el orden correcto y manejar faltantes
-        try:
-             # Usar reindex para asegurar orden y columnas, llenar NaNs con 0.0
-             profile_for_prediction = user_profile.reindex(self.feature_columns).fillna(0.0)
-             # Convertir a DataFrame de 1 fila
-             profile_df = pd.DataFrame([profile_for_prediction])
-
-             predicted_archetype = self.cognitive_model.predict(profile_df)[0]
-        except (KeyError, ValueError, AttributeError) as e:
-             logging.error(f"Error preparando features para predicción: {e}. Usando default.")
-             # Fallback a un arquetipo si falla la preparación o predicción
-             predicted_archetype = list(self.expert_map.keys())[0]
-        except Exception as e: # Captura otros errores de predicción
-             logging.error(f"Error inesperado prediciendo arquetipo: {e}. Usando default.")
-             predicted_archetype = list(self.expert_map.keys())[0]
-
-        # --- 2. Pesos Base ---
-        base_weights = {archetype: 0.0 for archetype in self.expert_map.keys()}
-        if predicted_archetype in base_weights:
-            base_weights[predicted_archetype] = 1.0
-
-        # --- 3. Modulación Afectiva ---
-        affective_weights = self._apply_affective_modulation(base_weights, emotion_probs)
-
-        # --- 4. Modulación Contextual ---
-        # (Las constantes ya se extrajeron en el paso 0)
-        conversational_weights = self._apply_conversational_modulation(
-            affective_weights, conversation_context, negative_emotions
-        )
-
-        # --- 5. Normalización Final ---
-        final_weights = self._normalize_weights(conversational_weights)
-
-        # --- 6. Construcción del Plan y Gating ---
-        sorted_plan = sorted(final_weights.items(), key=lambda item: item[1], reverse=True)
-        final_recs = []
         
-        # Obtener emoción dominante (pasando las etiquetas)
+        final_recs = []
+        gating_log_for_ui = {}
         top_detected_emotion = self._get_top_emotion(emotion_probs, official_labels)
-
-
-        # --- Acción Proactiva CUD ---
         has_cud = user_profile.get('TIENE_CUD') == 'Si_Tiene_CUD'
-        gating_log_for_ui = {} # Diccionario para logs específicos de esta respuesta
-        if not has_cud:
-            rec_str_cud, rec_int_cud = self.cud_expert.generate_recommendation(
-                prompt=user_prompt, original_profile=user_profile, is_proactive_call=True
-            )
-            final_recs.append(rec_str_cud)
-            # Loguear Gating (pasando las etiquetas)
-            gating_cud = self._log_gating_event(
-                "GestorCUD (Proactivo)", rec_int_cud, top_detected_emotion, official_labels
-            )
-            gating_log_for_ui["cud_expert"] = gating_cud # Guardar para posible uso futuro
 
-        # --- Recomendaciones de Arquetipo ---
-        final_recs.append("**[Plan de Acción Adaptativo (Arquetipo)]**")
-        min_rec_weight = self.thresholds.get('min_recommendation_weight', 0.15)
-        recommendations_added = 0
+        # --- 1. GATING DE INTENCIÓN EXPLÍCITA (CUD Reactivo) ---
+        # Primero, verificar si el prompt es explícitamente SOBRE el CUD
+        _rec_cud_str, rec_cud_int, cud_react_score = self.cud_expert.generate_recommendation(
+            prompt=user_prompt, original_profile=user_profile, is_proactive_call=False
+        )
+        is_cud_query = rec_cud_int.get("pregunta_clave") != "default"
 
-        for archetype, weight in sorted_plan:
-            if weight > min_rec_weight and archetype in self.expert_map:
-                expert = self.expert_map[archetype]
-                rec_str_arch, rec_int_arch = expert.generate_recommendation(
-                    prompt=user_prompt, original_profile=user_profile
+        if is_cud_query:
+            # --- RUTA A: Consulta Reactiva de CUD ---
+            # El usuario está hablando del CUD. Responder SOLO con el GestorCUD.
+            final_recs.append(_rec_cud_str)
+            gating_cud = self._log_gating_event("GestorCUD (Reactivo)", rec_cud_int, top_detected_emotion, official_labels)
+            gating_log_for_ui["cud_expert"] = gating_cud
+            
+            predicted_archetype = "N/A (Consulta CUD)" # Indicar que fue una consulta CUD
+            final_weights = {k: 0.0 for k in self.expert_map.keys()}
+        
+        else:
+            # --- RUTA B: Consulta de Arquetipo (Lógica MoE) ---
+            # El usuario NO está hablando del CUD. Ejecutar lógica MoE completa.
+
+            # --- 2. Predicción Cognitiva (Perfil Base) ---
+            try:
+                 profile_for_prediction = user_profile.reindex(self.feature_columns).fillna(0.0)
+                 profile_df = pd.DataFrame([profile_for_prediction])
+                 predicted_archetype = self.cognitive_model.predict(profile_df)[0]
+            except Exception as e:
+                 logging.error(f"Error prediciendo arquetipo: {e}. Usando default.")
+                 predicted_archetype = list(self.expert_map.keys())[0]
+
+            # --- 3. Gating Semántico de Anulación (BUG 2) ---
+            semantic_override_threshold = self.thresholds.get('semantic_override_threshold', 0.75)
+            best_semantic_match = {'score': -1.0, 'archetype': None, 'intention': None}
+
+            for archetype_name, expert in self.expert_map.items():
+                _resp_str, intention, score = expert.generate_recommendation(user_prompt)
+                if score > best_semantic_match['score'] and intention.get("pregunta_clave") != "default":
+                    best_semantic_match = {'score': score, 'archetype': archetype_name, 'intention': intention}
+
+            # Aplicar la anulación si se cumple la condición
+            if (best_semantic_match['score'] > semantic_override_threshold and
+                best_semantic_match['archetype'] is not None and
+                best_semantic_match['archetype'] != predicted_archetype):
+                
+                logging.info(f"ANULACIÓN SEMÁNTICA: Fuerte match ({best_semantic_match['score']:.2f}) "
+                             f"con {best_semantic_match['archetype']} anula predicción cognitiva ({predicted_archetype}).")
+                predicted_archetype = best_semantic_match['archetype'] # Sobrescribir el arquetipo
+
+            # --- 4. Pesos Base ---
+            base_weights = {archetype: 0.0 for archetype in self.expert_map.keys()}
+            if predicted_archetype in base_weights:
+                base_weights[predicted_archetype] = 1.0
+
+            # --- 5. Modulación Afectiva (BUG 1 Corregido) ---
+            affective_weights = self._apply_affective_modulation(base_weights, emotion_probs)
+
+            # --- 6. Modulación Contextual ---
+            conversational_weights = self._apply_conversational_modulation(
+                affective_weights, conversation_context, negative_emotions
+            )
+
+            # --- 7. Normalización Final ---
+            final_weights = self._normalize_weights(conversational_weights)
+
+            # --- 8. Construcción del Plan (con CUD Proactivo - BUG 3 Corregido) ---
+            
+            # Añadir mensaje proactivo CUD (si aplica y no se mencionó "cud")
+            if not has_cud and "cud" not in user_prompt.lower():
+                rec_str_cud_pro, rec_int_cud_pro, _score_pro = self.cud_expert.generate_recommendation(
+                    prompt="default", # Forzar prompt "default"
+                    original_profile=user_profile, 
+                    is_proactive_call=True
                 )
-                is_cud_topic_arch = "cud" in rec_int_arch.get("tags", [])
-                # Añadir si: (NO es CUD) O (SÍ es CUD PERO usuario tiene CUD)
-                if not is_cud_topic_arch or has_cud:
-                    # Formato mejorado con nombre del experto
-                    final_recs.append(f"  - ({weight:.0%}) {rec_str_arch}") # Quitar 'Prioridad:'
-                    recommendations_added += 1
-                    # Loguear Gating Afectivo SOLO para el tutor principal (el 1ro añadido)
-                    if recommendations_added == 1:
-                        # Loguear Gating (pasando las etiquetas)
-                        gating_archetype = self._log_gating_event(
-                            expert.nombre, rec_int_arch, top_detected_emotion, official_labels
+                final_recs.append(rec_str_cud_pro)
+                gating_cud = self._log_gating_event("GestorCUD (Proactivo)", rec_int_cud_pro, top_detected_emotion, official_labels)
+                gating_log_for_ui["cud_expert"] = gating_cud
+            
+            # Añadir Recomendaciones de Arquetipo
+            final_recs.append("**[Plan de Acción Adaptativo (Arquetipo)]**")
+            min_rec_weight = self.thresholds.get('min_recommendation_weight', 0.15)
+            recommendations_added = 0
+
+            # Iterar sobre los expertos ordenados por su peso final
+            for archetype, weight in sorted(final_weights.items(), key=lambda item: item[1], reverse=True):
+                
+                if weight > min_rec_weight and archetype in self.expert_map:
+                    expert = self.expert_map[archetype]
+                    
+                    # Si este experto fue el ganador de la anulación semántica, usar su intención ya calculada
+                    if archetype == best_semantic_match['archetype'] and best_semantic_match['intention'] is not None:
+                         rec_int_arch = best_semantic_match['intention']
+                         rec_str_arch = f"[{expert.nombre}]: {rec_int_arch.get('respuesta', '...')}"
+                    else:
+                        # Si no, hacer una búsqueda semántica normal para este experto
+                         rec_str_arch, rec_int_arch, _rec_score = expert.generate_recommendation(
+                            prompt=user_prompt, original_profile=user_profile
                         )
-                        gating_log_for_ui["archetype_expert"] = gating_archetype
 
-        # --- Mensaje Default si no hubo recomendaciones ---
-        if recommendations_added == 0 and len(final_recs) <= 1: # Solo título
-            default_expert_name = predicted_archetype if predicted_archetype in self.expert_map else list(self.expert_map.keys())[0]
-            default_expert = self.expert_map[default_expert_name]
-            _, default_intention = default_expert.generate_recommendation(prompt="default", original_profile=user_profile)
-            default_response = default_intention.get("respuesta", "Analicemos tu situación.")
-            # Formato consistente
-            final_recs.append(f"  - [{default_expert.nombre} (Default)]: {default_response}")
-            # Loguear Gating (pasando las etiquetas)
-            gating_default = self._log_gating_event(
-                default_expert.nombre + " (Default)", default_intention, top_detected_emotion, official_labels
-            )
-            gating_log_for_ui["default_expert"] = gating_default
+                    final_recs.append(f"  - ({weight:.0%}) {rec_str_arch}")
+                    recommendations_added += 1
+                    
+                    if recommendations_added == 1: # Loguear solo el principal
+                        gating_arch = self._log_gating_event(expert.nombre, rec_int_arch, top_detected_emotion, official_labels)
+                        gating_log_for_ui["archetype_expert"] = gating_arch
 
-
+            # Mensaje Default si no hubo recomendaciones
+            if recommendations_added == 0:
+                default_expert_name = predicted_archetype
+                default_expert = self.expert_map[default_expert_name]
+                _def_str, def_int, _def_score = default_expert.generate_recommendation(prompt="default", original_profile=user_profile)
+                default_response = def_int.get("respuesta", "Analicemos tu situación.")
+                final_recs.append(f"  - [{default_expert.nombre} (Default)]: {default_response}")
+                
+                gating_default = self._log_gating_event(default_expert.nombre + " (Default)", def_int, top_detected_emotion, official_labels)
+                gating_log_for_ui["default_expert"] = gating_default
+        
+        # --- 9. Finalización ---
         plan_string = "\n".join(final_recs)
-        # Devolver el diccionario `final_weights` en lugar de `analysis_log_data`
+        # Devolver el arquetipo (cognitivo o anulado) y los pesos finales
         return plan_string, predicted_archetype, final_weights
