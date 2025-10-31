@@ -2,18 +2,27 @@
 Aplicación principal de Streamlit para el prototipo de Tesis Doctoral:
 Tutor Cognitivo Adaptativo con IA Afectiva.
 
+- Guardado de perfiles de onboarding como JSON individuales (más robusto).
+- Visualización de la lógica de fusión Afectivo-Cognitiva en la UI.
+- Ruta de logs ahora es un directorio (config.yaml).
+
+
+- Ruta de guardado de perfiles de onboarding centralizada en config.yaml.
+- Se añade un ONBOARDING_ID único (timestamp) a cada perfil guardado.
+- Normalización de etiquetas de emoción basada en config.yaml.
+- Caption con perfil activo.
+
+
+- Pipeline de inferencia en tiempo real con modo "Demo" y "Perfil Nuevo".
+- Formulario de "onboarding".
+- Integración con 'src.profile_inference'.
+
 Componentes integrados:
 - Clasificador de Emociones (`emotion_classifier.py`)
 - Tutor Cognitivo (`cognitive_model_trainer.py`)
 - Motor de Fusión de Expertos (`cognitive_tutor.py`)
 - Motor de Inferencia de Perfil (`profile_inference.py`)
 - Configuración Central (`config.yaml`)
-
-Esta versión incluye:
-- Pipeline de inferencia en tiempo real con modo "Demo" y "Perfil Nuevo" (Épica 2).
-- Formulario de "onboarding" para perfilar nuevos usuarios (Épica 2).
-- Visualización de la lógica de fusión Afectivo-Cognitiva (Épica 3).
-- Lógica de normalización de emoción revertida a la versión estable (app-6.py).
 """
 
 import streamlit as st
@@ -61,7 +70,7 @@ except Exception as e:
 def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionClassifier, MoESystem, pd.DataFrame, Dict]:
     """
     Carga y prepara todos los artefactos necesarios. Cacheado para rendimiento.
-    Valida rutas y dependencias.
+    Valida rutas y dependencias. (MODIFICADO para log dir).
     """
     with st.spinner("Cargando modelos y preparando el sistema..."):
         # Carga robusta de config.yaml
@@ -86,6 +95,7 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionC
             'cognitive_tutor': paths.get('cognitive_tutor'),
             'emotion_classifier': paths.get('emotion_classifier'),
             'demo_profiles': data_paths.get('demo_profiles'),
+            # --- Ruta de directorio para logs ---
             'onboarding_log_dir': data_paths.get('onboarding_log_dir')
         }
 
@@ -424,7 +434,6 @@ def render_chat_interface(
 ) -> None:
     """
     Renderiza la interfaz de chat principal. Incluye visualización de lógica adaptativa.
-    (CORREGIDO: Lógica de normalización de emoción revertida a la versión estable).
     """
     st.title("🧠 Tutor Cognitivo Adaptativo con IA Afectiva 🤖")
     st.caption(f"👤 Perfil activo: **{st.session_state.current_archetype}** ({st.session_state.profile_mode})")
@@ -441,6 +450,9 @@ def render_chat_interface(
     for message in st.session_state.get("messages", []):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            # Quitar el expander de aquí, ya está arriba
+            # if "analysis" in message and isinstance(message["analysis"], dict):
+            #     with st.expander("Ver Análisis Detallado"): ...
 
     # Entrada de usuario
     if prompt := st.chat_input("Escriba su consulta aquí..."):
@@ -458,35 +470,34 @@ def render_chat_interface(
                 user_profile = st.session_state.current_user_profile
                 emotion_probs = emotion_classifier.predict_proba(prompt)[0]
 
-                # --- LÓGICA DE NORMALIZACIÓN SIMPLE (REVERTIDA Y FUNCIONAL) ---
+                # Normalización de Emoción (basada en YAML)
                 top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
-                
-                # Normalización: Elimina espacios, convierte a minúscula, luego capitaliza.
-                top_emotion_normalized = top_emotion_raw.strip().lower().capitalize()
-                
-                # Opcional: Log de depuración si la normalización cambió algo
-                if top_emotion_raw != top_emotion_normalized and "Etiqueta_" not in top_emotion_raw:
-                    st.warning(f"DEBUG: Emoción normalizada. Original: '{top_emotion_raw}', Normalizada: '{top_emotion_normalized}'")
-                # --- FIN DE LA REVERSIÓN ---
+                official_labels = st.session_state.config.get('constants', {}).get('emotion_labels', [])
+                label_map = {label.strip().lower(): label for label in official_labels}
+                normalized_key = top_emotion_raw.strip().lower()
+                top_emotion_normalized = label_map.get(normalized_key, top_emotion_raw.strip().capitalize())
+                if "Etiqueta_" in top_emotion_normalized or not top_emotion_normalized:
+                    top_emotion_normalized = "Desconocida"
 
-                # --- Llamada al MoESystem ---
+                # --- ¡MODIFICACIÓN IMPORTANTE! ---
+                # Asumir que get_cognitive_plan ahora devuelve los pesos finales
                 plan_result = cognitive_tutor_system.get_cognitive_plan(
                     user_profile, emotion_probs,
                     st.session_state.session_data["conversation_context"],
                     st.session_state.config, prompt
                 )
-                
-                # Desempaquetar el resultado esperado (3 valores)
+                # Desempaquetar el resultado esperado (ajustar si tu función devuelve otra cosa)
                 if isinstance(plan_result, tuple) and len(plan_result) == 3:
                      cognitive_plan, predicted_archetype, final_weights = plan_result
                 else:
-                     # Fallback si MoESystem no fue modificado (seguridad)
-                     st.warning("Advertencia: MoESystem.get_cognitive_plan no devolvió 3 valores. La visualización estará incompleta.")
+                     # Fallback si MoESystem no fue modificado
+                     st.warning("Advertencia: MoESystem.get_cognitive_plan no devolvió los pesos finales. La visualización estará incompleta.")
                      cognitive_plan, predicted_archetype = plan_result # Asumir el retorno antiguo
                      final_weights = None # Marcar como no disponible
 
+
                 # Respuestas empáticas (basadas en emoción normalizada)
-                empathetic_responses = {
+                empathetic_responses = { # ... (igual que antes) ...
                     "Alegria": "¡Qué buena noticia! Me alegra sentir tu optimismo. Para potenciar ese impulso, este es el plan:",
                     "Confianza": "¡Excelente! Percibo mucha seguridad en tus palabras. Usemos esa confianza como base para el siguiente plan de acción:",
                     "Anticipacion": "Noto tu expectativa. ¡Esa energía es muy valiosa! Enfoquémosla con el siguiente plan:",
@@ -496,7 +507,8 @@ def render_chat_interface(
                     "Sorpresa": "¡Vaya! Parece que esto te ha tomado por sorpresa. Analicemos con calma la situación. Este es el plan:",
                     "Desconocida": "Entendido. Este es el plan de acción sugerido:"
                 }
-                
+                for label in official_labels:
+                    if label not in empathetic_responses: empathetic_responses[label] = f"Detecté '{label}'. Plan:"
                 intro_message = empathetic_responses.get(top_emotion_normalized, empathetic_responses["Desconocida"])
 
                 full_response = f"{intro_message}\n\n{cognitive_plan}"
@@ -505,7 +517,7 @@ def render_chat_interface(
                 # Guardar datos de análisis (incluyendo pesos finales)
                 analysis_data = {
                     "archetype": predicted_archetype,
-                    "top_emotion": top_emotion_normalized, # <- Clave normalizada y validada
+                    "top_emotion": top_emotion_normalized,
                     "top_emotion_prob": emotion_probs.get(top_emotion_raw, 0.0),
                     "emotion_probs": emotion_probs,
                     "final_weights": final_weights # <-- Añadir pesos
@@ -513,8 +525,10 @@ def render_chat_interface(
                 st.session_state.messages.append({"role": "assistant", "content": full_response, "analysis": analysis_data})
                 st.session_state.current_archetype = predicted_archetype
                 update_session_data(analysis_data)
-                
-                st.rerun() # Re-ejecutar para mostrar el nuevo expander
+                # No se necesita st.rerun() aquí, pero sí se necesita después de agregar el mensaje
+                # para que el nuevo expander se muestre inmediatamente.
+                st.rerun()
+
 
             except Exception as e:
                 error_message = f"Error al generar respuesta: {e}"
