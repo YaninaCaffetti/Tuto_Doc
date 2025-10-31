@@ -196,11 +196,13 @@ EXPERT_KB = {
                 "¿Conviene hacer cursos cortos o una carrera larga?",
                 "¿Qué es mejor, un bootcamp o la universidad?",
                 "¿Cómo decido qué estudiar para el trabajo?",
-                "Formación profesional o título de grado"
+                "Formación profesional o título de grado",
+                "necesito especializarme en inglés",
+                "quiero aprender inglés"
             ],
             "respuesta": """Depende de tus metas. Los cursos cortos actualizan rápido tus competencias, mientras que una carrera ofrece bases teóricas sólidas. Podés combinarlos.""",
             "contexto_emocional_esperado": "anticipacion",
-            "tags": ["formacion", "educacion", "proyeccion"]
+            "tags": ["formacion", "educacion", "proyeccion", "idiomas"]
         },
         {
             "pregunta_clave": "Manejo emocional del rechazo en la búsqueda laboral",
@@ -208,7 +210,9 @@ EXPERT_KB = {
                 "Afrontar el rechazo en búsquedas laborales: Resiliencia y próximos pasos",
                 "Me rechazaron de un trabajo, estoy triste",
                 "¿Cómo afrontar el rechazo laboral?",
-                "Nadie me contrata, me siento mal"
+                "Nadie me contrata, me siento mal",
+                "estoy triste",
+                "estoy trsite"
             ],
             "respuesta": """El rechazo no define tu valor profesional. Analizá qué podés mejorar y seguí postulando. Cada entrevista te prepara mejor para la siguiente.""",
             "contexto_emocional_esperado": "tristeza",
@@ -222,7 +226,8 @@ EXPERT_KB = {
                 "No sé si irme de mi empleo actual",
                 "¿Cuándo es momento de cambiar de trabajo?",
                 "Siento estancamiento laboral",
-                "Estoy pensando en dejar mi puesto" # DESCONTAMINACIÓN (FALLO 2)
+                "Estoy pensando en dejar mi puesto",
+                "que puedo hacer por mi carrera"
             ],
             "respuesta": """Si sentís estancamiento, estrés crónico o falta de aprendizaje, es momento de evaluar opciones. Planificá la transición antes de tomar la decisión final.""",
             "contexto_emocional_esperado": "confianza",
@@ -407,6 +412,21 @@ EXPERT_KB = {
             "respuesta": """Mantené una postura abierta, mirá a tu interlocutor y asentí suavemente. El lenguaje corporal transmite seguridad y atención.""",
             "contexto_emocional_esperado": "confianza",
             "tags": ["comunicacion_no_verbal", "presencia", "confianza"]
+        },
+        {
+            "pregunta_clave": "Meta-Consulta de Frustracion (No entiendo)",
+            "variantes": [
+                "No te entiendo",
+                "No entiendo lo que me decís",
+                "Qué querés decir",
+                "No te sigo",
+                "Me perdí con tu respuesta",
+                "no me estas escuchando",
+                "no me estás escuchando"
+            ],
+            "respuesta": "Entiendo, pido disculpas si no fui claro. Como tu tutor de interacción, mi objetivo es ayudarte a comunicarte mejor. ¿Podemos reintentar? ¿Qué es lo que necesitás que aclare?",
+            "contexto_emocional_esperado": "ira",
+            "tags": ["meta", "frustracion", "clarificacion", "comunicacion"]
         }
     ],
     "TutorCompetencias": [
@@ -711,19 +731,6 @@ EXPERT_KB = {
             "respuesta": "Esa es una excelente pregunta. Te derivo con el GestorCUD, que es el experto en ese trámite.",
             "contexto_emocional_esperado": "anticipacion",
             "tags": ["cud", "redireccion", "filtro"]
-        },
-        {
-            "pregunta_clave": "Meta-Consulta de Frustracion (No entiendo)",
-            "variantes": [
-                "No te entiendo",
-                "No entiendo lo que me decís",
-                "Qué querés decir",
-                "No te sigo",
-                "Me perdí con tu respuesta"
-            ],
-            "respuesta": "Entiendo, pido disculpas si no fui claro. Como tu tutor de bienestar, mi objetivo es ayudarte a gestionar cómo te sentís. ¿Podemos reenfocarnos en qué te trajo a esta consulta?",
-            "contexto_emocional_esperado": "ira",
-            "tags": ["meta", "frustracion", "clarificacion"]
         }
     ],
     "TutorApoyos": [
