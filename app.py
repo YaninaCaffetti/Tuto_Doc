@@ -2,27 +2,18 @@
 Aplicación principal de Streamlit para el prototipo de Tesis Doctoral:
 Tutor Cognitivo Adaptativo con IA Afectiva.
 
-- Guardado de perfiles de onboarding como JSON individuales (más robusto).
-- Visualización de la lógica de fusión Afectivo-Cognitiva en la UI.
-- Ruta de logs ahora es un directorio (config.yaml).
-
-
-- Ruta de guardado de perfiles de onboarding centralizada en config.yaml.
-- Se añade un ONBOARDING_ID único (timestamp) a cada perfil guardado.
-- Normalización de etiquetas de emoción basada en config.yaml.
-- Caption con perfil activo.
-
-
-- Pipeline de inferencia en tiempo real con modo "Demo" y "Perfil Nuevo".
-- Formulario de "onboarding".
-- Integración con 'src.profile_inference'.
-
 Componentes integrados:
 - Clasificador de Emociones (`emotion_classifier.py`)
 - Tutor Cognitivo (`cognitive_model_trainer.py`)
 - Motor de Fusión de Expertos (`cognitive_tutor.py`)
 - Motor de Inferencia de Perfil (`profile_inference.py`)
 - Configuración Central (`config.yaml`)
+
+Esta versión incluye:
+- Pipeline de inferencia en tiempo real con modo "Demo" y "Perfil Nuevo" (Épica 2).
+- Formulario de "onboarding" para perfilar nuevos usuarios (Épica 2).
+- Visualización de la lógica de fusión Afectivo-Cognitiva (Épica 3).
+- Lógica de normalización de emoción revertida a la versión estable (app-6.py).
 """
 
 import streamlit as st
@@ -70,7 +61,7 @@ except Exception as e:
 def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionClassifier, MoESystem, pd.DataFrame, Dict]:
     """
     Carga y prepara todos los artefactos necesarios. Cacheado para rendimiento.
-    Valida rutas y dependencias. (MODIFICADO para log dir).
+    Valida rutas y dependencias.
     """
     with st.spinner("Cargando modelos y preparando el sistema..."):
         # Carga robusta de config.yaml
@@ -95,7 +86,6 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionC
             'cognitive_tutor': paths.get('cognitive_tutor'),
             'emotion_classifier': paths.get('emotion_classifier'),
             'demo_profiles': data_paths.get('demo_profiles'),
-            # --- Ruta de directorio para logs ---
             'onboarding_log_dir': data_paths.get('onboarding_log_dir')
         }
 
@@ -434,12 +424,13 @@ def render_chat_interface(
 ) -> None:
     """
     Renderiza la interfaz de chat principal. Incluye visualización de lógica adaptativa.
-    (CORREGIDO: Lógica de normalización de emoción robustecida).
+    (CORREGIDO: Lógica de normalización de emoción revertida a la versión estable).
     """
     st.title("🧠 Tutor Cognitivo Adaptativo con IA Afectiva 🤖")
     st.caption(f"👤 Perfil activo: **{st.session_state.current_archetype}** ({st.session_state.profile_mode})")
 
-    # --- EXPANDER DE VISUALIZACIÓN ---
+    # --- ¡NUEVO EXPANDER DE VISUALIZACIÓN! ---
+    # Intentar obtener los datos de análisis del último mensaje del asistente
     last_analysis_data = None
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
         last_analysis_data = st.session_state.messages[-1].get("analysis")
@@ -450,7 +441,7 @@ def render_chat_interface(
     for message in st.session_state.get("messages", []):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-            
+
     # Entrada de usuario
     if prompt := st.chat_input("Escriba su consulta aquí..."):
         if st.session_state.current_user_profile is None:
@@ -467,43 +458,34 @@ def render_chat_interface(
                 user_profile = st.session_state.current_user_profile
                 emotion_probs = emotion_classifier.predict_proba(prompt)[0]
 
-                # --- LÓGICA DE NORMALIZACIÓN ROBUSTA (CORREGIDA) ---
+                # --- LÓGICA DE NORMALIZACIÓN SIMPLE (REVERTIDA Y FUNCIONAL) ---
                 top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
-                official_labels = st.session_state.config.get('constants', {}).get('emotion_labels', [])
                 
-                # 1. Crear mapa de normalización (ej. {'tristeza': 'Tristeza'})
-                label_map = {label.strip().lower(): label for label in official_labels}
+                # Normalización: Elimina espacios, convierte a minúscula, luego capitaliza.
+                top_emotion_normalized = top_emotion_raw.strip().lower().capitalize()
                 
-                # 2. Normalizar la etiqueta cruda del modelo
-                normalized_key = top_emotion_raw.strip().lower()
-                
-                # 3. Buscar en el mapa
-                top_emotion_normalized = label_map.get(normalized_key) # Devuelve 'Tristeza' o None
-                
-                # 4. Asignar Fallback
-                if top_emotion_normalized is None:
-                    top_emotion_normalized = "Desconocida" # Forzar a "Desconocida" si no está en config
-                # --- FIN DE LA CORRECCIÓN ---
+                # Opcional: Log de depuración si la normalización cambió algo
+                if top_emotion_raw != top_emotion_normalized and "Etiqueta_" not in top_emotion_raw:
+                    st.warning(f"DEBUG: Emoción normalizada. Original: '{top_emotion_raw}', Normalizada: '{top_emotion_normalized}'")
+                # --- FIN DE LA REVERSIÓN ---
 
-
-                # --- ¡MODIFICACIÓN IMPORTANTE! ---
-                # Asumir que get_cognitive_plan ahora devuelve los pesos finales
+                # --- Llamada al MoESystem ---
                 plan_result = cognitive_tutor_system.get_cognitive_plan(
                     user_profile, emotion_probs,
                     st.session_state.session_data["conversation_context"],
                     st.session_state.config, prompt
                 )
                 
+                # Desempaquetar el resultado esperado (3 valores)
                 if isinstance(plan_result, tuple) and len(plan_result) == 3:
                      cognitive_plan, predicted_archetype, final_weights = plan_result
                 else:
-                     # Fallback si MoESystem no fue modificado
-                     st.warning("Advertencia: MoESystem.get_cognitive_plan no devolvió los pesos finales.")
-                     cognitive_plan, predicted_archetype = plan_result 
-                     final_weights = None 
+                     # Fallback si MoESystem no fue modificado (seguridad)
+                     st.warning("Advertencia: MoESystem.get_cognitive_plan no devolvió 3 valores. La visualización estará incompleta.")
+                     cognitive_plan, predicted_archetype = plan_result # Asumir el retorno antiguo
+                     final_weights = None # Marcar como no disponible
 
                 # Respuestas empáticas (basadas en emoción normalizada)
-                # (CORREGIDO: Typo "action" en "Ira")
                 empathetic_responses = {
                     "Alegria": "¡Qué buena noticia! Me alegra sentir tu optimismo. Para potenciar ese impulso, este es el plan:",
                     "Confianza": "¡Excelente! Percibo mucha seguridad en tus palabras. Usemos esa confianza como base para el siguiente plan de acción:",
@@ -514,8 +496,6 @@ def render_chat_interface(
                     "Sorpresa": "¡Vaya! Parece que esto te ha tomado por sorpresa. Analicemos con calma la situación. Este es el plan:",
                     "Desconocida": "Entendido. Este es el plan de acción sugerido:"
                 }
-                
-                # (Eliminada la lógica de bucle 'for label in official_labels...')
                 
                 intro_message = empathetic_responses.get(top_emotion_normalized, empathetic_responses["Desconocida"])
 
@@ -580,3 +560,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
