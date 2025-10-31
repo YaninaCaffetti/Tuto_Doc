@@ -434,12 +434,12 @@ def render_chat_interface(
 ) -> None:
     """
     Renderiza la interfaz de chat principal. Incluye visualización de lógica adaptativa.
+    (CORREGIDO: Lógica de normalización de emoción robustecida).
     """
     st.title("🧠 Tutor Cognitivo Adaptativo con IA Afectiva 🤖")
     st.caption(f"👤 Perfil activo: **{st.session_state.current_archetype}** ({st.session_state.profile_mode})")
 
-    # --- ¡NUEVO EXPANDER DE VISUALIZACIÓN! ---
-    # Intentar obtener los datos de análisis del último mensaje del asistente
+    # --- EXPANDER DE VISUALIZACIÓN ---
     last_analysis_data = None
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
         last_analysis_data = st.session_state.messages[-1].get("analysis")
@@ -450,10 +450,7 @@ def render_chat_interface(
     for message in st.session_state.get("messages", []):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-            # Quitar el expander de aquí, ya está arriba
-            # if "analysis" in message and isinstance(message["analysis"], dict):
-            #     with st.expander("Ver Análisis Detallado"): ...
-
+            
     # Entrada de usuario
     if prompt := st.chat_input("Escriba su consulta aquí..."):
         if st.session_state.current_user_profile is None:
@@ -470,14 +467,24 @@ def render_chat_interface(
                 user_profile = st.session_state.current_user_profile
                 emotion_probs = emotion_classifier.predict_proba(prompt)[0]
 
-                # Normalización de Emoción (basada en YAML)
+                # --- LÓGICA DE NORMALIZACIÓN ROBUSTA (CORREGIDA) ---
                 top_emotion_raw = max(emotion_probs, key=emotion_probs.get) if emotion_probs else "Desconocida"
                 official_labels = st.session_state.config.get('constants', {}).get('emotion_labels', [])
+                
+                # 1. Crear mapa de normalización (ej. {'tristeza': 'Tristeza'})
                 label_map = {label.strip().lower(): label for label in official_labels}
+                
+                # 2. Normalizar la etiqueta cruda del modelo
                 normalized_key = top_emotion_raw.strip().lower()
-                top_emotion_normalized = label_map.get(normalized_key, top_emotion_raw.strip().capitalize())
-                if "Etiqueta_" in top_emotion_normalized or not top_emotion_normalized:
-                    top_emotion_normalized = "Desconocida"
+                
+                # 3. Buscar en el mapa
+                top_emotion_normalized = label_map.get(normalized_key) # Devuelve 'Tristeza' o None
+                
+                # 4. Asignar Fallback
+                if top_emotion_normalized is None:
+                    top_emotion_normalized = "Desconocida" # Forzar a "Desconocida" si no está en config
+                # --- FIN DE LA CORRECCIÓN ---
+
 
                 # --- ¡MODIFICACIÓN IMPORTANTE! ---
                 # Asumir que get_cognitive_plan ahora devuelve los pesos finales
@@ -486,18 +493,18 @@ def render_chat_interface(
                     st.session_state.session_data["conversation_context"],
                     st.session_state.config, prompt
                 )
-                # Desempaquetar el resultado esperado (ajustar si tu función devuelve otra cosa)
+                
                 if isinstance(plan_result, tuple) and len(plan_result) == 3:
                      cognitive_plan, predicted_archetype, final_weights = plan_result
                 else:
                      # Fallback si MoESystem no fue modificado
-                     st.warning("Advertencia: MoESystem.get_cognitive_plan no devolvió los pesos finales. La visualización estará incompleta.")
-                     cognitive_plan, predicted_archetype = plan_result # Asumir el retorno antiguo
-                     final_weights = None # Marcar como no disponible
-
+                     st.warning("Advertencia: MoESystem.get_cognitive_plan no devolvió los pesos finales.")
+                     cognitive_plan, predicted_archetype = plan_result 
+                     final_weights = None 
 
                 # Respuestas empáticas (basadas en emoción normalizada)
-                empathetic_responses = { # ... (igual que antes) ...
+                # (CORREGIDO: Typo "action" en "Ira")
+                empathetic_responses = {
                     "Alegria": "¡Qué buena noticia! Me alegra sentir tu optimismo. Para potenciar ese impulso, este es el plan:",
                     "Confianza": "¡Excelente! Percibo mucha seguridad en tus palabras. Usemos esa confianza como base para el siguiente plan de acción:",
                     "Anticipacion": "Noto tu expectativa. ¡Esa energía es muy valiosa! Enfoquémosla con el siguiente plan:",
@@ -507,8 +514,9 @@ def render_chat_interface(
                     "Sorpresa": "¡Vaya! Parece que esto te ha tomado por sorpresa. Analicemos con calma la situación. Este es el plan:",
                     "Desconocida": "Entendido. Este es el plan de acción sugerido:"
                 }
-                for label in official_labels:
-                    if label not in empathetic_responses: empathetic_responses[label] = f"Detecté '{label}'. Plan:"
+                
+                # (Eliminada la lógica de bucle 'for label in official_labels...')
+                
                 intro_message = empathetic_responses.get(top_emotion_normalized, empathetic_responses["Desconocida"])
 
                 full_response = f"{intro_message}\n\n{cognitive_plan}"
@@ -517,7 +525,7 @@ def render_chat_interface(
                 # Guardar datos de análisis (incluyendo pesos finales)
                 analysis_data = {
                     "archetype": predicted_archetype,
-                    "top_emotion": top_emotion_normalized,
+                    "top_emotion": top_emotion_normalized, # <- Clave normalizada y validada
                     "top_emotion_prob": emotion_probs.get(top_emotion_raw, 0.0),
                     "emotion_probs": emotion_probs,
                     "final_weights": final_weights # <-- Añadir pesos
@@ -525,10 +533,8 @@ def render_chat_interface(
                 st.session_state.messages.append({"role": "assistant", "content": full_response, "analysis": analysis_data})
                 st.session_state.current_archetype = predicted_archetype
                 update_session_data(analysis_data)
-                # No se necesita st.rerun() aquí, pero sí se necesita después de agregar el mensaje
-                # para que el nuevo expander se muestre inmediatamente.
-                st.rerun()
-
+                
+                st.rerun() # Re-ejecutar para mostrar el nuevo expander
 
             except Exception as e:
                 error_message = f"Error al generar respuesta: {e}"
@@ -574,4 +580,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
