@@ -1,5 +1,5 @@
 """
-Módulo de Inferencia de Perfil de Usuario.
+Módulo de Inferencia de Perfil de Usuario (Épica 2).
 
 Este módulo centraliza la lógica de Feature Engineering, Simulación de Rasgos (MBTI)
 y Fuzzificación. Su diseño permite su uso dual:
@@ -42,14 +42,21 @@ def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     df_p = df.copy()
 
     # 1. Conversión numérica segura y manejo de nulos
-    cols_to_numeric = [
-        'dificultad_total', 'dificultades', 'tipo_dificultad', 'MNEA', 'edad_agrupada',
-        'Estado_ocup', 'cat_ocup', 'certificado', 'PC08', 'pc03', 'tipo_hogar'
-    ]
-    for col in cols_to_numeric:
+    # Se usa pd.to_numeric con 'coerce' para transformar errores en NaN.
+    # Luego, se rellenan los NaNs con un valor centinela (0 o 9) según la semántica de la variable
+    # para evitar contaminación con ceros donde no corresponde (ej. MNEA=0 no existe en manual).
+    
+    # Variables donde 0 es un valor válido o "Sin dato" seguro
+    cols_zero_fill = ['dificultad_total', 'dificultades', 'certificado'] 
+    for col in cols_zero_fill:
         if col in df_p.columns:
-            # Coerce errors to NaN, then fill with 0 (o valor neutro seguro)
             df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+
+    # Variables donde 0 podría ser ambiguo, usamos 9 (Ignorado/NC estándar en INDEC)
+    cols_nine_fill = ['tipo_dificultad', 'MNEA', 'edad_agrupada', 'Estado_ocup', 'cat_ocup', 'PC08', 'pc03', 'tipo_hogar']
+    for col in cols_nine_fill:
+        if col in df_p.columns:
+            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(9)
 
     # 2. Creación de 'Perfil_Dificultad_Agrupado'
     # Lógica de agrupación basada en reglas de negocio del dominio de discapacidad
@@ -87,10 +94,11 @@ def run_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
         1: '0A_0_a_5_anios', 2: '0B_6_a_13_anios', 3: '1_Joven_Adulto_Temprano (14-39)',
         4: '2_Adulto_Medio (40-64)', 5: '3_Adulto_Mayor (65+)'
     }
+    # Si edad_agrupada es 9 (nuestro fillna), map devolverá NaN, entonces fillna con default joven.
     df_p['GRUPO_ETARIO_INDEC'] = df_p['edad_agrupada'].map(edad_map).fillna('1_Joven_Adulto_Temprano (14-39)')
 
     # 5. Creación de 'TIENE_CUD'
-    cud_map = {1: 'Si_Tiene_CUD', 2: 'No_Tiene_CUD', 9: 'Ignorado_CUD'}
+    cud_map = {1: 'Si_Tiene_CUD', 2: 'No_Tiene_CUD', 9: 'Ignorado_CUD', 0: 'Ignorado_CUD'}
     df_p['TIENE_CUD'] = df_p['certificado'].map(cud_map).fillna('No_Tiene_CUD')
 
     # 6. Creación de 'Espectro_Inclusion_Laboral'
