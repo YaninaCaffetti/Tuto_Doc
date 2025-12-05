@@ -1,10 +1,28 @@
-"""Pipeline de procesamiento de datos para el Tutor Cognitivo. (FIX SHAP & Épica 2)
+"""
+Pipeline de procesamiento de datos para el Tutor Cognitivo. (FIX SHAP + BALANCEO)
 
-CORRECCIÓN CRÍTICA (Dic 2025):
-- Se implementó un filtrado estricto para filas 'huérfanas' (todas las pertenencias = 0).
-- Anteriormente, idxmax() asignaba el primer arquetipo ('Com_Desafiado') a los casos de score 0,
-  contaminando el dataset de entrenamiento con perfiles de Bajo Capital Humano.
-- Se refina la lógica para evitar ambigüedades.
+Este script ejecuta el pipeline ETL (Extracción, Transformación, Carga) completo
+para generar los datos necesarios para el entrenamiento del modelo cognitivo
+y los perfiles de demostración.
+
+Aplica dos correcciones críticas para la tesis doctoral, derivadas de la auditoría XAI:
+1. Limpieza de Filas Huérfanas: Elimina perfiles con baja pertenencia (<0.1) a cualquier
+   arquetipo para corregir el sesgo detectado por SHAP (donde perfiles vacíos se asignaban
+   erróneamente a 'Com_Desafiado').
+2. Balanceo de Clases (Upsampling): Aplica una estrategia de sobremuestreo a los arquetipos
+   minoritarios para garantizar que el modelo aprenda sus reglas específicas, superando
+   el desbalance natural presente en los datos de la encuesta ENDIS.
+
+Dependencias:
+    - pandas
+    - numpy
+    - pyyaml
+    - sklearn (resample)
+    - src.profile_inference (lógica compartida)
+    - src.constants
+
+Ejecución:
+    python src/data_processing.py
 """
 
 import pandas as pd
@@ -13,9 +31,9 @@ import os
 import logging
 import yaml
 import traceback
+from sklearn.utils import resample  # Necesario para la estrategia de balanceo
 
-# Importar las constantes centralizadas
-# Asegúrate de que constants.py exista y tenga estas variables
+# Importación robusta de constantes y lógica compartida
 try:
     from .constants import ALL_ARCHETYPES, TARGET_COLUMN
     from .profile_inference import (
@@ -24,7 +42,7 @@ try:
         run_fuzzification
     )
 except ImportError:
-    # Fallback para ejecución directa como script
+    # Fallback para ejecución directa como script principal
     from constants import ALL_ARCHETYPES, TARGET_COLUMN
     from profile_inference import (
         run_feature_engineering,
@@ -41,59 +59,80 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Aplica las reglas expertas ("receta dorada") para calcular la pertenencia.
-    SOLO para entrenamiento.
+    Aplica las reglas expertas ("receta dorada") para calcular la pertenencia a cada arquetipo.
+    
+    Esta función implementa la lógica heurística definida en la tesis para asignar
+    un grado de pertenencia (0.0 a 1.0) a cada uno de los 6 arquetipos de vulnerabilidad.
+    
+    NOTA: Esta función se utiliza SOLO durante la fase de entrenamiento offline para
+    etiquetar los datos históricos.
+
+    Args:
+        df (pd.DataFrame): DataFrame con características de Fase 1 y scores MBTI simulados.
+
+    Returns:
+        pd.DataFrame: El DataFrame original enriquecido con 6 nuevas columnas 
+                      `Pertenencia_{Arquetipo}`.
     """
     df_out = df.copy()
     logging.info("Calculando pertenencia a arquetipos (Reglas Expertas)...")
 
-    # --- REGLAS REFINADAS PARA EVITAR COLISIONES ---
+    # --- DEFINICIÓN DE REGLAS REFINADAS PARA EVITAR COLISIONES ---
 
     def _clasificar_comunicador_desafiado(r):
-        # REGLA DE ORO: Debe tener Capital Humano ALTO.
-        # Si es Bajo o Medio, se fuerza a 0.0 para limpiar el dataset.
+        """
+        Regla para 'Comunicador Desafiado'.
+        Perfil: Alto Capital Humano + Barreras de Comunicación.
+        """
+        # REGLA DE ORO (Excluyente): Debe tener Capital Humano ALTO.
         if r.get('CAPITAL_HUMANO') != '3_Alto':
             return 0.0
             
-        pdif, slab, get = r.get('Perfil_Dificultad_Agrupado'), r.get('Espectro_Inclusion_Laboral'), r.get('GRUPO_ETARIO_INDEC')
-        ei, sn = r.get('MBTI_EI_score_sim'), r.get('MBTI_SN_score_sim')
+        pdif, slab = r.get('Perfil_Dificultad_Agrupado'), r.get('Espectro_Inclusion_Laboral')
+        ei = r.get('MBTI_EI_score_sim')
         
         es_dificultad_com = (pdif in ['1F_Habla_Comunicacion_Unica', '1C_Auditiva_Unica'])
         es_inclusion_deficiente = (slab in ['2_Busqueda_Sin_Exito', '3_Inclusion_Precaria_Aprox'])
         
         prob_base = 0.0
         if es_dificultad_com and es_inclusion_deficiente: 
-            prob_base = 0.95 # Muy alta certeza si cumple la definición exacta
+            prob_base = 0.95 # Alta certeza
         elif es_inclusion_deficiente and pdif == '3_Tres_o_Mas_Dificultades':
              # Caso borde: múltiples dificultades a veces enmascaran lo comunicacional
              prob_base = 0.3
         
         if prob_base == 0.0: return 0.0
         
-        # Moduladores MBTI
-        factor_ei = 1.0 - (0.2 * ei) if pd.notna(ei) else 1.0 # Introversión favorece
-        prob_final = prob_base * factor_ei
-        return round(max(0.0, min(prob_final, 1.0)), 2)
+        # Moduladores MBTI: Introversión favorece este perfil
+        factor_ei = 1.0 - (0.2 * ei) if pd.notna(ei) else 1.0
+        return round(max(0.0, min(prob_base * factor_ei, 1.0)), 2)
 
     def _clasificar_navegante_informal(r):
-        # REGLA DE ORO: Capital Humano BAJO.
+        """
+        Regla para 'Navegante Informal'.
+        Perfil: Bajo Capital Humano + Proactividad/Informalidad.
+        """
+        # REGLA DE ORO (Excluyente): Capital Humano BAJO.
         if r.get('CAPITAL_HUMANO') != '1_Bajo':
             return 0.0
             
-        slab = r.get('Espectro_Inclusion_Laboral')
-        jp = r.get('MBTI_JP_score_sim')
+        slab, jp = r.get('Espectro_Inclusion_Laboral'), r.get('MBTI_JP_score_sim')
         
         # Debe estar en inclusión precaria o búsqueda
         if slab not in ['3_Inclusion_Precaria_Aprox', '2_Busqueda_Sin_Exito']:
             return 0.0
             
         prob_base = 0.9
-        # Moduladores
-        factor_jp = 1.0 + (0.2 * jp) if pd.notna(jp) else 1.0 # Percepción (flexibilidad) favorece
+        # Moduladores: Percepción (flexibilidad) favorece
+        factor_jp = 1.0 + (0.2 * jp) if pd.notna(jp) else 1.0 
         return round(max(0.0, min(prob_base * factor_jp, 1.0)), 2)
 
     def _clasificar_profesional_subutilizado(r):
-        # REGLA DE ORO: Capital Humano ALTO o MEDIO (Técnicos).
+        """
+        Regla para 'Profesional Subutilizado'.
+        Perfil: Alto/Medio Capital Humano + Subempleo/Desempleo.
+        """
+        # REGLA DE ORO: Capital Humano ALTO o MEDIO.
         if r.get('CAPITAL_HUMANO') == '1_Bajo':
             return 0.0
             
@@ -108,12 +147,15 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         return 0.0
 
     def _clasificar_potencial_latente(r):
-        # Foco: Exclusión total + Barreras + Desaliento
+        """
+        Regla para 'Potencial Latente'.
+        Perfil: Exclusión Total del Mercado + Barreras significativas.
+        """
+        # Foco: Exclusión total
         if r.get('Espectro_Inclusion_Laboral') != '1_Exclusion_del_Mercado':
             return 0.0
             
-        pdif = r.get('Perfil_Dificultad_Agrupado')
-        ei = r.get('MBTI_EI_score_sim')
+        pdif, ei = r.get('Perfil_Dificultad_Agrupado'), r.get('MBTI_EI_score_sim')
         
         prob_base = 0.6
         if pdif in ['1E_Autocuidado_Unica', '3_Tres_o_Mas_Dificultades']: 
@@ -124,8 +166,11 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         return round(max(0.0, min(prob_base * factor_ei, 1.0)), 2)
 
     def _clasificar_candidato_necesidades_sig(r):
+        """
+        Regla para 'Candidato con Necesidades Significativas'.
+        Perfil: Barreras múltiples o severas que requieren apoyos extensos.
+        """
         pdif = r.get('Perfil_Dificultad_Agrupado')
-        # Definición por severidad de la dificultad
         if pdif in ['3_Tres_o_Mas_Dificultades', '1E_Autocuidado_Unica']:
             return 0.9
         if pdif == '2_Dos_Dificultades':
@@ -133,22 +178,24 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         return 0.0
 
     def _clasificar_joven_transicion(r):
+        """
+        Regla para 'Joven en Transición'.
+        Perfil: Edad Joven + Primeros pasos laborales/educativos.
+        """
         # Regla estricta de edad
         if r.get('GRUPO_ETARIO_INDEC') != '1_Joven_Adulto_Temprano (14-39)':
             return 0.0
         
-        # Priorizar a quienes nunca trabajaron o estudian
-        asiste = r.get('PC08') # Asistencia escolar
-        if asiste == 1: 
-            return 0.9
+        asiste = r.get('PC08') 
+        if asiste == 1: return 0.9 # Asiste a educación
         
         slab = r.get('Espectro_Inclusion_Laboral')
-        if slab == '2_Busqueda_Sin_Exito': # Primer empleo frustrado
-            return 0.8
+        if slab == '2_Busqueda_Sin_Exito': 
+            return 0.8 # Buscando primer empleo
             
         return 0.0
 
-    # Mapeo de funciones
+    # Mapeo de funciones a nombres de arquetipos
     arch_funcs = {
         ALL_ARCHETYPES[0]: _clasificar_comunicador_desafiado,
         ALL_ARCHETYPES[1]: _clasificar_navegante_informal,
@@ -158,6 +205,7 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         ALL_ARCHETYPES[5]: _clasificar_joven_transicion,
     }
 
+    # Aplicación de reglas fila por fila
     for name, func in arch_funcs.items():
         try:
             df_out[f'Pertenencia_{name}'] = df_out.apply(func, axis=1)
@@ -169,7 +217,11 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Wrapper para la fase 2."""
+    """
+    Wrapper para la fase 2 completa.
+    
+    Orquesta la simulación de MBTI y el cálculo de pertenencia a arquetipos.
+    """
     logging.info("Ejecutando Fase 2: Ingeniería de Arquetipos...")
     df_mbti = _simulate_mbti_scores(df)
     df_archetyped = _calculate_archetype_membership(df_mbti)
@@ -177,10 +229,11 @@ def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ==============================================================================
-# PUNTO DE ENTRADA PRINCIPAL
+# PUNTO DE ENTRADA PRINCIPAL (ETL OFFLINE)
 # ==============================================================================
 
 if __name__ == '__main__':
+    # Carga de configuración
     try:
         with open('config.yaml', 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
@@ -193,65 +246,100 @@ if __name__ == '__main__':
         logging.error(f"Error crítico: No se encontró archivo en '{RAW_DATA_PATH}'.")
         exit()
 
-    logging.info("--- ⚙️ Iniciando Pipeline de Procesamiento (FIXED SHAP) ---")
+    logging.info("--- ⚙️ Iniciando Pipeline de Procesamiento (FIX SHAP + BALANCEO) ---")
     
+    # Carga de datos crudos (Manejo de encoding y delimitador)
     try:
         df_raw = pd.read_csv(RAW_DATA_PATH, delimiter=';', encoding='latin1', low_memory=False, on_bad_lines='warn')
     except Exception as e:
         logging.error(f"Error leyendo CSV: {e}")
         exit()
 
-    # --- Pipeline ---
+    # --- Pipeline de Transformación ---
     df_featured = run_feature_engineering(df_raw)
     df_archetyped = run_archetype_engineering(df_featured)
     df_fuzzified = run_fuzzification(df_archetyped)
 
-    # --- FIX CRÍTICO: Limpieza de Filas Huérfanas (Todo 0) ---
+    # --- 1. FIX CRÍTICO: Limpieza de Filas Huérfanas (Todo 0) ---
+    # Identificar filas que no activaron ninguna regla experta de manera significativa
     archetype_cols = [f'Pertenencia_{name}' for name in ALL_ARCHETYPES]
-    
-    # Calcular el máximo score de pertenencia por fila
     df_fuzzified['MAX_SCORE'] = df_fuzzified[archetype_cols].max(axis=1)
     
-    # Filtrar: Si el max score es < 0.1, la fila es "ruido" y se descarta.
-    # Esto evita que idxmax() elija el primer arquetipo por defecto.
-    initial_count = len(df_fuzzified)
+    # Filtrar ruido: Score mínimo de 0.1 para considerar la fila válida
+    # Esto previene que idxmax() seleccione el primer arquetipo por defecto en filas vacías.
     df_clean = df_fuzzified[df_fuzzified['MAX_SCORE'] > 0.1].copy()
-    dropped_count = initial_count - len(df_clean)
-    
+    dropped_count = len(df_fuzzified) - len(df_clean)
     if dropped_count > 0:
-        logging.warning(f"⚠️ SE ELIMINARON {dropped_count} FILAS HUÉRFANAS (Score < 0.1).")
-        logging.warning("Esto corrige el sesgo detectado por SHAP donde perfiles vacíos se etiquetaban como 'Com_Desafiado'.")
-    
+        logging.warning(f"⚠️ Se eliminaron {dropped_count} filas huérfanas (Score < 0.1). Corrección anti-sesgo aplicada.")
+
     if df_clean.empty:
-        logging.error("Error crítico: El filtrado eliminó todas las filas. Revisa las reglas expertas.")
+        logging.error("Error crítico: Dataset vacío tras limpieza.")
         exit()
 
-    # --- Generación Target ---
-    # Ahora es seguro usar idxmax porque sabemos que hay al menos un score > 0.1
+    # --- Generación Target Base ---
+    # Asignar la etiqueta 'hard' (clase dominante) basada en el mayor score de pertenencia
     df_clean[TARGET_COLUMN] = df_clean[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
     
-    logging.info("--- Distribución Limpia de Arquetipos ---")
-    logging.info("\n" + df_clean[TARGET_COLUMN].value_counts().to_string())
+    # --- 2. ESTRATEGIA DE BALANCEO (OVERSAMPLING) ---
+    logging.info("--- Aplicando Balanceo de Clases (Oversampling) ---")
+    target_counts = df_clean[TARGET_COLUMN].value_counts()
+    logging.info(f"Distribución Original:\n{target_counts}")
 
-    # --- Guardado ---
-    feature_cols = [col for col in df_clean.columns if '_memb' in col]
-    df_training = df_clean[feature_cols + [TARGET_COLUMN]].fillna(0.0)
+    MIN_SAMPLES = 1000 # Umbral mínimo de muestras para garantizar aprendizaje efectivo
+    dfs_to_concat = [df_clean] # Iniciar con el dataset limpio original
+
+    for archetype in ALL_ARCHETYPES:
+        count = target_counts.get(archetype, 0)
+        
+        if 0 < count < MIN_SAMPLES:
+            # Identificar la clase minoritaria
+            df_minority = df_clean[df_clean[TARGET_COLUMN] == archetype]
+            
+            if not df_minority.empty:
+                # Calcular cuántas muestras faltan para llegar al mínimo
+                n_samples_needed = MIN_SAMPLES - count
+                
+                # Generar copias sintéticas (resampling con reemplazo)
+                df_upsampled = resample(
+                    df_minority, 
+                    replace=True,     
+                    n_samples=n_samples_needed,    
+                    random_state=42
+                )
+                dfs_to_concat.append(df_upsampled)
+                logging.info(f"  › {archetype}: Se añadieron +{n_samples_needed} copias (Total: {MIN_SAMPLES}).")
+        elif count == 0:
+            logging.warning(f"  ⚠️ {archetype}: 0 muestras encontradas. No se puede hacer upsampling.")
+
+    # Combinar todo en un nuevo DataFrame balanceado y mezclar (shuffle)
+    df_balanced = pd.concat(dfs_to_concat).sample(frac=1, random_state=42).reset_index(drop=True)
+
+    logging.info("--- Distribución Final Balanceada ---")
+    logging.info("\n" + df_balanced[TARGET_COLUMN].value_counts().to_string())
+
+    # --- Guardado de Datos ---
+    feature_cols = [col for col in df_balanced.columns if '_memb' in col]
+    df_training = df_balanced[feature_cols + [TARGET_COLUMN]].fillna(0.0)
     
-    # Ruta de salida (asumiendo estructura de proyecto)
-    base_dir = os.getcwd() # O usar lógica de config
+    # Determinar ruta de salida relativa al script
+    base_dir = os.getcwd()
     out_dir = os.path.join(base_dir, 'data')
     os.makedirs(out_dir, exist_ok=True)
     
+    # Guardar dataset de entrenamiento
     out_path = os.path.join(out_dir, 'cognitive_profiles.csv')
     df_training.to_csv(out_path, index=False)
-    logging.info(f"✅ Archivo de entrenamiento guardado: {out_path}")
+    logging.info(f"✅ Archivo de entrenamiento BALANCEADO guardado: {out_path}")
     
-    # Generar Demo
+    # Generar Perfiles Demo (Usando el dataset balanceado para asegurar variedad)
     demo_list = []
-    for arch in df_clean[TARGET_COLUMN].unique():
-        subset = df_clean[df_clean[TARGET_COLUMN] == arch]
+    for arch in df_balanced[TARGET_COLUMN].unique():
+        subset = df_balanced[df_balanced[TARGET_COLUMN] == arch]
         if len(subset) > 0:
-            demo_list.append(subset.sample(min(2, len(subset)), random_state=42))
+            # Intentar tomar ejemplos únicos si existen para la demo
+            unique_subset = subset.drop_duplicates()
+            sample_source = unique_subset if len(unique_subset) >= 2 else subset
+            demo_list.append(sample_source.sample(min(2, len(sample_source)), random_state=42))
     
     if demo_list:
         df_demo = pd.concat(demo_list)
