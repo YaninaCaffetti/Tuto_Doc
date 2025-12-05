@@ -1,17 +1,18 @@
 """
-Pipeline de procesamiento de datos para el Tutor Cognitivo. (FIX SHAP + BALANCEO)
+Pipeline de procesamiento de datos para el Tutor Cognitivo. (FIX SHAP + BALANCEO + REGLAS)
 
 Este script ejecuta el pipeline ETL (Extracción, Transformación, Carga) completo
 para generar los datos necesarios para el entrenamiento del modelo cognitivo
 y los perfiles de demostración.
 
-Aplica dos correcciones críticas para la tesis doctoral, derivadas de la auditoría XAI:
-1. Limpieza de Filas Huérfanas: Elimina perfiles con baja pertenencia (<0.1) a cualquier
-   arquetipo para corregir el sesgo detectado por SHAP (donde perfiles vacíos se asignaban
-   erróneamente a 'Com_Desafiado').
-2. Balanceo de Clases (Upsampling): Aplica una estrategia de sobremuestreo a los arquetipos
-   minoritarios para garantizar que el modelo aprenda sus reglas específicas, superando
-   el desbalance natural presente en los datos de la encuesta ENDIS.
+Correcciones Críticas Implementadas:
+1.  **Refinamiento de Reglas:** Se ajustó la regla de 'Joven en Transición' para excluir
+    perfiles con Capital Humano Alto, evitando conflictos con 'Comunicador Desafiado'
+    o 'Profesional Subutilizado'.
+2.  **Limpieza de Filas Huérfanas:** Elimina perfiles con baja pertenencia (<0.1) a cualquier
+    arquetipo para corregir el sesgo detectado por SHAP.
+3.  **Balanceo de Clases (Upsampling):** Aplica sobremuestreo a los arquetipos minoritarios
+    para garantizar un mínimo de muestras, superando el desbalance natural de la encuesta.
 
 Dependencias:
     - pandas
@@ -186,6 +187,12 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         if r.get('GRUPO_ETARIO_INDEC') != '1_Joven_Adulto_Temprano (14-39)':
             return 0.0
         
+        # --- NUEVA REGLA DE EXCLUSIÓN ---
+        # Si tiene Capital Humano ALTO (Universitario), NO es transición simple,
+        # es un perfil profesional (Subutilizado o Comunicador).
+        if r.get('CAPITAL_HUMANO') == '3_Alto':
+           return 0.0
+           
         asiste = r.get('PC08') 
         if asiste == 1: return 0.9 # Asiste a educación
         
