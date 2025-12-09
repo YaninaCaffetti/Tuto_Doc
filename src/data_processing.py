@@ -1,11 +1,11 @@
-"""Pipeline de procesamiento de datos (Versión Balanceo Híbrido: Tijera + Inyección).
+"""Pipeline de procesamiento de datos (Versión Definitiva: Limpieza de Contradicciones).
 
-Este script implementa la estrategia definitiva para corregir el sesgo de clase mayoritaria:
-BALANCEO HÍBRIDO.
-1. Upsampling: Eleva las clases minoritarias a un piso mínimo (N=1000).
-2. Downsampling: Recorta las clases mayoritarias gigantes (como 'Joven_Transicion' o 
-   'Potencial_Latente') a un techo máximo (N=3000) para evitar que aplasten estadísticamente
-   a las reglas lógicas de los perfiles más específicos.
+Este script ejecuta el pipeline ETL e implementa la solución final al sesgo de edad:
+1. Inyección de datos sintéticos ("Vacuna").
+2. Limpieza de etiquetas contradictorias en los datos originales ("Relabeling").
+   - Si un perfil dice ser 'Joven_Transicion' pero tiene Capital Alto, se corrige
+     forzosamente a 'Prof_Subutil' o 'Com_Desafiado'.
+3. Balanceo de clases.
 """
 
 import pandas as pd
@@ -39,7 +39,7 @@ def _inject_synthetic_data() -> pd.DataFrame:
     logging.info("💉 Inyectando datos sintéticos...")
     synthetic_rows = []
     
-    # 1. COMUNICADOR DESAFIADO (Joven Universitario + Habla)
+    # CASO 1: COMUNICADOR DESAFIADO (Joven Universitario + Habla)
     for i in range(300):
         row = {
             'dificultad_total': 1, 'tipo_dificultad': 6, 'dificultades': 1,
@@ -50,7 +50,7 @@ def _inject_synthetic_data() -> pd.DataFrame:
         }
         synthetic_rows.append(row)
 
-    # 2. POTENCIAL LATENTE CALIFICADO (Universitario + Inactivo)
+    # CASO 2: POTENCIAL LATENTE CALIFICADO (Universitario + Inactivo)
     for i in range(100):
         row = {
             'dificultad_total': 1, 'tipo_dificultad': 1, 'dificultades': 1,
@@ -65,7 +65,7 @@ def _inject_synthetic_data() -> pd.DataFrame:
     return pd.DataFrame(synthetic_rows)
 
 # ==============================================================================
-# FASE 2: REGLAS (LÓGICA HÍBRIDA + AJUSTES)
+# FASE 2: REGLAS (LÓGICA HÍBRIDA)
 # ==============================================================================
 def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     df_out = df.copy()
@@ -109,12 +109,12 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         slab, pdif = r.get('Espectro_Inclusion_Laboral'), r.get('Perfil_Dificultad_Agrupado')
         ei = r.get('MBTI_EI_score_sim')
         
-        # CLAVE: Si es Universitario, SOLO entra si es INACTIVO (Exclusión del Mercado)
+        # CLAVE: Si es Universitario, SOLO entra si es INACTIVO
         if slab != '1_Exclusion_del_Mercado': return 0.0
         
         prob_base = 0.6
         if pdif in ['1E_Autocuidado_Unica', '3_Tres_o_Mas_Dificultades']: prob_base = 0.95
-        elif r.get('CAPITAL_HUMANO') == '3_Alto': prob_base = 0.85 # Rescate de profesionales inactivos
+        elif r.get('CAPITAL_HUMANO') == '3_Alto': prob_base = 0.85 
         
         factor_ei = 1.0 - (0.3 * ei) if pd.notna(ei) else 1.0
         return round(max(0.0, min(prob_base * factor_ei, 1.0)), 2)
@@ -160,6 +160,32 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 # ==============================================================================
+# FASE 4: LIMPIEZA DE ETIQUETAS (CORRECCIÓN DE CONTRADICCIONES)
+# ==============================================================================
+def _fix_inconsistent_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """Corrige etiquetas inconsistentes en los datos generados."""
+    df_clean = df.copy()
+    
+    # CASO: Etiquetado como 'Joven_Transicion' PERO tiene Capital Alto
+    mask_error = (df_clean[TARGET_COLUMN] == 'Joven_Transicion') & (df_clean['CH_Alto_memb'] > 0.5)
+    
+    if mask_error.sum() > 0:
+        logging.warning(f"🔄 Corrigiendo {mask_error.sum()} etiquetas contradictorias (Joven Universitario -> Transición).")
+        
+        # Si tiene dificultad de comunicación -> Com_Desafiado
+        mask_com = mask_error & ((df_clean['PD_ComCog_memb'] > 0.5) | (df_clean['PD_Sensorial_memb'] > 0.5))
+        df_clean.loc[mask_com, TARGET_COLUMN] = 'Com_Desafiado'
+        
+        # El resto -> Profesional Subutilizado
+        mask_prof = mask_error & (~mask_com)
+        df_clean.loc[mask_prof, TARGET_COLUMN] = 'Prof_Subutil'
+        
+        logging.info(f"   › {mask_com.sum()} reasignados a 'Com_Desafiado'")
+        logging.info(f"   › {mask_prof.sum()} reasignados a 'Prof_Subutil'")
+
+    return df_clean
+
+# ==============================================================================
 # MAIN
 # ==============================================================================
 
@@ -177,7 +203,7 @@ if __name__ == '__main__':
     RAW_DATA_PATH = config.get('data_paths', {}).get('raw_data')
     if not RAW_DATA_PATH: logging.error("Path error"); exit()
 
-    logging.info("--- ⚙️ Iniciando Pipeline (BALANCEO HÍBRIDO: TIJERA + INYECCIÓN) ---")
+    logging.info("--- ⚙️ Iniciando Pipeline (LIMPIEZA DE CONTRADICCIONES) ---")
     
     try:
         df_raw = pd.read_csv(RAW_DATA_PATH, delimiter=';', encoding='latin1', low_memory=False, on_bad_lines='warn')
@@ -186,7 +212,6 @@ if __name__ == '__main__':
     # 1. Inyección
     df_synthetic = _inject_synthetic_data()
     df_combined = pd.concat([df_raw, df_synthetic], ignore_index=True)
-    logging.info(f"Datos Totales: {len(df_combined)} (Sintéticos: {len(df_synthetic)})")
 
     # 2. Pipeline
     df_featured = run_feature_engineering(df_combined)
@@ -197,55 +222,44 @@ if __name__ == '__main__':
     archetype_cols = [f'Pertenencia_{name}' for name in ALL_ARCHETYPES]
     df_fuzzified['MAX_SCORE'] = df_fuzzified[archetype_cols].max(axis=1)
     df_clean = df_fuzzified[df_fuzzified['MAX_SCORE'] > 0.1].copy()
-    dropped = len(df_fuzzified) - len(df_clean)
-    if dropped > 0: logging.warning(f"⚠️ Se eliminaron {dropped} filas huérfanas.")
+    
+    if len(df_fuzzified) - len(df_clean) > 0:
+        logging.warning(f"⚠️ Se eliminaron {len(df_fuzzified) - len(df_clean)} filas huérfanas.")
 
-    # 4. Target
+    # 4. Target Inicial
     df_clean[TARGET_COLUMN] = df_clean[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
 
-    # 5. Relabeling (Limpieza de Etiquetas Inconsistentes)
-    mask_error = (df_clean[TARGET_COLUMN] == 'Joven_Transicion') & (df_clean['CH_Alto_memb'] > 0.5)
-    if mask_error.sum() > 0:
-        logging.warning(f"🔄 Reasignando {mask_error.sum()} 'Joven_Transicion' universitarios.")
-        mask_com = mask_error & ((df_clean['PD_ComCog_memb'] > 0.5) | (df_clean['PD_Sensorial_memb'] > 0.5))
-        df_clean.loc[mask_com, TARGET_COLUMN] = 'Com_Desafiado'
-        df_clean.loc[mask_error & (~mask_com), TARGET_COLUMN] = 'Prof_Subutil'
+    # 5. CORRECCIÓN DE ETIQUETAS (El paso clave)
+    df_corrected = _fix_inconsistent_labels(df_clean)
 
-    # --- 6. BALANCEO HÍBRIDO (La Tijera) ---
-    logging.info("--- Balanceo Híbrido (Upsampling Minorías / Downsampling Mayorías) ---")
-    target_counts = df_clean[TARGET_COLUMN].value_counts()
-    logging.info(f"Distribución Pre-Balanceo:\n{target_counts}")
+    # 6. Balanceo Híbrido
+    logging.info("--- Balanceo Híbrido ---")
+    target_counts = df_corrected[TARGET_COLUMN].value_counts()
+    logging.info(f"Distribución Pre:\n{target_counts}")
 
-    MIN_SAMPLES = 1000  # Piso para minorías
-    MAX_SAMPLES = 3000  # Techo para mayorías (Recorte agresivo de 31k a 3k)
-    
+    MIN_SAMPLES = 1000 
+    MAX_SAMPLES = 3000
     dfs_balanced = []
 
     for archetype in ALL_ARCHETYPES:
-        df_arch = df_clean[df_clean[TARGET_COLUMN] == archetype]
+        df_arch = df_corrected[df_corrected[TARGET_COLUMN] == archetype]
         count = len(df_arch)
         
-        if count == 0:
-            logging.warning(f"  ⚠️ {archetype}: 0 muestras.")
-            continue
+        if count == 0: continue
             
         if count < MIN_SAMPLES:
-            # UPSAMPLING (Inflar)
-            df_resampled = resample(df_arch, replace=True, n_samples=MIN_SAMPLES, random_state=42)
-            logging.info(f"  ⬆️ {archetype}: Upsampling {count} -> {MIN_SAMPLES}")
+            df_res = resample(df_arch, replace=True, n_samples=MIN_SAMPLES, random_state=42)
+            logging.info(f"  ⬆️ {archetype}: Upsample -> {MIN_SAMPLES}")
         elif count > MAX_SAMPLES:
-            # DOWNSAMPLING (Recortar)
-            df_resampled = resample(df_arch, replace=False, n_samples=MAX_SAMPLES, random_state=42)
-            logging.info(f"  ⬇️ {archetype}: Downsampling {count} -> {MAX_SAMPLES}")
+            df_res = resample(df_arch, replace=False, n_samples=MAX_SAMPLES, random_state=42)
+            logging.info(f"  ⬇️ {archetype}: Downsample -> {MAX_SAMPLES}")
         else:
-            # MANTENER (Ya está en rango)
-            df_resampled = df_arch
-            logging.info(f"  ➡️ {archetype}: Mantiene {count}")
+            df_res = df_arch
             
-        dfs_balanced.append(df_resampled)
+        dfs_balanced.append(df_res)
 
     df_final = pd.concat(dfs_balanced).sample(frac=1, random_state=42).reset_index(drop=True)
-    logging.info(f"Distribución Final:\n{df_final[TARGET_COLUMN].value_counts()}")
+    logging.info(f"Final:\n{df_final[TARGET_COLUMN].value_counts()}")
 
     # 7. Guardado
     feature_cols = [col for col in df_final.columns if '_memb' in col]
@@ -266,4 +280,4 @@ if __name__ == '__main__':
             demo_list.append(subset.sample(min(2, len(subset)), random_state=42))
     
     if demo_list: pd.concat(demo_list).to_csv(os.path.join(out_dir, 'demo_profiles.csv'))
-    logging.info("✅ Perfiles demo generados.")
+    logging.info("✅ Listo.")
