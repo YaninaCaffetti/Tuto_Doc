@@ -1,10 +1,11 @@
-"""Pipeline de procesamiento de datos (Versión Híbrida: Lógica Backup + Fixes SHAP/Balanceo).
+"""Pipeline de procesamiento de datos (Versión Híbrida Final: Lógica Detallada + Fixes Críticos).
 
-Este script restaura la lógica compleja de reglas heurísticas (con multiplicadores MBTI)
-del diseño original, pero incorpora las correcciones críticas de auditoría:
-1. Filtrado de huérfanos.
-2. Balanceo de clases (Upsampling).
-3. Regla de exclusión en 'Joven en Transición' para evitar conflictos con profesionales.
+Este script combina la lógica heurística detallada del diseño original (con multiplicadores MBTI)
+con las correcciones críticas de auditoría para eliminar sesgos:
+1. Inyección de datos sintéticos para cubrir huecos de representatividad (ej. Comunicador Desafiado).
+2. Filtrado de filas huérfanas (ruido).
+3. Corrección de etiquetas (Relabeling) para eliminar el sesgo de 'Joven en Transición' en perfiles profesionales.
+4. Balanceo de clases (Upsampling).
 """
 
 import pandas as pd
@@ -34,15 +35,54 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ==============================================================================
-# FASE 2: INGENIERÍA DE ARQUETIPOS (REGLAS DE EXPERTO - LÓGICA RESTAURADA)
+# 0. INYECCIÓN DE DATOS SINTÉTICOS (LA VACUNA)
+# ==============================================================================
+def _inject_synthetic_data() -> pd.DataFrame:
+    """Genera casos de libro para asegurar que el modelo vea ejemplos perfectos."""
+    logging.info("💉 Inyectando datos sintéticos para reforzar reglas...")
+    synthetic_rows = []
+    
+    # CASO CLAVE: Comunicador Desafiado (Joven Universitario + Habla)
+    # Generamos 300 casos para que el peso sea significativo
+    for i in range(300):
+        row = {
+            'dificultad_total': 1,
+            'tipo_dificultad': 6, # Habla
+            'dificultades': 1,
+            'MNEA': 5, # Universitario Completo (Capital Alto)
+            'edad_agrupada': 3, # Joven (El caso difícil)
+            'Estado_ocup': 2, # Desocupado
+            'cat_ocup': 9, 'certificado': 1, 'PC08': 9, 'pc03': 1, 'tipo_hogar': 2,
+            'ID': f'SYN_COM_DES_{i}'
+        }
+        synthetic_rows.append(row)
+        
+    # CASO DE REFUERZO: Profesional Subutilizado (Joven Universitario sin Discapacidad Habla)
+    for i in range(100):
+        row = {
+            'dificultad_total': 1,
+            'tipo_dificultad': 1, # Motora (Dificultad menor)
+            'dificultades': 1,
+            'MNEA': 5, # Universitario
+            'edad_agrupada': 3, # Joven
+            'Estado_ocup': 2,
+            'cat_ocup': 9, 'certificado': 1, 'PC08': 9, 'pc03': 1, 'tipo_hogar': 2,
+            'ID': f'SYN_PROF_SUB_{i}'
+        }
+        synthetic_rows.append(row)
+
+    return pd.DataFrame(synthetic_rows)
+
+# ==============================================================================
+# FASE 2: INGENIERÍA DE ARQUETIPOS (REGLAS DETALLADAS RESTAURADAS)
 # ==============================================================================
 
 def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
-    """Calcula pertenencia usando la lógica detallada del diseño original."""
+    """Calcula pertenencia usando la lógica detallada con multiplicadores MBTI."""
     df_out = df.copy()
-    logging.info("Calculando pertenencia a arquetipos (Lógica Restaurada + Ajustes)...")
+    logging.info("Calculando pertenencia a arquetipos (Lógica Detallada)...")
 
-    # --- REGLAS DETALLADAS DEL BACKUP (CON AJUSTES FINOS) ---
+    # --- REGLAS DETALLADAS ---
 
     def _clasificar_comunicador_desafiado(r):
         ch, pdif, slab, get = r.get('CAPITAL_HUMANO'), r.get('Perfil_Dificultad_Agrupado'), r.get('Espectro_Inclusion_Laboral'), r.get('GRUPO_ETARIO_INDEC')
@@ -55,7 +95,7 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         
         prob_base = 0.0
         if es_capital_alto and es_dificultad_com and es_inclusion_deficiente: 
-            # Ajuste: Igualar probabilidad para jóvenes y adultos para no perderlos ante Joven_Transicion
+            # Regla original: 0.9 si es joven. Esto está bien, el problema era que Joven_Transicion competía.
             prob_base = 0.95 
         elif es_capital_alto and es_inclusion_deficiente and es_dificultad_multiple: 
             prob_base = 0.2
@@ -115,10 +155,9 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         slab, pdif = r.get('Espectro_Inclusion_Laboral'), r.get('Perfil_Dificultad_Agrupado')
         ei, tf, jp = r.get('MBTI_EI_score_sim'), r.get('MBTI_TF_score_sim'), r.get('MBTI_JP_score_sim')
         
-        # --- AJUSTE FINO (NUEVO): Penalizar Capital Alto ---
+        # --- EXCLUSIÓN DE SEGURIDAD ---
         if r.get('CAPITAL_HUMANO') == '3_Alto' and pdif not in ['1E_Autocuidado_Unica', '3_Tres_o_Mas_Dificultades']:
             return 0.0
-        # -------------------------------------------------
 
         prob_base = 0.0
         if slab == '1_Exclusion_del_Mercado':
@@ -139,10 +178,9 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         pdif, slab = r.get('Perfil_Dificultad_Agrupado'), r.get('Espectro_Inclusion_Laboral')
         ei, tf, jp = r.get('MBTI_EI_score_sim'), r.get('MBTI_TF_score_sim'), r.get('MBTI_JP_score_sim')
         
-        # --- AJUSTE FINO (NUEVO): Penalizar Capital Alto ---
+        # --- EXCLUSIÓN DE SEGURIDAD ---
         if r.get('CAPITAL_HUMANO') == '3_Alto' and pdif not in ['3_Tres_o_Mas_Dificultades', '1E_Autocuidado_Unica']:
              return 0.0
-        # -------------------------------------------------
 
         prob_base = 0.0
         if pdif == '3_Tres_o_Mas_Dificultades': prob_base = 0.95
@@ -168,13 +206,11 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         
         prob_base = 0.0
         if get == '1_Joven_Adulto_Temprano (14-39)':
-            # --- NUEVA REGLA DE EXCLUSIÓN (FIX LÓGICO) ---
-            # Si tiene Capital Humano ALTO (Universitario), NO es transición simple.
+            # --- EXCLUSIÓN CRÍTICA: Joven Universitario NO es transición simple ---
             if ch == '3_Alto':
                 return 0.0
-            # ---------------------------------------------
             
-            if asiste == 1: prob_base = 0.85 # Asiste a establecimiento educativo
+            if asiste == 1: prob_base = 0.85 
             elif ch in ['2_Medio', '3_Alto'] and slab in ['1_Exclusion_del_Mercado', '2_Busqueda_Sin_Exito']: prob_base = 0.95
             elif ch == '1_Bajo' and slab in ['1_Exclusion_del_Mercado', '2_Busqueda_Sin_Exito']: prob_base = 0.65
             
@@ -186,7 +222,6 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         prob_final = prob_base * factor_ei * factor_tf * factor_jp
         return round(max(0.0, min(prob_final, 1.0)), 2)
 
-    # --- Aplicación de Reglas ---
     arch_funcs = {
         ALL_ARCHETYPES[0]: _clasificar_comunicador_desafiado,
         ALL_ARCHETYPES[1]: _clasificar_navegante_informal,
@@ -206,93 +241,105 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 
+# ==============================================================================
+# FASE 4: LIMPIEZA DE ETIQUETAS (CORRECCIÓN POST-TARGET)
+# ==============================================================================
+
+def _fix_inconsistent_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Elimina el sesgo residual de los datos generados corrigiendo etiquetas
+    lógicamente inconsistentes antes del entrenamiento.
+    """
+    df_clean = df.copy()
+    
+    # Condición de Conflicto: Etiquetado como 'Joven_Transicion' PERO tiene Capital Alto
+    # (El sesgo que descubrimos en la prueba de inferencia)
+    mask_error = (df_clean[TARGET_COLUMN] == 'Joven_Transicion') & (df_clean['CH_Alto_memb'] > 0.5)
+    n_errors = mask_error.sum()
+    
+    if n_errors > 0:
+        logging.warning(f"🔄 CORRIGIENDO {n_errors} etiquetas inconsistentes (Joven Universitario != Transición).")
+        
+        # Estrategia de Reasignación:
+        # 1. Si tiene dificultad de comunicación o sensorial -> Com_Desafiado
+        mask_com = mask_error & ((df_clean['PD_ComCog_memb'] > 0.5) | (df_clean['PD_Sensorial_memb'] > 0.5))
+        df_clean.loc[mask_com, TARGET_COLUMN] = 'Com_Desafiado'
+        
+        # 2. El resto (probablemente motora o leve) -> Profesional Subutilizado
+        mask_prof = mask_error & (~mask_com)
+        df_clean.loc[mask_prof, TARGET_COLUMN] = 'Prof_Subutil'
+        
+        logging.info(f"   › {mask_com.sum()} reasignados a 'Com_Desafiado'")
+        logging.info(f"   › {mask_prof.sum()} reasignados a 'Prof_Subutil'")
+        
+    return df_clean
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+
 def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Wrapper orquestador para la Fase 2 completa."""
     logging.info("Ejecutando Fase 2: Ingeniería de Arquetipos...")
     df_mbti = _simulate_mbti_scores(df)
     df_archetyped = _calculate_archetype_membership(df_mbti)
     return df_archetyped
 
-
-# ==============================================================================
-# PUNTO DE ENTRADA PRINCIPAL
-# ==============================================================================
-
 if __name__ == '__main__':
     try:
-        with open('config.yaml', 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
-    except Exception as e:
-        logging.error(f"Error cargando config: {e}")
-        exit()
+        with open('config.yaml', 'r', encoding='utf-8') as f: config = yaml.safe_load(f)
+    except Exception as e: logging.error(f"Config error: {e}"); exit()
 
     RAW_DATA_PATH = config.get('data_paths', {}).get('raw_data')
-    if not RAW_DATA_PATH or not os.path.exists(RAW_DATA_PATH):
-        logging.error(f"Error crítico: No se encontró archivo en '{RAW_DATA_PATH}'.")
-        exit()
+    if not RAW_DATA_PATH: logging.error("Path error"); exit()
 
-    logging.info("--- ⚙️ Iniciando Pipeline de Procesamiento (HÍBRIDO: BACKUP + FIXES) ---")
+    logging.info("--- ⚙️ Iniciando Pipeline (HÍBRIDO + INYECCIÓN + RELABELING) ---")
     
     try:
         df_raw = pd.read_csv(RAW_DATA_PATH, delimiter=';', encoding='latin1', low_memory=False, on_bad_lines='warn')
-    except Exception as e:
-        logging.error(f"Error leyendo CSV: {e}")
-        exit()
+    except Exception as e: logging.error(f"CSV error: {e}"); exit()
 
-    # --- Pipeline ---
-    df_featured = run_feature_engineering(df_raw)
+    # 1. Inyección de Datos Sintéticos (Para que el modelo aprenda lo que no está en la encuesta)
+    df_synthetic = _inject_synthetic_data()
+    df_combined = pd.concat([df_raw, df_synthetic], ignore_index=True)
+    logging.info(f"Datos Reales: {len(df_raw)} | Sintéticos: {len(df_synthetic)}")
+
+    # 2. Pipeline
+    df_featured = run_feature_engineering(df_combined)
     df_archetyped = run_archetype_engineering(df_featured)
     df_fuzzified = run_fuzzification(df_archetyped)
 
-    # --- 1. Limpieza de Filas Huérfanas (SHAP FIX) ---
+    # 3. Limpieza de Filas Huérfanas
     archetype_cols = [f'Pertenencia_{name}' for name in ALL_ARCHETYPES]
     df_fuzzified['MAX_SCORE'] = df_fuzzified[archetype_cols].max(axis=1)
-    
-    # Filtrar ruido (Score < 0.1)
     df_clean = df_fuzzified[df_fuzzified['MAX_SCORE'] > 0.1].copy()
-    dropped_count = len(df_fuzzified) - len(df_clean)
-    if dropped_count > 0:
-        logging.warning(f"⚠️ Se eliminaron {dropped_count} filas huérfanas (Score < 0.1).")
-
-    if df_clean.empty:
-        logging.error("Error crítico: Dataset vacío tras limpieza.")
-        exit()
-
-    # --- Generación Target Base ---
-    df_clean[TARGET_COLUMN] = df_clean[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
     
-    # --- 2. Balanceo de Clases (OVERSAMPLING) ---
-    logging.info("--- Aplicando Balanceo de Clases (Oversampling) ---")
-    target_counts = df_clean[TARGET_COLUMN].value_counts()
-    logging.info(f"Distribución Original:\n{target_counts}")
+    # 4. Generación Target Inicial
+    df_clean[TARGET_COLUMN] = df_clean[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
+
+    # 5. CORRECCIÓN DE ETIQUETAS (El paso clave para eliminar el sesgo de edad)
+    df_corrected = _fix_inconsistent_labels(df_clean)
+
+    # 6. Balanceo de Clases
+    logging.info("--- Balanceo de Clases (Upsampling) ---")
+    target_counts = df_corrected[TARGET_COLUMN].value_counts()
+    logging.info(f"Distribución Pre-Balanceo:\n{target_counts}")
 
     MIN_SAMPLES = 1000 
-    dfs_to_concat = [df_clean]
+    dfs_to_concat = [df_corrected]
 
     for archetype in ALL_ARCHETYPES:
         count = target_counts.get(archetype, 0)
-        
         if 0 < count < MIN_SAMPLES:
-            df_minority = df_clean[df_clean[TARGET_COLUMN] == archetype]
+            n_needed = MIN_SAMPLES - count
+            df_minority = df_corrected[df_corrected[TARGET_COLUMN] == archetype]
             if not df_minority.empty:
-                n_samples_needed = MIN_SAMPLES - count
-                df_upsampled = resample(
-                    df_minority, 
-                    replace=True,     
-                    n_samples=n_samples_needed,    
-                    random_state=42
-                )
+                df_upsampled = resample(df_minority, replace=True, n_samples=n_needed, random_state=42)
                 dfs_to_concat.append(df_upsampled)
-                logging.info(f"  › {archetype}: Se añadieron +{n_samples_needed} copias.")
-        elif count == 0:
-            logging.warning(f"  ⚠️ {archetype}: 0 muestras encontradas.")
+                logging.info(f"  › {archetype}: +{n_needed} copias.")
 
     df_balanced = pd.concat(dfs_to_concat).sample(frac=1, random_state=42).reset_index(drop=True)
 
-    logging.info("--- Distribución Final Balanceada ---")
-    logging.info("\n" + df_balanced[TARGET_COLUMN].value_counts().to_string())
-
-    # --- Guardado ---
+    # 7. Guardado
     feature_cols = [col for col in df_balanced.columns if '_memb' in col]
     df_training = df_balanced[feature_cols + [TARGET_COLUMN]].fillna(0.0)
     
@@ -300,22 +347,16 @@ if __name__ == '__main__':
     out_dir = os.path.join(base_dir, 'data')
     os.makedirs(out_dir, exist_ok=True)
     
-    out_path = os.path.join(out_dir, 'cognitive_profiles.csv')
-    df_training.to_csv(out_path, index=False)
-    logging.info(f"✅ Archivo de entrenamiento BALANCEADO guardado: {out_path}")
+    df_training.to_csv(os.path.join(out_dir, 'cognitive_profiles.csv'), index=False)
+    logging.info("✅ Archivo de entrenamiento guardado.")
     
-    # Generar Demo
+    # Demo
     demo_list = []
     for arch in df_balanced[TARGET_COLUMN].unique():
         subset = df_balanced[df_balanced[TARGET_COLUMN] == arch]
         if len(subset) > 0:
-            unique_subset = subset.drop_duplicates()
-            sample_source = unique_subset if len(unique_subset) >= 2 else subset
-            demo_list.append(sample_source.sample(min(2, len(sample_source)), random_state=42))
+            demo_list.append(subset.sample(min(2, len(subset)), random_state=42))
     
     if demo_list:
-        df_demo = pd.concat(demo_list)
-        df_demo['ID'] = [f'Demo_{i}' for i in range(len(df_demo))]
-        df_demo.set_index('ID', inplace=True)
-        df_demo.to_csv(os.path.join(out_dir, 'demo_profiles.csv'))
+        pd.concat(demo_list).to_csv(os.path.join(out_dir, 'demo_profiles.csv'))
         logging.info("✅ Perfiles demo generados.")
