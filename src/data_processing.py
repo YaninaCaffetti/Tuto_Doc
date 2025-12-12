@@ -1,11 +1,11 @@
-"""Pipeline de procesamiento de datos (Versión Definitiva: Limpieza de Contradicciones).
+"""Pipeline de procesamiento de datos (Versión Final: Inyección + Relabeling Forzado).
 
-Este script ejecuta el pipeline ETL e implementa la solución final al sesgo de edad:
-1. Inyección de datos sintéticos ("Vacuna").
-2. Limpieza de etiquetas contradictorias en los datos originales ("Relabeling").
-   - Si un perfil dice ser 'Joven_Transicion' pero tiene Capital Alto, se corrige
-     forzosamente a 'Prof_Subutil' o 'Com_Desafiado'.
-3. Balanceo de clases.
+Este script ejecuta el pipeline ETL e implementa la solución definitiva al sesgo:
+1. Inyección de datos sintéticos ("Vacuna" de casos de libro).
+2. Limpieza de Etiquetas (Relabeling): Busca explícitamente perfiles inconsistentes 
+   (Joven Universitario clasificado como Transición) y corrige su etiqueta a 
+   'Com_Desafiado' o 'Prof_Subutil' ANTES del entrenamiento.
+3. Balanceo Híbrido (Tijera): Upsampling de minorías y Downsampling de mayorías.
 """
 
 import pandas as pd
@@ -73,20 +73,18 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     def _clasificar_comunicador_desafiado(r):
         if r.get('CAPITAL_HUMANO') != '3_Alto': return 0.0
         pdif, slab = r.get('Perfil_Dificultad_Agrupado'), r.get('Espectro_Inclusion_Laboral')
-        ei, sn = r.get('MBTI_EI_score_sim'), r.get('MBTI_SN_score_sim')
+        ei = r.get('MBTI_EI_score_sim')
         
-        # Debe buscar o empleo precario
         if slab not in ['2_Busqueda_Sin_Exito', '3_Inclusion_Precaria_Aprox']: return 0.0
-
         es_dificultad_com = (pdif in ['1F_Habla_Comunicacion_Unica', '1C_Auditiva_Unica'])
         
         prob_base = 0.0
         if es_dificultad_com: prob_base = 0.98
         elif pdif == '3_Tres_o_Mas_Dificultades': prob_base = 0.3
-            
+        
         if prob_base == 0.0: return 0.0
         factor_ei = 1.0 - (0.2 * ei) if pd.notna(ei) else 1.0
-        return round(max(0.0, min(prob_base * max(0.8, min(factor_ei, 1.2)), 1.0)), 2)
+        return round(max(0.0, min(prob_base * factor_ei, 1.0)), 2)
 
     def _clasificar_navegante_informal(r):
         if r.get('CAPITAL_HUMANO') != '1_Bajo': return 0.0
@@ -99,6 +97,7 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     def _clasificar_profesional_subutilizado(r):
         if r.get('CAPITAL_HUMANO') == '1_Bajo': return 0.0
         pdif, slab = r.get('Perfil_Dificultad_Agrupado'), r.get('Espectro_Inclusion_Laboral')
+        
         if slab not in ['2_Busqueda_Sin_Exito', '3_Inclusion_Precaria_Aprox']: return 0.0
         
         es_dificultad_menor = pdif in ['0_Sin_Dificultad_Registrada', '4_Solo_Certificado', '1A_Motora_Unica', '1B_Visual_Unica']
@@ -109,7 +108,6 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
         slab, pdif = r.get('Espectro_Inclusion_Laboral'), r.get('Perfil_Dificultad_Agrupado')
         ei = r.get('MBTI_EI_score_sim')
         
-        # CLAVE: Si es Universitario, SOLO entra si es INACTIVO
         if slab != '1_Exclusion_del_Mercado': return 0.0
         
         prob_base = 0.6
@@ -121,7 +119,6 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
 
     def _clasificar_candidato_necesidades_sig(r):
         pdif = r.get('Perfil_Dificultad_Agrupado')
-        # Exclusión para Capital Alto (salvo barrera extrema)
         if r.get('CAPITAL_HUMANO') == '3_Alto' and pdif not in ['3_Tres_o_Mas_Dificultades', '1E_Autocuidado_Unica']:
              return 0.0
 
@@ -132,8 +129,7 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
     def _clasificar_joven_transicion(r):
         get, ch, slab, asiste = r.get('GRUPO_ETARIO_INDEC'), r.get('CAPITAL_HUMANO'), r.get('Espectro_Inclusion_Laboral'), r.get('PC08')
         
-        # EXCLUSIÓN TOTAL: Si es Universitario, JAMÁS es transición simple.
-        if ch == '3_Alto': return 0.0
+        if ch == '3_Alto': return 0.0 # Intento de exclusión (puede fallar si la fila viene con etiqueta previa)
         
         if get != '1_Joven_Adulto_Temprano (14-39)': return 0.0
         
@@ -163,32 +159,39 @@ def _calculate_archetype_membership(df: pd.DataFrame) -> pd.DataFrame:
 # FASE 4: LIMPIEZA DE ETIQUETAS (CORRECCIÓN DE CONTRADICCIONES)
 # ==============================================================================
 def _fix_inconsistent_labels(df: pd.DataFrame) -> pd.DataFrame:
-    """Corrige etiquetas inconsistentes en los datos generados."""
+    """
+    Corrige etiquetas que violan las reglas de negocio estrictas.
+    Esta función es la autoridad final sobre los datos antes de entrenar.
+    """
     df_clean = df.copy()
     
-    # CASO: Etiquetado como 'Joven_Transicion' PERO tiene Capital Alto
+    # DETECTAR: Etiquetado como 'Joven_Transicion' PERO tiene Capital Humano Alto
+    # (CH_Alto_memb > 0.5 indica que el Feature Engineering lo marcó como Alto)
     mask_error = (df_clean[TARGET_COLUMN] == 'Joven_Transicion') & (df_clean['CH_Alto_memb'] > 0.5)
+    n_errors = mask_error.sum()
     
-    if mask_error.sum() > 0:
-        logging.warning(f"🔄 Corrigiendo {mask_error.sum()} etiquetas contradictorias (Joven Universitario -> Transición).")
+    if n_errors > 0:
+        logging.warning(f"🔄 CORRIGIENDO {n_errors} etiquetas contradictorias (Joven Universitario -> Transición).")
         
-        # Si tiene dificultad de comunicación -> Com_Desafiado
+        # Lógica de reasignación:
+        # A. Si tiene dificultad de comunicación o sensorial -> Com_Desafiado
         mask_com = mask_error & ((df_clean['PD_ComCog_memb'] > 0.5) | (df_clean['PD_Sensorial_memb'] > 0.5))
         df_clean.loc[mask_com, TARGET_COLUMN] = 'Com_Desafiado'
         
-        # El resto -> Profesional Subutilizado
+        # B. El resto -> Profesional Subutilizado
         mask_prof = mask_error & (~mask_com)
         df_clean.loc[mask_prof, TARGET_COLUMN] = 'Prof_Subutil'
         
         logging.info(f"   › {mask_com.sum()} reasignados a 'Com_Desafiado'")
         logging.info(f"   › {mask_prof.sum()} reasignados a 'Prof_Subutil'")
-
+    else:
+        logging.info("✅ No se detectaron contradicciones Joven/Profesional.")
+        
     return df_clean
 
 # ==============================================================================
 # MAIN
 # ==============================================================================
-
 def run_archetype_engineering(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Ejecutando Fase 2...")
     df_mbti = _simulate_mbti_scores(df)
@@ -226,16 +229,16 @@ if __name__ == '__main__':
     if len(df_fuzzified) - len(df_clean) > 0:
         logging.warning(f"⚠️ Se eliminaron {len(df_fuzzified) - len(df_clean)} filas huérfanas.")
 
-    # 4. Target Inicial
+    # 4. Generación Target Inicial
     df_clean[TARGET_COLUMN] = df_clean[archetype_cols].idxmax(axis=1).str.replace('Pertenencia_', '')
 
     # 5. CORRECCIÓN DE ETIQUETAS (El paso clave)
     df_corrected = _fix_inconsistent_labels(df_clean)
 
     # 6. Balanceo Híbrido
-    logging.info("--- Balanceo Híbrido ---")
+    logging.info("--- Balanceo Híbrido (Upsampling/Downsampling) ---")
     target_counts = df_corrected[TARGET_COLUMN].value_counts()
-    logging.info(f"Distribución Pre:\n{target_counts}")
+    logging.info(f"Distribución Pre-Balanceo:\n{target_counts}")
 
     MIN_SAMPLES = 1000 
     MAX_SAMPLES = 3000
