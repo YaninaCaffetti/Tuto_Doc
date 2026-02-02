@@ -348,9 +348,10 @@ class MoESystem:
         predicted_archetype = list(self.expert_map.keys())[0] # Default
         
         try:
-            # Limpieza defensiva
+            # Limpieza defensiva y FIX del Warning de Pandas
             user_profile.index = user_profile.index.astype(str).str.strip()
-            profile_for_pred = user_profile.reindex(self.feature_columns).fillna(0.0)
+            # SE AÑADE .infer_objects(copy=False) para silenciar el FutureWarning
+            profile_for_pred = user_profile.reindex(self.feature_columns).fillna(0.0).infer_objects(copy=False)
             profile_df = pd.DataFrame([profile_for_pred])
 
             # A. Inferencia Base (o Probabilística si es posible)
