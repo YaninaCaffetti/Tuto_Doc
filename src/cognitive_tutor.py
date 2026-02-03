@@ -13,8 +13,6 @@ Componentes principales:
 3.  **Subclases de Expertos:** Implementaciones específicas para cada dominio de tutoría.
 4.  **Sistema `MoESystem`:** Orquestador principal con lógica Neuro-Simbólica y XAI.
 
-Autor: [Tu Nombre]
-Contexto: Tesis Doctoral en Informática - Universidad Nacional de Misiones.
 """
 
 import pandas as pd
