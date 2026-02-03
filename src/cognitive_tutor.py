@@ -13,6 +13,8 @@ Componentes principales:
 3.  **Subclases de Expertos:** Implementaciones específicas para cada dominio de tutoría.
 4.  **Sistema `MoESystem`:** Orquestador principal con lógica Neuro-Simbólica y XAI.
 
+Autor: [Tu Nombre]
+Contexto: Tesis Doctoral en Informática - Universidad Nacional de Misiones.
 """
 
 import pandas as pd
@@ -609,6 +611,7 @@ class MoESystem:
                 
                 # Sanity Check de Probabilidades para auditoría
                 ranked_predictions = []
+                sum_probs = 0.0 # Reinicio defensivo
                 for c, p in zip(classes, proba):
                     if np.isfinite(p) and p >= 0:
                         fp = float(p)
@@ -762,7 +765,7 @@ class MoESystem:
         # Log Estructurado de Ejecución (Para Tesis)
         execution_metrics = {
             "cud_search_mode": cud_search_mode or "N/A",
-            "expert_search_mode": expert_search_mode,
+            "expert_search_mode": expert_search_mode or "N/A", # FIX: Fallback a N/A
             "veto_applied": was_veto_applied,
             "raw_prediction": raw_prediction,
             "selected_archetype": predicted_archetype,
@@ -798,4 +801,3 @@ if __name__ == "__main__":
     # Bloque de prueba de carga
     logging.basicConfig(level=logging.INFO)
     logger.info("Módulo cognitive_tutor cargado correctamente.")
-
