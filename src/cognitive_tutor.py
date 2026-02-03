@@ -617,6 +617,14 @@ class MoESystem:
                 
                 ranked_predictions.sort(key=lambda x: x[1], reverse=True)
                 raw_prediction = ranked_predictions[0][0] if ranked_predictions else None
+                
+                # =========================
+                # FIX A: Fallback si predict_proba no deja ranking utilizable
+                # =========================
+                if not ranked_predictions:
+                    raw_prediction = str(self.cognitive_model.predict(profile_df)[0])
+                    ranked_predictions = [(raw_prediction, 1.0)]
+                    sum_probs = 1.0
             else:
                 raw_prediction = str(self.cognitive_model.predict(profile_df)[0])
                 ranked_predictions = [(raw_prediction, 1.0)]
@@ -639,6 +647,9 @@ class MoESystem:
             logger.error(f"Error crítico en predicción cognitiva: {e}. Usando default.")
             predicted_archetype = default_cls
             raw_prediction = raw_prediction or "Desconocido"
+            # safety net útil: ranking mínimo consistente
+            ranked_predictions = [(predicted_archetype, 1.0)]
+            sum_probs = 1.0
 
         # --- 2. Orquestación MoE (Cálculo de Pesos - TRUE MoE) ---
         base_weights = {arch: 0.0 for arch in self.expert_map}
@@ -707,13 +718,19 @@ class MoESystem:
             if w > min_weight and arch in self.expert_map:
                 expert = self.expert_map[arch]
                 rec_str, intent, mode = expert.generate_recommendation(user_prompt, original_profile=user_profile_safe)
+                
+                # =========================
+                # FIX B: Capturar el primer modo de búsqueda que aparezca
+                # =========================
+                if expert_search_mode is None:
+                    expert_search_mode = mode
+
                 # Evitar redundancia si el consejo es sobre CUD y el usuario ya recibió la alerta proactiva
                 if not ("cud" in intent.get("tags", []) and not has_cud):
                     final_recs.append(f" - ({w:.0%}) {rec_str}")
                     added += 1
                     if added == 1: 
                         gating_data = self._log_gating_event(expert.nombre, intent, top_emotion, official_labels)
-                        expert_search_mode = mode # Modo de búsqueda del experto principal
                         primary_congruence = gating_data["tipo"] # XAI: Congruencia del experto principal
 
         # 3.3. Fallback por defecto
@@ -781,3 +798,4 @@ if __name__ == "__main__":
     # Bloque de prueba de carga
     logging.basicConfig(level=logging.INFO)
     logger.info("Módulo cognitive_tutor cargado correctamente.")
+
