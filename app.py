@@ -219,9 +219,9 @@ def render_adaptive_logic_expander(analysis_data: Dict, config: Dict):
         st.markdown("---")
         st.markdown("### ⚙️ Motor de Inferencia")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Modo Búsqueda", metrics.get('expert_search_mode', 'N/A'))
+        c1.metric("Modo Búsqueda", str(metrics.get('expert_search_mode', 'N/A')))
         c2.metric("Masa Efectiva MoE", f"{metrics.get('moe_effective_mass', 0):.2f}")
-        c3.metric("Congruencia", metrics.get('affective_congruence', 'N/A'))
+        c3.metric("Congruencia", str(metrics.get('affective_congruence', 'N/A')))
 
         # D. Pesos Finales
         st.markdown("#### ⚖️ Mezcla de Expertos (Pesos Finales)")
@@ -287,10 +287,7 @@ def render_onboarding_form(moe_system: MoESystem):
         submitted = st.form_submit_button("🚀 Crear Perfil e Iniciar")
         
         if submitted:
-            # Mapeo simple de UI a Datos (Simplificado para el ejemplo)
-            # En producción, usar mapers robustos como en tu código original
-            
-            # Mapping inverso simplificado para demostración
+            # Mapeo simple de UI a Datos
             edu_map = {"Terciario/Univ. Completo": 5, "Terciario/Univ. Incompleto": 4, "Secundario": 3, "Primario": 1}
             edad_map = {"14-39": 3, "40-64": 4, "65+": 5}
             
@@ -362,21 +359,23 @@ def render_chat(emotion_clf, moe_system):
                         user_prompt=prompt
                     )
 
-                    # --- CORRECCIÓN CRÍTICA DE DESEMPAQUETADO ---
+                    # --- CORRECCIÓN CRÍTICA: Desempaquetado Robusto ---
                     xai_meta = {}
                     final_weights = {}
+                    plan = "Error en generación de respuesta."
+                    archetype = "Desconocido"
                     
                     if isinstance(plan_result, tuple):
-                        if len(plan_result) == 4:
+                        n = len(plan_result)
+                        if n == 4:
                             plan, archetype, final_weights, xai_meta = plan_result
-                        elif len(plan_result) == 3:
+                        elif n == 3:
                             plan, archetype, final_weights = plan_result
-                        else:
-                             # Fallback legacy (2 valores)
+                        elif n >= 2:
+                             # Fallback legacy
                             plan, archetype = plan_result[0], plan_result[1]
                     else:
                         plan = str(plan_result)
-                        archetype = "Desconocido"
 
                     # C. Respuesta
                     st.markdown(plan)
