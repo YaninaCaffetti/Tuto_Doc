@@ -6,7 +6,7 @@ Características:
 - Interfaz de Chat con Gating Afectivo.
 - Visualización de Auditoría XAI (Explainable AI) en tiempo real.
 - Gestión de Perfiles de Usuario (Onboarding y Demo).
-- Integración completa con el backend MoE refinado.
+- Integración completa con el backend MoE refinado (4 valores de retorno).
 """
 
 import streamlit as st
@@ -354,14 +354,30 @@ def render_chat(emotion_clf, moe_system):
                     top_emo = max(emo_probs, key=emo_probs.get)
                     
                     # B. Inferencia Cognitiva (Llamada al Backend Final)
-                    plan, archetype, weights, xai_meta = moe_system.get_cognitive_plan(
+                    plan_result = moe_system.get_cognitive_plan(
                         user_profile=st.session_state.current_user_profile,
                         emotion_probs=emo_probs,
                         conversation_context=st.session_state.session_data["conversation_context"],
                         config=st.session_state.config,
                         user_prompt=prompt
                     )
+
+                    # --- CORRECCIÓN CRÍTICA DE DESEMPAQUETADO ---
+                    xai_meta = {}
+                    final_weights = {}
                     
+                    if isinstance(plan_result, tuple):
+                        if len(plan_result) == 4:
+                            plan, archetype, final_weights, xai_meta = plan_result
+                        elif len(plan_result) == 3:
+                            plan, archetype, final_weights = plan_result
+                        else:
+                             # Fallback legacy (2 valores)
+                            plan, archetype = plan_result[0], plan_result[1]
+                    else:
+                        plan = str(plan_result)
+                        archetype = "Desconocido"
+
                     # C. Respuesta
                     st.markdown(plan)
                     
@@ -371,7 +387,7 @@ def render_chat(emotion_clf, moe_system):
                         "top_emotion": top_emo,
                         "top_emotion_prob": emo_probs[top_emo],
                         "emotion_probs": emo_probs,
-                        "final_weights": weights,
+                        "final_weights": final_weights,
                         "xai_metadata": xai_meta # <--- Clave para el visualizador
                     }
                     st.session_state.messages.append({
