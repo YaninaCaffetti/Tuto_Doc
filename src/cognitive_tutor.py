@@ -13,6 +13,8 @@ Componentes principales:
 3.  **Subclases de Expertos:** Implementaciones específicas para cada dominio de tutoría.
 4.  **Sistema `MoESystem`:** Orquestador principal con lógica Neuro-Simbólica y XAI.
 
+Autor: [Tu Nombre]
+Contexto: Tesis Doctoral en Informática - Universidad Nacional de Misiones.
 """
 
 import pandas as pd
@@ -294,21 +296,7 @@ class Experto:
         }
 
     def generate_recommendation(self, prompt: str, **kwargs) -> Tuple[str, Dict[str, Any], str]:
-        """
-        Genera una recomendación contextualizada basada en la consulta del usuario.
-
-        Utiliza una estrategia de recuperación híbrida:
-        1.  **Búsqueda Semántica:** Comparación vectorial coseno contra centroides.
-        2.  **Fallback por Palabras Clave:** Búsqueda de tokens robusta si la semántica falla.
-        3.  **Respuesta por Defecto:** Si no hay coincidencias relevantes.
-
-        Args:
-            prompt (str): Consulta del usuario.
-            **kwargs: Parámetros adicionales (e.g., perfil del usuario).
-
-        Returns:
-            Tuple[str, Dict, str]: (Texto de respuesta, Metadatos intención, Modo de búsqueda usado).
-        """
+        """Genera recomendación usando búsqueda semántica optimizada o fallback robusto por tokens."""
         model = get_semantic_model()
         matched_intention = None
         search_mode = "default" # Modo por defecto
@@ -316,16 +304,11 @@ class Experto:
         # 1. Estrategia Principal: Búsqueda Semántica
         if model and self.kb_embeddings is not None and len(self.kb_keys) > 0:
             try:
-                # Detección del dispositivo de los embeddings pre-calculados
                 target_device = self.kb_embeddings.device
-                
                 with torch.no_grad():
-                    # Codificar prompt. Evitar .to(device) redundante si ya está ahí.
                     raw_emb = model.encode(prompt, convert_to_tensor=True)
-                    # FIX: Verificación defensiva antes de mover al dispositivo
                     if hasattr(raw_emb, "device") and raw_emb.device != target_device:
                         raw_emb = raw_emb.to(target_device)
-                    
                     prompt_emb = F.normalize(raw_emb, p=2, dim=0)
                 
                 scores = util.cos_sim(prompt_emb, self.kb_embeddings)[0]
@@ -339,19 +322,14 @@ class Experto:
         # 2. Estrategia de Respaldo: Tokens / Palabras Clave (Robusto con Regex)
         if matched_intention is None:
             prompt_lower = prompt.lower()
-            # Tokenización que ignora puntuación: "CUD?" -> "cud"
             tokens = set(re.findall(r"\b\w+\b", prompt_lower, flags=re.UNICODE))
-            
-            # Whitelist de siglas cortas válidas en el dominio
             valid_short_tokens = {'cud', 'ong', 'tea', 'ilp', 'lsa'} 
             
             for item in self.knowledge_base:
-                # FIX: Sanitización de claves vacías o nulas
                 key = (item.get("pregunta_clave") or "").strip().lower()
                 vars_lower = [str(v).lower() for v in item.get("variantes", [])]
                 
-                # Coincidencia de clave exacta (con boundaries y control de clave "default" o vacía)
-                # FIX: No ejecutar regex si key es "default"
+                # Coincidencia de clave exacta (ignorando "default")
                 if key and key != "default" and re.search(rf"\b{re.escape(key)}\b", prompt_lower):
                     matched_intention = item
                     search_mode = "tokens"
@@ -359,18 +337,15 @@ class Experto:
                 
                 # Búsqueda en variantes
                 for v in vars_lower:
-                    # Tokenizar variante
                     v_tokens = re.findall(r"\b\w+\b", v, flags=re.UNICODE)
                     if not v_tokens: continue
                     
                     match_found = False
                     if len(v_tokens) == 1:
                         token = v_tokens[0]
-                        # Filtro de calidad para unigramas: longitud >= 4 o whitelist
                         if len(token) >= 4 or token in valid_short_tokens:
                             if token in tokens: match_found = True
                     else:
-                        # Para frases, verificamos que todos los tokens estén presentes (subset)
                         if set(v_tokens).issubset(tokens): match_found = True
                     
                     if match_found:
@@ -459,7 +434,12 @@ class MoESystem:
     def __init__(self, cognitive_model: Any, feature_columns: List[str],
                  affective_rules: Dict, thresholds: Dict):
         self.cognitive_model = cognitive_model
-        self.feature_columns = list(feature_columns) if feature_columns else []
+        
+        # --- FIX CRÍTICO: Manejo seguro de Numpy Array vs Lista ---
+        if feature_columns is not None and len(feature_columns) > 0:
+            self.feature_columns = list(feature_columns)
+        else:
+            self.feature_columns = []
         
         # Inicialización perezosa de expertos para evitar side-effects al importar
         self.expert_map = _build_expert_map()
@@ -609,7 +589,6 @@ class MoESystem:
                 
                 # Sanity Check de Probabilidades para auditoría
                 ranked_predictions = []
-                sum_probs = 0.0 # Reinicio defensivo
                 for c, p in zip(classes, proba):
                     if np.isfinite(p) and p >= 0:
                         fp = float(p)
@@ -763,7 +742,7 @@ class MoESystem:
         # Log Estructurado de Ejecución (Para Tesis)
         execution_metrics = {
             "cud_search_mode": cud_search_mode or "N/A",
-            "expert_search_mode": expert_search_mode or "N/A", # FIX: Fallback a N/A
+            "expert_search_mode": expert_search_mode,
             "veto_applied": was_veto_applied,
             "raw_prediction": raw_prediction,
             "selected_archetype": predicted_archetype,
