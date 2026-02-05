@@ -113,7 +113,7 @@ def load_all_models_and_data() -> Tuple[EmotionClassifier, MoESystem, pd.DataFra
             emo_model.eval() # IMPORTANTE: Modo evaluación para determinismo
             
             emo_tokenizer = AutoTokenizer.from_pretrained(model_emo_path)
-            emotion_classifier = EmotionClassifier(emo_model, emo_tokenizer, device=device) # Asegurar que tu clase acepte device o lo maneje
+            emotion_classifier = EmotionClassifier(emo_model, emo_tokenizer) 
 
             # 2. Tutor Cognitivo
             if not os.path.exists(model_cog_path):
@@ -309,7 +309,8 @@ def render_adaptive_logic_expander(analysis_data: Dict):
 
 def render_sidebar(df_profiles):
     with st.sidebar:
-        st.markdown("**Tesis Doctoral en Informática**")
+        st.markdown("**Tesis Doctoral en Informática.**")
+        st.markdown("**Universidad Nacional de Misiones, FCEQyN.**")
         st.markdown("*Mgter. Ing. Yanina A. Caffetti*")
         st.divider()
         
