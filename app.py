@@ -19,6 +19,7 @@ import traceback
 import datetime
 import json
 import altair as alt
+import numpy as np
 from typing import Dict, Tuple
 
 # --- 1. CONFIGURACIÓN INICIAL Y CARGA DE MÓDULOS ---
@@ -29,7 +30,7 @@ if src_path not in sys.path:
 
 # Configuración de página (Primera llamada obligatoria)
 st.set_page_config(
-    page_title="Tutor Cognitivo Neuro-Simbólico Afectivo",
+    page_title="Tutor Cognitivo Neuro-Simbólico",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -107,7 +108,6 @@ def load_all_models_and_data() -> Tuple[EmotionClassifier, MoESystem, pd.DataFra
             device = "cuda" if torch.cuda.is_available() else "cpu"
             
             emo_model = AutoModelForSequenceClassification.from_pretrained(model_emo_path)
-            # NOTA: No movemos explícitamente a GPU aquí para evitar conflictos internos de clase
             emo_model.eval() 
             
             emo_tokenizer = AutoTokenizer.from_pretrained(model_emo_path)
@@ -355,6 +355,21 @@ def render_onboarding_form(moe_system):
             }
             with st.spinner("Ejecutando inferencia de perfil..."):
                 profile = infer_profile_features(raw_data)
+
+                # --- FIX CRÍTICO: Asegurar variables para Guardrails ---
+                # Forzar CUD según input UI
+                if cud == "Sí":
+                    profile["TIENE_CUD"] = "Si_Tiene_CUD"
+                    profile["certificado"] = 1
+                else:
+                    profile["TIENE_CUD"] = "No_Tiene_CUD"
+                    profile["certificado"] = 2
+                
+                # Forzar MNEA para Guardrail Universitario
+                if educacion == "Terciario/Univ. Completo":
+                    profile["MNEA"] = 5
+                    profile["CH_Alto_memb"] = 1.0 # Máxima membresía para asegurar lógica difusa
+                
                 try:
                     log_dir = st.session_state.config['data_paths']['onboarding_log_dir']
                     if log_dir:
@@ -376,7 +391,6 @@ def render_chat(emotion_clf, moe_system):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             if "analysis" in msg:
-                # CORRECCIÓN: Solo 1 argumento
                 render_adaptive_logic_expander(msg["analysis"])
 
     if prompt := st.chat_input("Consulte sobre derechos, trámites o empleo..."):
@@ -398,7 +412,7 @@ def render_chat(emotion_clf, moe_system):
                         user_prompt=prompt
                     )
 
-                    # Desempaquetado seguro (Fix Técnico)
+                    # Desempaquetado seguro
                     xai_meta, final_weights = {}, {}
                     plan, archetype = "Error", "Desconocido"
                     
@@ -440,7 +454,7 @@ def main():
         initialize_session_state(df_prof, config)
         render_sidebar(df_prof)
         
-        st.markdown("<div class='header-academic'>Prototipo de Tesis Doctoral: Sistema Neuro-Simbólico de Tutoría Cognitiva - Afectiva</div>", unsafe_allow_html=True)
+        st.markdown("<div class='header-academic'>Prototipo de Tesis Doctoral: Sistema Neuro-Simbólico de Tutoría Cognitiva</div>", unsafe_allow_html=True)
 
         if st.session_state.profile_mode == "Perfil Nuevo":
             if st.session_state.current_user_profile is not None:
