@@ -4,9 +4,9 @@ Tutor Cognitivo Adaptativo con IA Afectiva y Arquitectura Neuro-Simbólica.
 
 Características:
 - Interfaz de Chat con Gating Afectivo.
-- Visualización de Auditoría XAI (Explainable AI) con gráficos Altair (Paper-ready).
-- Gestión de Perfiles de Usuario (Onboarding y Demo) con serialización robusta.
-- Integración con backend MoE optimizado (GPU/CPU aware).
+- Visualización de Auditoría XAI (Explainable AI) en tiempo real con diseño premium.
+- Gestión de Perfiles de Usuario (Onboarding y Demo).
+- Integración completa con el backend MoE refinado (4 valores de retorno).
 """
 
 import streamlit as st
@@ -14,13 +14,12 @@ import yaml
 import sys
 import os
 import pandas as pd
-import numpy as np
 import joblib
 import traceback
 import datetime
 import json
 import altair as alt
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple
 
 # --- 1. CONFIGURACIÓN INICIAL Y CARGA DE MÓDULOS ---
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -30,8 +29,8 @@ if src_path not in sys.path:
 
 # Configuración de página (Primera llamada obligatoria)
 st.set_page_config(
-    page_title="Tutor Cognitivo Afectivo - Tesis Doctoral",
-    page_icon="🎓",
+    page_title="Tutor Cognitivo Neuro-Simbólico Afectivo",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -55,7 +54,7 @@ except ImportError as e:
     st.error(f"Error Crítico al importar módulos del sistema: {e}. Verifique la carpeta 'src'.")
     st.stop()
 
-# --- 2. FUNCIONES DE CARGA DE DATOS (ROBUSTAS) ---
+# --- 2. FUNCIONES DE CARGA DE DATOS (CACHEADAS) ---
 
 def load_config_robust(default_name: str = 'config.yaml') -> Dict:
     """Busca el archivo de configuración con fallback inteligente."""
@@ -106,14 +105,13 @@ def load_all_models_and_data() -> Tuple[EmotionClassifier, MoESystem, pd.DataFra
             from transformers import AutoTokenizer, AutoModelForSequenceClassification
             
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            # print(f"Cargando modelo de emociones en: {device}") # Debug log
             
             emo_model = AutoModelForSequenceClassification.from_pretrained(model_emo_path)
-            emo_model.to(device)
-            emo_model.eval() # IMPORTANTE: Modo evaluación para determinismo
+            # NOTA: No movemos explícitamente a GPU aquí para evitar conflictos internos de clase
+            emo_model.eval() 
             
             emo_tokenizer = AutoTokenizer.from_pretrained(model_emo_path)
-            emotion_classifier = EmotionClassifier(emo_model, emo_tokenizer) 
+            emotion_classifier = EmotionClassifier(emo_model, emo_tokenizer)
 
             # 2. Tutor Cognitivo
             if not os.path.exists(model_cog_path):
@@ -148,9 +146,7 @@ def load_all_models_and_data() -> Tuple[EmotionClassifier, MoESystem, pd.DataFra
 # --- 3. UTILIDADES DE VISUALIZACIÓN Y SERIALIZACIÓN ---
 
 def serialize_profile_to_json(profile_series: pd.Series, raw_ui_data: Dict, output_path: str):
-    """
-    Guarda el perfil en JSON sanitizando tipos de Numpy para compatibilidad.
-    """
+    """Guarda el perfil en JSON sanitizando tipos de Numpy."""
     def sanitize(obj):
         if isinstance(obj, (np.integer, int)): return int(obj)
         if isinstance(obj, (np.floating, float)): return float(obj)
@@ -158,7 +154,6 @@ def serialize_profile_to_json(profile_series: pd.Series, raw_ui_data: Dict, outp
         if isinstance(obj, (np.ndarray, list)): return [sanitize(x) for x in obj]
         return str(obj)
 
-    # Convertir serie a diccionario sanitizado
     profile_dict = {k: sanitize(v) for k, v in profile_series.to_dict().items()}
     
     payload = {
@@ -171,19 +166,14 @@ def serialize_profile_to_json(profile_series: pd.Series, raw_ui_data: Dict, outp
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
 def plot_emotion_chart(probs: Dict[str, float], highlight_negative: bool = False):
-    """
-    Genera un gráfico de barras profesional con Altair.
-    Más estable que st.bar_chart y con mejor estética para tesis.
-    """
+    """Genera un gráfico de barras con Altair."""
     if not probs: return
     
-    # Filtrar ruido
     data = [{"Emoción": k, "Confianza": v} for k, v in probs.items() if v > 0.02]
     df = pd.DataFrame(data)
     
     if df.empty: return
 
-    # Configuración de colores
     color_range = ['#FF4B4B', '#FF4B4B'] if highlight_negative else ['#4B8BFF', '#4B8BFF']
     
     chart = alt.Chart(df).mark_bar().encode(
@@ -212,7 +202,7 @@ def get_initial_session_data() -> Dict:
     }
 
 def clear_session_state():
-    """Limpia el chat y el perfil activo para evitar estados inconsistentes."""
+    """Limpia el chat y el perfil activo."""
     st.session_state.messages = []
     st.session_state.session_data = get_initial_session_data()
     st.session_state.current_user_profile = None
@@ -229,7 +219,6 @@ def initialize_session_state(df_profiles: pd.DataFrame, config: Dict):
     if "profile_mode" not in st.session_state: st.session_state.profile_mode = "Demo"
     
     profile_ids = df_profiles.index.tolist()
-    # Validación segura del índice seleccionado
     if "selected_profile_id" not in st.session_state:
         st.session_state.selected_profile_id = profile_ids[0] if profile_ids else None
     elif st.session_state.selected_profile_id not in profile_ids:
@@ -239,9 +228,7 @@ def update_metrics(analysis: Dict):
     metrics = st.session_state.session_data["metrics"]
     context = st.session_state.session_data["conversation_context"]
     
-    # Normalización basada en config si es posible, sino usa la detectada
     top_emotion = analysis.get("top_emotion", "Neutral")
-    
     metrics["total_interactions"] += 1
     metrics["emotion_counts"][top_emotion] = metrics["emotion_counts"].get(top_emotion, 0) + 1
     context["emotional_trajectory"] = (context["emotional_trajectory"] + [top_emotion])[-5:]
@@ -249,6 +236,10 @@ def update_metrics(analysis: Dict):
 # --- 5. COMPONENTES UI (VISUALIZACIÓN) ---
 
 def render_adaptive_logic_expander(analysis_data: Dict):
+    """
+    Panel XAI. Recibe solo analysis_data.
+    Config se lee de st.session_state si es necesario.
+    """
     if not analysis_data: return
 
     xai = analysis_data.get('xai_metadata', {})
@@ -266,7 +257,6 @@ def render_adaptive_logic_expander(analysis_data: Dict):
             emo = analysis_data.get('top_emotion', 'N/A')
             prob = analysis_data.get('top_emotion_prob', 0.0)
             
-            # Obtener emociones negativas desde config para lógica de alerta
             neg_emotions = set(st.session_state.config.get('constants', {}).get('negative_emotions', []))
             is_negative = emo in neg_emotions
             
@@ -275,7 +265,6 @@ def render_adaptive_logic_expander(analysis_data: Dict):
             else:
                 st.info(f"**{emo}** ({prob:.1%})")
             
-            # Gráfico Altair Profesional
             plot_emotion_chart(analysis_data.get('emotion_probs', {}), highlight_negative=is_negative)
 
         with col_right:
@@ -309,14 +298,12 @@ def render_adaptive_logic_expander(analysis_data: Dict):
 
 def render_sidebar(df_profiles):
     with st.sidebar:
-        st.markdown("**Tesis Doctoral en Informática.**")
-        st.markdown("**Universidad Nacional de Misiones, FCEQyN.**")
+        st.markdown("**Tesis Doctoral en Informática**")
         st.markdown("*Mgter. Ing. Yanina A. Caffetti*")
         st.divider()
         
         st.subheader("🎛️ Configuración")
         
-        # Selector de Modo con Callback (CLAVE PARA UX)
         st.radio(
             "Modo de Operación", 
             ["Demo", "Perfil Nuevo"], 
@@ -342,7 +329,7 @@ def render_sidebar(df_profiles):
 
 def render_onboarding_form(moe_system):
     st.markdown("### 📝 Generación de Nuevo Perfil")
-    st.info("Ingrese los datos sociodemográficos para simular un nuevo usuario y testear la inferencia del arquetipo.")
+    st.info("Ingrese los datos sociodemográficos para simular un nuevo usuario.")
     
     with st.form("onboarding"):
         c1, c2 = st.columns(2)
@@ -359,18 +346,15 @@ def render_onboarding_form(moe_system):
             # Mapeo de UI a Datos
             edu_map = {"Terciario/Univ. Completo": 5, "Terciario/Univ. Incompleto": 4, "Secundario": 3, "Primario": 1}
             edad_map = {"14-39": 3, "40-64": 4, "65+": 5}
-            
             raw_data = {
                 "edad_agrupada": edad_map.get(edad, 3), "MNEA": edu_map.get(educacion, 3),
                 "Estado_ocup": 2 if ocupacion == "Desocupado" else 1, "dificultad_total": 1,
                 "tipo_dificultad": 6 if discapacidad == "Habla" else 1, "dificultades": 1,
-                "certificado": 1 if cud == "Sí" else 2, "PC08": 9, "pc03": 9, "tipo_hogar": 9
+                "certificado": 1 if cud == "Sí" else 2, # 1=Sí, 2=No
+                "PC08": 9, "pc03": 9, "tipo_hogar": 9
             }
-            
             with st.spinner("Ejecutando inferencia de perfil..."):
                 profile = infer_profile_features(raw_data)
-                
-                # Serialización Robusta
                 try:
                     log_dir = st.session_state.config['data_paths']['onboarding_log_dir']
                     if log_dir:
@@ -388,30 +372,24 @@ def render_onboarding_form(moe_system):
 def render_chat(emotion_clf, moe_system):
     st.markdown(f"### 💬 Chat con Tutor ({st.session_state.current_archetype})")
     
-    # Mostrar historial
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             if "analysis" in msg:
-                render_adaptive_logic_expander(msg["analysis"], st.session_state.config)
+                # CORRECCIÓN: Solo 1 argumento
+                render_adaptive_logic_expander(msg["analysis"])
 
-    # Input usuario (Bloqueado si no hay perfil)
     if prompt := st.chat_input("Consulte sobre derechos, trámites o empleo..."):
-        if st.session_state.current_user_profile is None:
-            st.warning("⚠️ Error de estado: Perfil no cargado. Por favor reinicie desde la barra lateral.")
-            return
-
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
         
         with st.chat_message("assistant"):
             with st.spinner("Procesando semántica y afectividad..."):
                 try:
-                    # A. Emociones
                     emo_probs = emotion_clf.predict_proba(prompt)[0]
                     top_emo = max(emo_probs, key=emo_probs.get)
                     
-                    # B. Cognitivo (Backend Nivel Dios)
+                    # LLAMADA AL BACKEND
                     plan_result = moe_system.get_cognitive_plan(
                         user_profile=st.session_state.current_user_profile,
                         emotion_probs=emo_probs,
@@ -420,7 +398,7 @@ def render_chat(emotion_clf, moe_system):
                         user_prompt=prompt
                     )
 
-                    # Desempaquetado seguro
+                    # Desempaquetado seguro (Fix Técnico)
                     xai_meta, final_weights = {}, {}
                     plan, archetype = "Error", "Desconocido"
                     
@@ -437,7 +415,6 @@ def render_chat(emotion_clf, moe_system):
 
                     st.markdown(plan)
                     
-                    # C. Guardado de Estado
                     analysis_data = {
                         "archetype": archetype, "top_emotion": top_emo,
                         "top_emotion_prob": emo_probs[top_emo], "emotion_probs": emo_probs,
@@ -445,13 +422,12 @@ def render_chat(emotion_clf, moe_system):
                     }
                     st.session_state.messages.append({"role": "assistant", "content": plan, "analysis": analysis_data})
                     
-                    # Actualización tardía del arquetipo (Bonus UX)
                     if st.session_state.current_archetype != archetype:
                         st.session_state.current_archetype = archetype
-                        st.rerun() # Rerun para actualizar el título del chat
+                        st.rerun()
                     else:
                         update_metrics(analysis_data)
-                        render_adaptive_logic_expander(analysis_data, st.session_state.config)
+                        render_adaptive_logic_expander(analysis_data)
                     
                 except Exception as e:
                     st.error("Ocurrió un error en el procesamiento.")
@@ -464,7 +440,7 @@ def main():
         initialize_session_state(df_prof, config)
         render_sidebar(df_prof)
         
-        st.markdown("<div class='header-academic'>Prototipo de Tesis Doctoral: Sistema Neuro-Simbólico de Tutoría Cognitiva</div>", unsafe_allow_html=True)
+        st.markdown("<div class='header-academic'>Prototipo de Tesis Doctoral: Sistema Neuro-Simbólico de Tutoría Cognitiva - Afectiva</div>", unsafe_allow_html=True)
 
         if st.session_state.profile_mode == "Perfil Nuevo":
             if st.session_state.current_user_profile is not None:
