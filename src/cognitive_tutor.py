@@ -12,9 +12,6 @@ Componentes principales:
     la KB y la búsqueda vectorial optimizada (agnóstica del dispositivo).
 3.  **Subclases de Expertos:** Implementaciones específicas para cada dominio de tutoría.
 4.  **Sistema `MoESystem`:** Orquestador principal con lógica Neuro-Simbólica y XAI.
-
-Autor: [Tu Nombre]
-Contexto: Tesis Doctoral en Informática - Universidad Nacional de Misiones.
 """
 
 import pandas as pd
@@ -435,19 +432,18 @@ class MoESystem:
                  affective_rules: Dict, thresholds: Dict):
         self.cognitive_model = cognitive_model
         
-        # --- FIX CRÍTICO: Manejo seguro de Numpy Array vs Lista ---
-        if feature_columns is not None and len(feature_columns) > 0:
-            self.feature_columns = list(feature_columns)
-        else:
-            self.feature_columns = []
+        # --- FIX CRÍTICO 2: Manejo simplificado de feature_columns ---
+        self.feature_columns = list(feature_columns) if feature_columns is not None else []
         
         # Inicialización perezosa de expertos para evitar side-effects al importar
         self.expert_map = _build_expert_map()
         self.cud_expert = GestorCUD()
         
         self.affective_rules = affective_rules or {}
-        # Inyección de configuración para el umbral difuso
-        self.thresholds = thresholds.get('affective_engine', thresholds or {})
+        
+        # --- FIX CRÍTICO 1: Manejo seguro de thresholds (siempre dict) ---
+        thresholds = thresholds if isinstance(thresholds, dict) else {}
+        self.thresholds = thresholds.get("affective_engine", thresholds)
         
         self.affective_congruence_log: List[Dict[str, str]] = []
         
@@ -589,6 +585,7 @@ class MoESystem:
                 
                 # Sanity Check de Probabilidades para auditoría
                 ranked_predictions = []
+                sum_probs = 0.0 # Reinicio defensivo
                 for c, p in zip(classes, proba):
                     if np.isfinite(p) and p >= 0:
                         fp = float(p)
@@ -742,7 +739,7 @@ class MoESystem:
         # Log Estructurado de Ejecución (Para Tesis)
         execution_metrics = {
             "cud_search_mode": cud_search_mode or "N/A",
-            "expert_search_mode": expert_search_mode,
+            "expert_search_mode": expert_search_mode or "N/A", # FIX: Fallback a N/A
             "veto_applied": was_veto_applied,
             "raw_prediction": raw_prediction,
             "selected_archetype": predicted_archetype,
