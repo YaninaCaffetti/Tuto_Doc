@@ -6,7 +6,8 @@ Características:
 - Interfaz de Chat con Gating Afectivo.
 - Visualización de Auditoría XAI (Explainable AI) en tiempo real.
 - Gestión de Perfiles de Usuario (Onboarding y Demo).
-- Integración completa con el backend MoE refinado (Soporte dinámico de retornos).
+- Integración robusta con backend MoE (4 valores).
+- Branding Académico.
 """
 
 import streamlit as st
@@ -26,13 +27,23 @@ src_path = os.path.join(project_root, 'src')
 if src_path not in sys.path:
     sys.path.append(src_path)
 
-# Configuración de página (Primera llamada obligatoria)
+# Configuración de página (Debe ser lo primero)
 st.set_page_config(
-    page_title="Tutor Cognitivo Neuro-Simbólico",
-    page_icon="🧠",
+    page_title="Tutor Cognitivo - Tesis Doctoral",
+    page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Estilos CSS para apariencia académica/profesional
+st.markdown("""
+<style>
+    .header-academic { font-size: 14px; color: #666; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+    .stExpander { border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .success-box { padding: 10px; background-color: #e8f5e9; border-radius: 5px; border-left: 5px solid #4caf50; }
+    .alert-box { padding: 10px; background-color: #ffebee; border-radius: 5px; border-left: 5px solid #f44336; }
+</style>
+""", unsafe_allow_html=True)
 
 try:
     from src.emotion_classifier import EmotionClassifier
@@ -45,7 +56,7 @@ except ImportError as e:
 # --- 2. FUNCIONES DE CARGA DE DATOS (CACHEADAS) ---
 @st.cache_resource
 def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionClassifier, MoESystem, pd.DataFrame, Dict]:
-    """Carga modelos, configuraciones y perfiles demo. Cacheado para eficiencia."""
+    """Carga modelos, configuraciones y perfiles demo."""
     with st.spinner("Inicializando Arquitectura Neuro-Simbólica..."):
         # 1. Cargar Configuración
         config_abs_path = os.path.join(project_root, config_path)
@@ -87,7 +98,7 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionC
             if os.path.exists(demo_path):
                 df_profiles = pd.read_csv(demo_path, index_col='ID')
             else:
-                st.warning("Archivo de perfiles demo no encontrado. Se usará DataFrame vacío.")
+                st.warning("Archivo de perfiles demo no encontrado.")
                 df_profiles = pd.DataFrame()
 
             feature_columns = getattr(cognitive_model, 'feature_names_in_', [])
@@ -107,7 +118,7 @@ def load_all_models_and_data(config_path: str = 'config.yaml') -> Tuple[EmotionC
             st.code(traceback.format_exc())
             st.stop()
 
-# --- 3. GESTIÓN DE SESIÓN Y ESTADO ---
+# --- 3. GESTIÓN DE SESIÓN Y ESTADO (UX MEJORADO) ---
 
 def get_initial_session_data() -> Dict:
     return {
@@ -123,6 +134,14 @@ def get_initial_session_data() -> Dict:
         }
     }
 
+def clear_session_state():
+    """Resetea la conversación y el perfil activo al cambiar de modo."""
+    st.session_state.messages = []
+    st.session_state.session_data = get_initial_session_data()
+    st.session_state.current_user_profile = None
+    st.session_state.current_archetype = "N/A"
+    # No reseteamos 'profile_mode' ni 'selected_profile_id' aquí porque son widgets
+
 def initialize_session_state(df_profiles: pd.DataFrame, config: Dict):
     if "messages" not in st.session_state: st.session_state.messages = []
     if "session_data" not in st.session_state: st.session_state.session_data = get_initial_session_data()
@@ -130,8 +149,9 @@ def initialize_session_state(df_profiles: pd.DataFrame, config: Dict):
     
     if "current_user_profile" not in st.session_state: st.session_state.current_user_profile = None
     if "current_archetype" not in st.session_state: st.session_state.current_archetype = "N/A"
-    if "profile_mode" not in st.session_state: st.session_state.profile_mode = "Demo"
     
+    # Defaults de UI
+    if "profile_mode" not in st.session_state: st.session_state.profile_mode = "Demo"
     profile_ids = df_profiles.index.tolist()
     if "selected_profile_id" not in st.session_state:
         st.session_state.selected_profile_id = profile_ids[0] if profile_ids else None
@@ -149,116 +169,142 @@ def update_metrics(analysis: Dict):
 def render_adaptive_logic_expander(analysis_data: Dict, config: Dict):
     if not analysis_data: return
 
-    with st.expander("🔍 Auditoría del Sistema (XAI & MoE)", expanded=False):
-        col_emo, col_cog = st.columns(2)
+    xai = analysis_data.get('xai_metadata', {})
+    metrics = xai.get('execution_metrics', {})
+    veto = metrics.get('veto_applied', False)
+    
+    label = "🔍 Auditoría del Sistema (XAI & MoE)"
+    if veto: label += " 🛡️ GUARDRAIL ACTIVO"
+
+    with st.expander(label, expanded=veto):
+        c1, c2 = st.columns([1, 1], gap="medium")
         
-        with col_emo:
-            st.markdown("### 🧡 Estado Afectivo")
+        with c1:
+            st.markdown("#### 🧡 Estado Afectivo")
             emo = analysis_data.get('top_emotion', 'N/A')
             prob = analysis_data.get('top_emotion_prob', 0.0)
-            st.info(f"Emoción: **{emo}** ({prob:.1%})")
+            if emo in ["Ira", "Tristeza", "Miedo"]:
+                st.warning(f"**{emo}** ({prob:.1%})")
+            else:
+                st.info(f"**{emo}** ({prob:.1%})")
             
             all_probs = analysis_data.get('emotion_probs', {})
             if all_probs:
-                clean_probs = {k:v for k,v in all_probs.items() if v > 0.05}
-                st.bar_chart(clean_probs, height=150)
+                clean = {k:v for k,v in all_probs.items() if v > 0.05}
+                st.bar_chart(clean, height=150, color="#FF4B4B" if emo in ["Ira", "Miedo"] else "#4B8BFF")
 
-        with col_cog:
-            st.markdown("### 🧠 Decisión Cognitiva")
-            xai = analysis_data.get('xai_metadata', {})
-            metrics = xai.get('execution_metrics', {})
-            
+        with c2:
+            st.markdown("#### 🧠 Decisión Cognitiva")
             raw_arch = metrics.get('raw_prediction', 'N/A')
             final_arch = metrics.get('selected_archetype', 'N/A')
-            veto = metrics.get('veto_applied', False)
             
             if veto:
-                st.error(f"🛡️ **GUARDRAIL ACTIVADO**")
-                st.markdown(f"Neuronal: `{raw_arch}` 🚫 ➔ Simbólico: `{final_arch}` ✅")
-                st.caption(f"Razón: {xai.get('guardrail_reason', {}).get('rule_id', 'Regla de Dominio')}")
+                st.markdown('<div class="alert-box">🛡️ <b>Veto Simbólico Aplicado</b></div>', unsafe_allow_html=True)
+                st.markdown(f"**Neuronal:** `{raw_arch}` ➔ **Final:** `{final_arch}`")
+                st.caption(f"**Regla:** {xai.get('guardrail_reason', {}).get('rule_id', 'N/A')}")
             else:
-                st.success(f"✅ **Predicción Validada**")
-                st.markdown(f"Arquetipo: **{final_arch}**")
+                st.markdown('<div class="success-box">✅ <b>Predicción Validada</b></div>', unsafe_allow_html=True)
+                st.markdown(f"**Arquetipo:** `{final_arch}`")
 
-        st.markdown("---")
-        st.markdown("### ⚙️ Motor de Inferencia")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Modo Búsqueda", str(metrics.get('expert_search_mode', 'N/A')))
-        c2.metric("Masa Efectiva MoE", f"{metrics.get('moe_effective_mass', 0):.2f}")
-        c3.metric("Congruencia", str(metrics.get('affective_congruence', 'N/A')))
+        st.divider()
+        st.caption("Métricas Técnicas del Motor de Inferencia")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Búsqueda", str(metrics.get('expert_search_mode', 'N/A')))
+        m2.metric("Masa Efectiva", f"{metrics.get('moe_effective_mass', 0):.2f}")
+        m3.metric("Congruencia", str(metrics.get('affective_congruence', 'N/A')))
+        m4.metric("Veto Mass", f"{metrics.get('moe_vetoed_mass', 0):.2f}")
 
-        st.markdown("#### ⚖️ Pesos Finales")
         weights = analysis_data.get('final_weights', {})
         if weights:
-            active_weights = {k: v for k, v in weights.items() if v > 0.01}
-            st.dataframe(
-                pd.DataFrame(active_weights.items(), columns=["Experto", "Peso"])
-                .sort_values("Peso", ascending=False).style.format({"Peso": "{:.2%}"}),
-                use_container_width=True, hide_index=True
-            )
+            with st.expander("Ver Pesos de Expertos"):
+                active = {k: v for k, v in weights.items() if v > 0.01}
+                st.dataframe(pd.DataFrame(active.items(), columns=["Experto", "Peso"]).sort_values("Peso", ascending=False).style.format({"Peso": "{:.2%}"}), use_container_width=True, hide_index=True)
 
 # --- 5. COMPONENTES UI (ONBOARDING & CHAT) ---
 
 def render_sidebar(df_profiles):
     with st.sidebar:
-        st.title("🎛️ Configuración")
-        mode = st.radio("Modo", ["Demo", "Perfil Nuevo"], key="profile_mode")
+        st.markdown("**Tesis Doctoral en Informática**")
+        st.markdown("*Mgter. Ing. Yanina A. Caffetti*")
+        st.divider()
+        
+        st.subheader("🎛️ Configuración")
+        
+        # Selector de Modo con Callback de Limpieza (FIX UX)
+        mode = st.radio(
+            "Modo de Operación", 
+            ["Demo", "Perfil Nuevo"], 
+            key="profile_mode",
+            on_change=clear_session_state # <--- CLAVE PARA QUE CARGUE EL FORMULARIO
+        )
         
         if mode == "Demo":
             if not df_profiles.empty:
                 ids = df_profiles.index.tolist()
-                selected = st.selectbox("Perfil Demo", ids, key="selected_profile_id")
-                if st.button("Cargar Perfil Demo"):
-                    st.session_state.current_user_profile = df_profiles.loc[selected]
-                    st.session_state.current_archetype = "Cargando..." 
+                st.selectbox("Perfil Demo", ids, key="selected_profile_id", on_change=clear_session_state)
+                
+                if st.button("🔄 Cargar/Reiniciar Demo", type="primary"):
+                    st.session_state.current_user_profile = df_profiles.loc[st.session_state.selected_profile_id]
+                    st.session_state.current_archetype = "Cargando..."
                     st.session_state.messages = []
                     st.rerun()
             else:
-                st.warning("Sin perfiles demo.")
+                st.warning("Sin datos demo.")
         
         st.divider()
-        st.metric("Interacciones", st.session_state.session_data["metrics"]["total_interactions"])
-        if st.button("🗑️ Reiniciar"):
-            st.session_state.messages = []
-            st.session_state.session_data = get_initial_session_data()
-            st.rerun()
+        st.metric("Interacciones Sesión", st.session_state.session_data["metrics"]["total_interactions"])
 
 def render_onboarding_form(moe_system):
-    st.header("📝 Nuevo Perfil")
+    st.markdown("### 📝 Generación de Nuevo Perfil")
+    st.info("Ingrese los datos sociodemográficos para simular un nuevo usuario y testear la inferencia del arquetipo.")
+    
     with st.form("onboarding"):
         c1, c2 = st.columns(2)
         edad = c1.selectbox("Rango Etario", ["14-39", "40-64", "65+"])
         educacion = c2.selectbox("Nivel Educativo", ["Primario", "Secundario", "Terciario/Univ. Incompleto", "Terciario/Univ. Completo"])
+        
         c3, c4 = st.columns(2)
         ocupacion = c3.selectbox("Situación Laboral", ["Ocupado Formal", "Ocupado Informal", "Desocupado", "Inactivo"])
         discapacidad = c4.selectbox("Tipo Discapacidad", ["Motora", "Visual", "Auditiva", "Mental", "Habla", "Visceral"])
-        cud = st.radio("¿Posee CUD?", ["Sí", "No", "En trámite"], horizontal=True)
         
-        if st.form_submit_button("🚀 Crear e Iniciar"):
+        cud = st.radio("¿Posee Certificado Único de Discapacidad (CUD)?", ["Sí", "No", "En trámite"], horizontal=True)
+        
+        if st.form_submit_button("🚀 Generar Perfil e Iniciar", type="primary"):
+            # Mapeo de UI a Datos (Coherente con modelo)
             edu_map = {"Terciario/Univ. Completo": 5, "Terciario/Univ. Incompleto": 4, "Secundario": 3, "Primario": 1}
             edad_map = {"14-39": 3, "40-64": 4, "65+": 5}
+            
             raw_data = {
-                "edad_agrupada": edad_map.get(edad, 3), "MNEA": edu_map.get(educacion, 3),
-                "Estado_ocup": 2 if ocupacion == "Desocupado" else 1, "dificultad_total": 1,
-                "tipo_dificultad": 6 if discapacidad == "Habla" else 1, "dificultades": 1,
-                "certificado": 1 if cud == "Sí" else 2, "PC08": 9, "pc03": 9, "tipo_hogar": 9
+                "edad_agrupada": edad_map.get(edad, 3),
+                "MNEA": edu_map.get(educacion, 3),
+                "Estado_ocup": 2 if ocupacion == "Desocupado" else 1,
+                "dificultad_total": 1,
+                "tipo_dificultad": 6 if discapacidad == "Habla" else 1,
+                "dificultades": 1,
+                "certificado": 1 if cud == "Sí" else 2,
+                "PC08": 9, "pc03": 9, "tipo_hogar": 9
             }
-            with st.spinner("Infiriendo perfil..."):
+            
+            with st.spinner("Ejecutando inferencia de perfil..."):
                 profile = infer_profile_features(raw_data)
-                # Intento de guardado (opcional)
+                
+                # Guardar log si existe directorio
                 try:
                     log_dir = st.session_state.config['data_paths']['onboarding_log_dir']
                     if log_dir:
-                        with open(os.path.join(log_dir, f"user_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"), 'w') as f:
+                        fname = f"user_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                        with open(os.path.join(log_dir, fname), 'w') as f:
                             json.dump(profile.astype(str).to_dict(), f, indent=2)
                 except: pass
+
                 st.session_state.current_user_profile = profile
                 st.session_state.current_archetype = "Perfil Generado"
                 st.session_state.messages = []
-                st.success("Perfil creado."); st.rerun()
+                st.success("Perfil creado correctamente.")
+                st.rerun()
 
 def render_chat(emotion_clf, moe_system):
-    st.subheader(f"💬 Chat ({st.session_state.current_archetype})")
+    st.markdown(f"### 💬 Chat con Tutor ({st.session_state.current_archetype})")
     
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
@@ -266,17 +312,17 @@ def render_chat(emotion_clf, moe_system):
             if "analysis" in msg:
                 render_adaptive_logic_expander(msg["analysis"], st.session_state.config)
 
-    if prompt := st.chat_input("Escribe tu consulta..."):
+    if prompt := st.chat_input("Consulte sobre derechos, trámites o empleo..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
         
         with st.chat_message("assistant"):
-            with st.spinner("Procesando..."):
+            with st.spinner("Procesando semántica y afectividad..."):
                 try:
                     emo_probs = emotion_clf.predict_proba(prompt)[0]
                     top_emo = max(emo_probs, key=emo_probs.get)
                     
-                    # Llamada al Backend
+                    # LLAMADA AL BACKEND (Soporta 4 valores)
                     plan_result = moe_system.get_cognitive_plan(
                         user_profile=st.session_state.current_user_profile,
                         emotion_probs=emo_probs,
@@ -285,7 +331,7 @@ def render_chat(emotion_clf, moe_system):
                         user_prompt=prompt
                     )
 
-                    # --- LÓGICA ROBUSTA DE DESEMPAQUETADO ---
+                    # Desempaquetado seguro
                     xai_meta, final_weights = {}, {}
                     plan, archetype = "Error", "Desconocido"
                     
@@ -310,11 +356,12 @@ def render_chat(emotion_clf, moe_system):
                     st.session_state.messages.append({"role": "assistant", "content": plan, "analysis": analysis_data})
                     st.session_state.current_archetype = archetype
                     update_metrics(analysis_data)
+                    
                     render_adaptive_logic_expander(analysis_data, st.session_state.config)
                     
                 except Exception as e:
-                    st.error(f"Error: {e}")
-                    st.code(traceback.format_exc())
+                    st.error("Ocurrió un error en el procesamiento.")
+                    st.exception(e)
 
 # --- MAIN ---
 def main():
@@ -322,14 +369,25 @@ def main():
         emo_clf, moe_sys, df_prof, config = load_all_models_and_data()
         initialize_session_state(df_prof, config)
         render_sidebar(df_prof)
-        if st.session_state.current_user_profile is not None:
-            render_chat(emo_clf, moe_sys)
-        elif st.session_state.profile_mode == "Perfil Nuevo":
-            render_onboarding_form(moe_sys)
-        else:
-            st.info("👈 Selecciona un perfil Demo para comenzar.")
+        
+        st.markdown("<div class='header-academic'>Prototipo de Tesis Doctoral: Sistema Neuro-Simbólico de Tutoría Cognitiva</div>", unsafe_allow_html=True)
+
+        if st.session_state.profile_mode == "Perfil Nuevo":
+            # Si hay perfil cargado tras onboarding, mostrar chat, si no, formulario
+            if st.session_state.current_user_profile is not None:
+                render_chat(emo_clf, moe_sys)
+            else:
+                render_onboarding_form(moe_sys)
+        
+        elif st.session_state.profile_mode == "Demo":
+            if st.session_state.current_user_profile is not None:
+                render_chat(emo_clf, moe_sys)
+            else:
+                st.info("👈 Seleccione un **Perfil Demo** en el menú lateral y haga clic en **Cargar** para iniciar.")
+                
     except Exception as e:
-        st.error("Error fatal."); st.exception(e)
+        st.error("Error fatal en la aplicación.")
+        st.exception(e)
 
 if __name__ == "__main__":
     main()
