@@ -35,9 +35,11 @@ Suba el archivo `base_estudio_discapacidad_2018.csv` (descargado del INDEC) a su
 ```yaml
 data_paths:
   raw_data: '/content/drive/MyDrive/ruta/a/su/archivo.csv'
+```
 
+```bash
 # 1. Clonar e instalar dependencias
-git clone [https://github.com/YaninaCaffetti/Tuto_Doc.git](https://github.com/YaninaCaffetti/Tuto_Doc.git)
+git clone https://github.com/YaninaCaffetti/Tuto_Doc.git
 cd Tuto_Doc
 pip install -r requirements.txt
 
