@@ -1,3 +1,15 @@
+# Dependencias del proyecto (versión octubre 2025)
+torch
+transformers
+accelerate
+datasets
+imbalanced-learn
+mlxtend
+sentencepiece
+sacremoses
+seaborn
+streamlit
+Pillow
 # Versiones usadas para reproducir los resultados del artículo CACIC 2026
 scikit-learn==1.5.2
 pandas==2.3.3
