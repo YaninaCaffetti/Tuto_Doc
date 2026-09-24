@@ -1,17 +1,7 @@
-
-scikit-learn
-pandas
-numpy
-torch
-transformers
-accelerate
-datasets
-imbalanced-learn
-mlxtend
-sentencepiece
-sacremoses
-seaborn
-matplotlib
-PyYAML
-streamlit
-Pillow
+# Versiones usadas para reproducir los resultados del artículo CACIC 2026
+scikit-learn==1.5.2
+pandas==2.3.3
+numpy==1.26.4
+shap==0.49.1
+matplotlib>=3.8
+PyYAML>=6.0
